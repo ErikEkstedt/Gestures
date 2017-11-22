@@ -18,7 +18,7 @@ class RoboschoolSocial(SharedMemoryClientEnv):
         self.camera_x = 0
         self.walk_target_x = 1e3  # kilometer away
         self.walk_target_y = 0
-        self.start_pos_x, self.start_pos_y, self.start_pos_z = 0, 0, 2
+        self.start_pos_x, self.start_pos_y, self.start_pos_z = 0, 0, 0
         self.camera_x = 0
         self.camera_y = 4.3
         self.camera_z = 45.0
@@ -199,4 +199,18 @@ class RoboschoolSocial(SharedMemoryClientEnv):
         self.camera_z = smoothness*self.camera_z + (1-smoothness)*camz
         self.camera.move_and_look_at(self.camera_x, self.camera_y, self.camera_z, x, y, 0.6)
 
+def test():
+    import gym, roboschool
+    from gym_mujoco_social import RoboschoolSocialHumanoid
 
+    env = RoboschoolSocialHumanoid()
+    env.reset()
+    steps = 1000
+
+    for step in range(steps):
+        env.render()
+        a = env.action_space.sample()
+        s, r, d, i = env.step(a)
+
+if __name__ == '__main__':
+    test()

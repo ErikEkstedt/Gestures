@@ -1,43 +1,10 @@
+'''
+Check out roboschool/agent_zoo/demo_race2.py
+'''
+
 import os, gym, roboschool
 import numpy as np
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
-
-# import tensorflow as tf
-# config = tf.ConfigProto(
-#     inter_op_parallelism_threads=1,
-#     intra_op_parallelism_threads=1,
-#     device_count = { "GPU": 0 } )
-# sess = tf.InteractiveSession(config=config)
-
-# # Tensorflow Agents
-# from RoboschoolWalker2d_v1_2017jul        import ZooPolicyTensorflow as PolWalker
-# from RoboschoolHopper_v1_2017jul          import ZooPolicyTensorflow as PolHopper
-# from RoboschoolHalfCheetah_v1_2017jul     import ZooPolicyTensorflow as PolHalfCheetah
-# from RoboschoolHumanoid_v1_2017jul        import ZooPolicyTensorflow as PolHumanoid1
-# from RoboschoolHumanoidFlagrun_v1_2017jul import ZooPolicyTensorflow as PolHumanoid2
-
-# # HumanoidFlagrun is compatible with normal Humanoid in observations and actions.
-# possible_participants = [
-#     ("RoboschoolHopper-v1",   PolHopper),
-#     ("RoboschoolWalker2d-v1", PolWalker),
-#     ("RoboschoolHalfCheetah-v1", PolHalfCheetah),
-#     ("RoboschoolHumanoid-v1", PolHumanoid1),
-#     ("RoboschoolHumanoid-v1", PolHumanoid2),
-#     ]
-
-# stadium = roboschool.scene_stadium.MultiplayerStadiumScene(gravity=9.8, timestep=0.0165/4, frame_skip=4)
-
-# This example shows inner workings of multiplayer scene, how you can run
-# several robots in one process.
-
-# participants = []
-# for lane in range(3):
-#     env_id, PolicyClass = possible_participants[ np.random.randint(len(possible_participants)) ]
-#     env = gym.make(env_id)
-#     env.unwrapped.scene = stadium   # if you set scene before first reset(), it will be used.
-#     env.unwrapped.player_n = lane   # mutliplayer scenes will also use player_n
-#     pi = PolicyClass("mymodel%i" % lane, env.observation_space, env.action_space)
-#     participants.append( (env, pi) )
 
 # ======= Own Test =========
 class RandomAction(object):

@@ -1,5 +1,6 @@
 from roboschool.scene_abstract import SingleRobotEmptyScene
-from roboschool.gym_mujoco_xml_env import RoboschoolMujocoXmlEnv
+
+from gym_mujoco_xml_env import RoboschoolMujocoXmlEnv
 # import gym, gym.spaces, gym.utils, gym.utils.seeding
 import numpy as np
 import os, sys
@@ -96,10 +97,9 @@ def test():
     s = env.reset()
     print(s.shape)
     for i in range(100):
-        o = env.render('rgb_array')
+        env.render()
         a = env.action_space.sample()
         s, r, done, info = env.step(a)
-        env.move_camera(3,3,3)
 
 
 if __name__ == '__main__':
