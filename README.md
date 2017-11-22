@@ -5,8 +5,11 @@ Roboschool
 
 Wants:
 - [ ] Customizing rewards
+	* How to get positions and information from joints?
+	* coordinates
+	* distances
 - [ ] Customising initial pose
-- [ ] fix joints, fix such that robot always standing.
+	- [ ] fix joints, fix such that robot always standing.
 - [ ] Multiple Processor training:
 	* rgb
 	* joint states 

@@ -47,8 +47,6 @@ class RandomAction(object):
     def act(self,s, cx):
         return self.env.action_space.sample()
 
-
-#stadium = roboschool.scene_stadium.MultiplayerStadiumScene(gravity=9.8, timestep=0.0165/4, frame_skip=4)
 stadium = roboschool.scene_stadium.MultiplayerStadiumScene(gravity=0.8, timestep=0.0165/4, frame_skip=4)
 
 participants = []
