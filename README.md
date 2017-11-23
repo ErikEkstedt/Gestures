@@ -3,20 +3,28 @@ Roboschool
 
 ## Custom Environment
 Wants:
-- [ ] Customizing rewards
-	* How to get positions and information from joints?
-	* coordinates
-	* distances
-- [ ] Customising initial pose
+- [ ] **Customising initial pose**
 	- [ ] fix joints, fix such that robot always standing.
-- [ ] Multiple Processor training:
+- [ ] **Customizing rewards**
+	* [x] How to get positions and information from joints?
+	* [x] coordinates
+	* [x] distances
+
+- [ ] **Multiple Processor training:**
 	* rgb
 	* joint states 
-- [x] Control the camera
+	* Simple to get pixels from single proc
+		* obs = env.render('rgb_array')
+		* cam = env.unwrapped.scene.cpp_world.new_camera_free_float(self.height, self.width, name)
 
-# Code
+- [x] **Control the camera**
+
+# Code 
+
 ## Roboschool Inspired Environment
 These scripts mimicks the structure of roboschool.
+
+Here I try to make an environment that fixates the hips and legs of a humonoid in order to train the upper body. This task does not want to solve balance or walking, just gestures.
 
 ### [gym_social](gym_social.py)
 Base class which defines my custom environment.

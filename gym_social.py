@@ -27,7 +27,7 @@ class RoboschoolSocial(SharedMemoryClientEnv):
         # my stuff
         self.MAXTIME = 1000
 
-    def create_single_player_scene(self, gravity=1.8, timestep=0.0165/4, frame_skip=4):
+    def create_single_player_scene(self, gravity=9.8, timestep=0.0165/4, frame_skip=4):
         return SinglePlayerStadiumScene(gravity, timestep, frame_skip)
 
     def robot_specific_reset(self):
@@ -72,8 +72,8 @@ class RoboschoolSocial(SharedMemoryClientEnv):
 
         self.rot_minus_yaw = np.array(
             [[np.cos(-yaw), -np.sin(-yaw), 0],
-             [np.sin(-yaw),  np.cos(-yaw), 0],
-             [           0,             0, 1]]
+                [np.sin(-yaw),  np.cos(-yaw), 0],
+                [           0,             0, 1]]
             )
         vx, vy, vz = np.dot(self.rot_minus_yaw, self.robot_body.speed())  # rotate speed back to body point of view
 
@@ -83,16 +83,6 @@ class RoboschoolSocial(SharedMemoryClientEnv):
             0.3*vx, 0.3*vy, 0.3*vz,    # 0.3 is just scaling typical speed into -1..+1, no physical sense here
             r, p], dtype=np.float32)
         return np.clip( np.concatenate([more] + [j] + [self.feet_contact]), -5, +5)
-
-    def get_position(self):
-        ''' Gets the current position of the robot.
-        Calculated by averaging over the absolute position of every x,y-joint
-        position and torso z-position (not average):
-        '''
-        body_pose = self.robot_body.pose()
-        parts_xyz = np.array( [p.pose().xyz() for p in self.parts.values()] ).flatten()
-        self.body_xyz = (parts_xyz[0::3].mean(), parts_xyz[1::3].mean(), body_pose.xyz()[2])  # torso z is more informative than mean z
-        return self.body_xyz
 
     def calc_potential(self):
         # progress in potential field is speed*dt, typical speed is about 2-3 meter per second, this potential will change 2-3 per frame (not per second),
@@ -104,10 +94,10 @@ class RoboschoolSocial(SharedMemoryClientEnv):
     foot_collision_cost  = -1.0    # touches another leg, or other objects, that cost makes robot avoid smashing feet into itself
     foot_ground_object_names = set(["floor"])  # to distinguish ground and other objects
     joints_at_limit_cost = -0.2    # discourage stuck joints
-
     def _step(self, a):
         if not self.scene.multiplayer:  # if multiplayer, action first applied to all robots, then global step() called, then _step() for all robots with the same actions
-            self.apply_action(a)
+            #self.apply_action(a)
+            self.custom_apply_action(a)
             self.scene.global_step()
 
         state = self.calc_state()  # also calculates self.joints_at_limit
@@ -155,7 +145,7 @@ class RoboschoolSocial(SharedMemoryClientEnv):
         pass
 
     def camera_adjust(self):
-        #self.camera_dramatic()
+        '''#self.camera_dramatic()'''
         self.camera_simple_follow()
 
     def camera_simple_follow(self):
@@ -199,6 +189,64 @@ class RoboschoolSocial(SharedMemoryClientEnv):
         self.camera_z = smoothness*self.camera_z + (1-smoothness)*camz
         self.camera.move_and_look_at(self.camera_x, self.camera_y, self.camera_z, x, y, 0.6)
 
+    # Custom -------------------------------------------------------
+    def custom_get_ordered_joints(self):
+        return self.ordered_joints
+
+    def custom_get_position(self):
+        ''' Gets the current position of the robot.
+        Calculated by averaging over the absolute position of every x,y-joint
+        position and torso z-position (not average):
+        '''
+        body_pose = self.robot_body.pose()
+        speed = self.robot_body.speed()
+        parts_xyz = np.array( [p.pose().xyz() for p in self.parts.values()] ).flatten()
+        body_xyz = (parts_xyz[0::3].mean(), parts_xyz[1::3].mean(), body_pose.xyz()[2])  # torso z is more informative than mean z
+        body_rpy = body_pose.rpy()
+        return body_xyz, body_rpy, speed
+
+    def custom_apply_action(self,a):
+        assert( np.isfinite(a).all() )
+        for n,j in enumerate(self.ordered_joints):
+            if "knee" in j.name or "hip" in j.name:
+                j.set_motor_torque(0)
+            else:
+                j.set_motor_torque( self.power*j.power_coef*float(np.clip(a[n], -1, +1)) )
+
+    def custom_robot_reset(self):
+        self.feet = [self.parts[f] for f in self.foot_list]
+        self.feet_contact = np.array([0.0 for f in self.foot_list], dtype=np.float32)
+        self.scene.actor_introduce(self)
+        self.initial_z = None
+
+    def custom_move_robot(self, init_x, init_y, init_z):
+        "Used by multiplayer stadium to move sideways, to another running lane."
+        self.cpp_robot.query_position()
+        pose = self.cpp_robot.root_part.pose()
+        pose.move_xyz(init_x, init_y, init_z)  # Works because robot loads around (0,0,0), and some robots have z != 0 that is left intact
+        self.cpp_robot.set_pose(pose)
+        self.start_pos_x, self.start_pos_y, self.start_pos_z = init_x, init_y, init_z
+
+    def custom_set_robot(self):
+        for j in self.ordered_joints:
+            print(j.name)
+            if "knee" in j.name or "hip" in j.name:
+                print('hello')
+                j.reset_current_position(0, 0)
+        x, y, z = 0, 0, 0.4
+        self.cpp_robot.query_position()
+        pose = self.cpp_robot.root_part.pose()
+        # pose.set_rpy(0, 0, 0)
+        pose.set_xyz(x, y, z)
+        #pose.move_xyz(x, y, z)  # Works because robot loads around (0,0,0), and some robots have z != 0 that is left intact
+        self.cpp_robot.set_pose(pose)
+        # self.start_pos_x, self.start_pos_y, self.start_pos_z = init_x, init_y, init_z
+
+'''
+My Problem is that setting the position only fixes the torso.
+I want to fixate the hip
+'''
+
 def test():
     import gym, roboschool
     from gym_mujoco_social import RoboschoolSocialHumanoid
@@ -207,10 +255,26 @@ def test():
     env.reset()
     steps = 1000
 
+    done = False
     for step in range(steps):
+        xyz, rpy, speed = env.custom_get_position()
+        print('Step: {}\tDone: {}'.format(step, done))
+        print('xyz: {}\nrpy: {}\nspeed: {}'.format(
+            np.round(xyz,4),np.round(rpy,4), np.round(rpy,4)))
+
         env.render()
         a = env.action_space.sample()
-        s, r, d, i = env.step(a)
+        s, r, done, i = env.step(a)
+        #env.custom_robot_reset()
+        env.custom_set_robot()
+
+        # if step % 50 == 0:
+        #     print('Custom Stuff')
+        #     #env.custom_robot_reset()
+        #     # env.custom_move_robot(0, 0, 1)
+        #     # env.custom_robot_reset()
+        #     env.custom_set_robot()
+        #     input()
 
 if __name__ == '__main__':
     test()
