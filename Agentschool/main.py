@@ -264,12 +264,12 @@ def main():
     args = get_args()  # Real argparser
     ds = description_string(args)
     print_ds(ds)
-    #
-    # if args.vis:
-    #     from vislogger import VisLogger
-    #     ds = description_string(args)
-    #     # Text is not pretty
-    #     vis = VisLogger(description_list=ds, log_dir=args.log_dir)
+
+    if args.vis:
+        from vislogger import VisLogger
+        ds = description_string(args)
+        # Text is not pretty
+        vis = VisLogger(description_list=ds, log_dir=args.log_dir)
 
     # ====== Environment ========
     monitor_log_dir = "/tmp/"

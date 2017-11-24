@@ -106,6 +106,7 @@ class PolicyBody(nn.Module):
         super(PolicyBody, self).__init__()
         self.num_inputs = num_inputs
         self.hidden = hidden
+        self.input_filter = input_filter
 
         if input_filter:
             self.obs_filter = ObsNorm((1,num_inputs),clip=5)
@@ -123,8 +124,9 @@ class PolicyBody(nn.Module):
         return self.head_value(x), x
 
     def cuda(self, **args):
-        self.obs_filter.cuda()
-        super(MLPPolicy, self).cuda(**args)
+        if self.input_filter:
+            self.obs_filter.cuda()
+        super(PolicyBody, self).cuda(**args)
         print('obs cuda')
 
     def cpu(self, **args):

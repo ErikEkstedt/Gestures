@@ -55,7 +55,7 @@ class StackedState(object):
         return self.current_state.size()
 
     def cuda(self):
-        self.state = self.state.cuda()
+        self.current_state = self.current_state.cuda()
         self.use_cuda = True
 
     def cpu(self):
