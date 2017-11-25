@@ -1,4 +1,3 @@
-
 import torch
 import torch.nn as nn
 from torch.autograd import Variable
@@ -14,6 +13,7 @@ import roboschool
 from memory import RolloutStorage, StackedState
 from arguments import FakeArgs, get_args
 from AgentRobo import AgentRoboSchool
+
 
 # ---------------------
 def log_print(agent, dist_entropy, value_loss, floss, action_loss, j):
@@ -32,7 +32,8 @@ def exploration(agent, env):
 
     1. Sample actions and gather rewards trajectory for num_steps.
     2. Reset states and rewards if some environments are done.
-    3. Keep track of means and std for visualizing progress.
+    3. Keep track of means and std fo
+    visualizing progress.
     '''
     stds = []
     for step in range(agent.args.num_steps):
@@ -265,32 +266,38 @@ def main():
     ds = description_string(args)
     print_ds(ds)
 
-    if args.vis:
-        from vislogger import VisLogger
-        ds = description_string(args)
-        # Text is not pretty
-        vis = VisLogger(description_list=ds, log_dir=args.log_dir)
 
-    # ====== Environment ========
+    # if args.vis:
+    #     from vislogger import VisLogger
+    #     ds = description_string(args)
+    #     env.custom_set_robot()
+    #     # Text is not pretty
+    #     vis = VisLogger(description_list=ds, log_dir=args.log_dir)
+
+    # == Environment ========
     monitor_log_dir = "/tmp/"
     env_id = "RoboschoolHumanoid-v1"
     num_stack = 4
     num_steps = 10
     use_cuda = False
 
+
     env = SubprocVecEnv([
         make_env(env_id, args.seed, i, monitor_log_dir)
         for i in range(args.num_processes)])
 
+
     state_shape = env.observation_space.shape
     stacked_state_shape = (state_shape[0] * num_stack,)
     action_shape = env.action_space.shape
+
 
     # memory
     memory = RolloutStorage(args.num_steps,
                             args.num_processes,
                             stacked_state_shape,
                             action_shape)
+
 
     CurrentState = StackedState(args.num_processes,
                                 args.num_stack,
@@ -311,7 +318,7 @@ def main():
     agent.final_rewards = torch.zeros([args.num_processes, 1])   # total episode reward
     agent.episode_rewards = torch.zeros([args.num_processes, 1]) # tmp episode reward
     agent.num_done = torch.zeros([args.num_processes, 1])        # how many finished episode, resets on plot
-    agent.std = []                           # list to hold all [action_mean, action_std]
+    agent.std = []                                               # list to hold all [action_mean, action_std]
 
     #  ==== RESET ====
     s = env.reset()
@@ -351,6 +358,9 @@ def main():
         agent.memory.last_to_first() #updates rollout memory and puts the last state first.
 
         #  ==== LOG ======
+
+        if j % args.log_interval == 0: log_print(agent, dist_entropy, value_loss, 1, action_loss, j)
+
         if j % args.vis_interval == 0 and j is not 0 and not args.no_vis:
             frame = (j + 1) * args.num_steps
 
@@ -390,7 +400,6 @@ def main():
             agent.num_done = 0
             agent.final_rewards = 0
 
-        #  if j % args.log_interval == 0: log_print(agent, dist_entropy, value_loss, 1, action_loss, j)
 
 
 if __name__ == '__main__':

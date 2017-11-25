@@ -32,6 +32,8 @@ Seems to work now!
 2. Clean code.
 3. Back to environment
 
+Value estimation based on rgb-obswervation as well?
+
 ### PPO
 
 Old policy/two policies needed ?

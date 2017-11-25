@@ -233,14 +233,25 @@ class RoboschoolSocial(SharedMemoryClientEnv):
             if "knee" in j.name or "hip" in j.name:
                 print('hello')
                 j.reset_current_position(0, 0)
-        x, y, z = 0, 0, 0.4
-        self.cpp_robot.query_position()
-        pose = self.cpp_robot.root_part.pose()
+        # x, y, z = 0, 0, 0.4
+        # self.cpp_robot.query_position()
+        # pose = self.cpp_robot.root_part.pose()
         # pose.set_rpy(0, 0, 0)
-        pose.set_xyz(x, y, z)
-        #pose.move_xyz(x, y, z)  # Works because robot loads around (0,0,0), and some robots have z != 0 that is left intact
-        self.cpp_robot.set_pose(pose)
-        # self.start_pos_x, self.start_pos_y, self.start_pos_z = init_x, init_y, init_z
+        # pose.set_xyz(x, y, z)
+        # #pose.move_xyz(x, y, z)  # Works because robot loads around (0,0,0), and some robots have z != 0 that is left intact
+        # #self.cpp_robot.set_pose(pose)
+        # self.cpp_robot.set_pose_and_speed(pose, 0,0,0)
+        # # self.start_pos_x, self.start_pos_y, self.start_pos_z = init_x, init_y, init_z
+        cpose = cpp_household.Pose()
+        yaw_center=0
+        yaw_random_spread = 3.14/16
+        yaw = yaw_center + self.np_random.uniform(low=-yaw_random_spread, high=yaw_random_spread)
+        pitch, roll = 0, 0
+        print('yaw_center: ', yaw)
+        print('x: {}, y: {}, z: {}'.format(self.start_pos_x, self.start_pos_y, self.start_pos_z))
+        cpose.set_xyz(self.start_pos_x, self.start_pos_y, self.start_pos_z + 1.4)
+        cpose.set_rpy(roll, pitch, yaw)
+        self.cpp_robot.set_pose_and_speed(cpose, 0,0,0)
 
 '''
 My Problem is that setting the position only fixes the torso.
@@ -250,8 +261,10 @@ I want to fixate the hip
 def test():
     import gym, roboschool
     from gym_mujoco_social import RoboschoolSocialHumanoid
+    from gym_mujoco_social import RoboschoolSocialHumanoid2
 
-    env = RoboschoolSocialHumanoid()
+    #env = RoboschoolSocialHumanoid()
+    env = RoboschoolSocialHumanoid2()
     env.reset()
     steps = 1000
 
@@ -260,21 +273,22 @@ def test():
         xyz, rpy, speed = env.custom_get_position()
         print('Step: {}\tDone: {}'.format(step, done))
         print('xyz: {}\nrpy: {}\nspeed: {}'.format(
-            np.round(xyz,4),np.round(rpy,4), np.round(rpy,4)))
+            np.round(xyz,4),np.round(rpy,4), np.round(speed,4)))
 
         env.render()
+        env.custom_set_robot()
         a = env.action_space.sample()
+        a = np.zeros(a.shape)
         s, r, done, i = env.step(a)
         #env.custom_robot_reset()
-        env.custom_set_robot()
 
-        # if step % 50 == 0:
-        #     print('Custom Stuff')
-        #     #env.custom_robot_reset()
-        #     # env.custom_move_robot(0, 0, 1)
-        #     # env.custom_robot_reset()
-        #     env.custom_set_robot()
-        #     input()
+        if step % 10 == 0:
+            print('Custom Stuff')
+            #env.custom_robot_reset()
+            # env.custom_move_robot(0, 0, 1)
+            # env.custom_robot_reset()
+            #env.custom_set_robot()
+            input()
 
 if __name__ == '__main__':
     test()
