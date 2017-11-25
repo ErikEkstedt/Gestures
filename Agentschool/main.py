@@ -267,12 +267,11 @@ def main():
     print_ds(ds)
 
 
-    # if args.vis:
-    #     from vislogger import VisLogger
-    #     ds = description_string(args)
-    #     env.custom_set_robot()
-    #     # Text is not pretty
-    #     vis = VisLogger(description_list=ds, log_dir=args.log_dir)
+    if args.vis:
+        from vislogger import VisLogger
+        ds = description_string(args)
+        # Text is not pretty
+        vis = VisLogger(description_list=ds, log_dir=args.log_dir)
 
     # == Environment ========
     monitor_log_dir = "/tmp/"
@@ -365,6 +364,10 @@ def main():
             frame = (j + 1) * args.num_steps
 
             if not args.no_test and j % args.test_interval == 0:
+                ''' TODO
+                Fix so that resetting the environment does not
+                effect the data. Equivialent to `done` ?
+                should be the same.'''
                 print('Testing')
                 test_reward = test(env, agent, tries=args.num_test, render = args.render)
                 vis.line_update(Xdata=frame, Ydata=test_reward, name='Test Score')
@@ -376,12 +379,13 @@ def main():
                 agent.rollouts.states[0].copy_(agent.current_state())
                 agent.rollouts.obs[0].copy_(rgbToTensor(o)[0])
 
-
             vloss_total /= args.vis_interval
             ploss_total /= args.vis_interval
             ent_total   /= args.vis_interval
 
-            R = agent.episode_rewards/(agent.tmp_steps + 1 )
+            # Take mean b/c several processes
+            R = agent.episode_rewards/(agent.tmp_steps+1)
+            R = R.mean()
             std = torch.Tensor(agent.std).mean()
 
             # Draw plots
