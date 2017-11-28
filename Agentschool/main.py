@@ -104,7 +104,7 @@ def training(agent, VLoss, verbose=False):
             ratio = torch.exp(action_log_probs - Variable(old_action_log_probs_batch))
             surr1 = ratio * adv_targ
             surr2 = torch.clamp(ratio, 1.0 - args.clip_param, 1.0 + args.clip_param) * adv_targ
-            action_loss = -torch.min(surr1, surr2).mean() # PPO's pessimistic surrogate (L^CLIP)
+            sction_loss = -torch.min(surr1, surr2).mean() # PPO's pessimistic surrogate (L^CLIP)
 
             value_loss = (Variable(return_batch) - values).pow(2).mean()
 
