@@ -27,22 +27,14 @@ class Shared_Mem(SharedMemoryClientEnv):
         self.camera_follow = 0
 
     def create_single_player_scene(self):
-        # return SinglePlayerStadiumScene(gravity=9.8, timestep=0.0165/4, frame_skip=4)
-        return SingleRobotEmptyScene(gravity=0, timestep=0.0165/4, frame_skip=4)
+        return SinglePlayerStadiumScene(gravity=9.8, timestep=0.0165/4, frame_skip=4)
+        # return SingleRobotEmptyScene(gravity=0, timestep=0.0165/4, frame_skip=4)
 
     def robot_specific_reset(self):
-        if self.robot_name=='torso':
-            for j in self.ordered_joints:
-                j.reset_current_position(self.np_random.uniform( low=-0.1, high=0.1 ), 0)
-            self.feet = [self.parts[f] for f in self.foot_list]
-            self.feet_contact = np.array([0.0 for f in self.foot_list], dtype=np.float32)
-            self.scene.actor_introduce(self)
-            self.initial_z = None
-        else:
-            for j in self.ordered_joints:
-                j.reset_current_position(self.np_random.uniform( low=-0.1, high=0.1 ), 0)
-            self.scene.actor_introduce(self)
-            self.initial_z = None
+        for j in self.ordered_joints:
+            j.reset_current_position(self.np_random.uniform( low=-0.1, high=0.1 ), 0)
+        self.scene.actor_introduce(self)
+        self.initial_z = None
 
     def move_robot(self, init_x, init_y, init_z):
         "Used by multiplayer stadium to move sideways, to another running lane."
@@ -377,66 +369,40 @@ class GYM_XML_MEM(Shared_Mem, GYM_XML):
         Shared_Mem.__init__(self, power)
 
 
-class Social_Humanoid(GYM_XML_MEM):
+class Social_Torso(GYM_XML_MEM):
     TASK_WALK, TASK_STAND_UP, TASK_ROLL_OVER, TASKS = range(4)
 
     def __init__(self, path=PATH_TO_XML, robot_name='torso', model_xml='humanoid_symmetric.xml'):
-        GYM_XML_MEM.__init__(self, path=path, model_xml=model_xml, robot_name=robot_name, action_dim=17, obs_dim=44, power=0.41)
+        GYM_XML_MEM.__init__(self, path=path, model_xml=model_xml, robot_name=robot_name, action_dim=13, obs_dim=44, power=0.41)
         # 17 joints, 4 of them important for walking (hip, knee), others may as well be turned off, 17/4 = 4.25
         self.electricity_cost  = 4.25*GYM_XML_MEM.electricity_cost
         self.stall_torque_cost = 4.25*GYM_XML_MEM.stall_torque_cost
         self.initial_z = 0.8
 
     def robot_specific_reset(self):
-        if self.robot_name is 'torso':
-            GYM_XML_MEM.robot_specific_reset(self)
-            self.motor_names  = ["abdomen_z", "abdomen_y", "abdomen_x"]
-            self.motor_power  = [100, 100, 100]
-            self.motor_names += ["right_hip_x", "right_hip_z", "right_hip_y", "right_knee"]
-            self.motor_power += [100, 100, 300, 200]
-            self.motor_names += ["left_hip_x", "left_hip_z", "left_hip_y", "left_knee"]
-            self.motor_power += [100, 100, 300, 200]
-            self.motor_names += ["right_shoulder1", "right_shoulder2", "right_elbow"]
-            self.motor_power += [75, 75, 75]
-            self.motor_names += ["left_shoulder1", "left_shoulder2", "left_elbow"]
-            self.motor_power += [75, 75, 75]
-            self.motors = [self.jdict[n] for n in self.motor_names]
-            self.humanoid_task()
-        else:
-            GYM_XML_MEM.robot_specific_reset(self)
-            self.motor_names  = ["abdomen_z", "abdomen_y", "abdomen_x"]
-            self.motor_power  = [100, 100, 100]
-            self.motor_names += ["right_shoulder1", "right_shoulder2", "right_elbow"]
-            self.motor_power += [75, 75, 75]
-            self.motor_names += ["left_shoulder1", "left_shoulder2", "left_elbow"]
-            self.motor_power += [75, 75, 75]
-            self.motors = [self.jdict[n] for n in self.motor_names]
-            self.humanoid_task()
+        GYM_XML_MEM.robot_specific_reset(self)
+        self.motor_names  = ["abdomen_z", "abdomen_y", "abdomen_x", "upper_abs"]
+        self.motor_power  = [100, 100, 100, 100]
+        self.motor_names += [ "neck_y", "neck_z", "neck_x"]
+        self.motor_power += [75, 75, 75]
+        self.motor_names += ["right_shoulder1", "right_shoulder2", "right_elbow"]
+        self.motor_power += [75, 75, 75]
+        self.motor_names += ["left_shoulder1", "left_shoulder2", "left_elbow"]
+        self.motor_power += [75, 75, 75]
+        self.motors = [self.jdict[n] for n in self.motor_names]
+        self.humanoid_task()
 
     def humanoid_task(self):
-        self.set_initial_orientation(self.TASK_WALK, yaw_center=0, yaw_random_spread=np.pi/16)
+        self.set_initial_orientation(yaw_center=0, yaw_random_spread=np.pi/16)
 
-    def set_initial_orientation(self, task, yaw_center, yaw_random_spread):
-        self.task = task
+    def set_initial_orientation(self, yaw_center, yaw_random_spread):
         cpose = cpp_household.Pose()
         yaw = yaw_center + self.np_random.uniform(low=-yaw_random_spread, high=yaw_random_spread)
-        if task==self.TASK_WALK:
-            pitch = 0
-            roll = 0
-            #cpose.set_xyz(self.start_pos_x, self.start_pos_y, self.start_pos_z + 1.4)
-            cpose.set_xyz(0, 0, 0 )
-        elif task==self.TASK_STAND_UP:
-            pitch = np.pi/2
-            roll = 0
-            cpose.set_xyz(self.start_pos_x, self.start_pos_y, self.start_pos_z + 0.45)
-        elif task==self.TASK_ROLL_OVER:
-            pitch = np.pi*3/2 - 0.15
-            roll = 0
-            cpose.set_xyz(self.start_pos_x, self.start_pos_y, self.start_pos_z + 0.22)
-        else:
-            assert False
+        pitch = 0
+        roll = 0
+        #cpose.set_xyz(self.start_pos_x, self.start_pos_y, self.start_pos_z + 1.4)
+        cpose.set_xyz(0, 0, 0 )
         cpose.set_rpy(roll, pitch, yaw)
-        #self.cpp_robot.set_pose_and_speed(cpose, 0,0,0)
         self.cpp_robot.set_pose_and_speed(cpose, 0,0,0)
         self.initial_z = 0.0
 
@@ -460,109 +426,54 @@ class Social_Humanoid(GYM_XML_MEM):
     def get_world(self):
         return self.scene.cpp_world
 
-class Reacher(GYM_XML):
-    def __init__(self, path=PATH_TO_XML, model_xml='reacher.xml', robot_name='body0', action_dim=2, obs_dim=9):
-        GYM_XML.__init__(self, path, model_xml, robot_name, action_dim, obs_dim)
-
-    def create_single_player_scene(self):
-        return SingleRobotEmptyScene(gravity=0.0, timestep=0.0165, frame_skip=1)
-
-    TARG_LIMIT = 0.27
-    def robot_specific_reset(self):
-        self.jdict["target_x"].reset_current_position(self.np_random.uniform( low=-self.TARG_LIMIT, high=self.TARG_LIMIT ), 0)
-        self.jdict["target_y"].reset_current_position(self.np_random.uniform( low=-self.TARG_LIMIT, high=self.TARG_LIMIT ), 0)
-        self.fingertip = self.parts["fingertip"]
-        self.target    = self.parts["target"]
-        self.central_joint = self.jdict["joint0"]
-        self.elbow_joint   = self.jdict["joint1"]
-        self.central_joint.reset_current_position(self.np_random.uniform( low=-3.14, high=3.14 ), 0)
-        self.elbow_joint.reset_current_position(self.np_random.uniform( low=-3.14, high=3.14 ), 0)
-
-    def apply_action(self, a):
-        assert( np.isfinite(a).all() )
-        self.central_joint.set_motor_torque( 0.05*float(np.clip(a[0], -1, +1)) )
-        self.elbow_joint.set_motor_torque( 0.05*float(np.clip(a[1], -1, +1)) )
-
-    def calc_state(self):
-        theta,      self.theta_dot = self.central_joint.current_relative_position()
-        self.gamma, self.gamma_dot = self.elbow_joint.current_relative_position()
-        target_x, _ = self.jdict["target_x"].current_position()
-        target_y, _ = self.jdict["target_y"].current_position()
-        self.to_target_vec = np.array(self.fingertip.pose().xyz()) - np.array(self.target.pose().xyz())
-        return np.array([
-            target_x,
-            target_y,
-            self.to_target_vec[0],
-            self.to_target_vec[1],
-            np.cos(theta),
-            np.sin(theta),
-            self.theta_dot,
-            self.gamma,
-            self.gamma_dot,
-            ])
-
-    def calc_potential(self):
-        return -100 * np.linalg.norm(self.to_target_vec)
-
-    def _step(self, a):
-        assert(not self.scene.multiplayer)
-        self.apply_action(a)
-        self.scene.global_step()
-
-        state = self.calc_state()  # sets self.to_target_vec
-
-        potential_old = self.potential
-        self.potential = self.calc_potential()
-
-        electricity_cost = (
-            -0.10*(np.abs(a[0]*self.theta_dot) + np.abs(a[1]*self.gamma_dot))  # work torque*angular_velocity
-            -0.01*(np.abs(a[0]) + np.abs(a[1]))                                # stall torque require some energy
-            )
-        stuck_joint_cost = -0.1 if np.abs(np.abs(self.gamma)-1) < 0.01 else 0.0
-        self.rewards = [float(self.potential - potential_old), float(electricity_cost), float(stuck_joint_cost)]
-        self.frame  += 1
-        self.done   += 0
-        self.reward += sum(self.rewards)
-        self.HUD(state, a, False)
-        return state, sum(self.rewards), False, {}
-
-    def camera_adjust(self):
-        x, y, z = self.fingertip.pose().xyz()
-        x *= 0.5
-        y *= 0.5
-        self.camera.move_and_look_at(0.3, 0.3, 0.3, x, y, z)
+    def get_motor_names(self):
+        return self.motor_names
 
 
 def test():
-    from environment import Social_Humanoid
-    from environment import Reacher
+    from environment import Social_Torso
     import numpy as np
 
+    # Roboschool
     # custom_model_xml = 'reacher.xml'
     # env = Reacher(path=PATH_TO_CUSTOM_XML, model_xml=custom_model_xml)
-
     # robot_name = 'torso'
     # model_xml = 'humanoid_symmetric.xml'
     # path=PATH_TO_XML
 
-    # robot_name = 'pelvis'
-    # model_xml = 'custom.xml'
-    # path=PATH_TO_CUSTOM_XML
-    # env = Social_Humanoid(path, robot_name=robot_name, model_xml=model_xml)
-
     robot_name = 'lwaist'
-    model_xml = 'custom2.xml'
+    model_xml = 'Social_torso.xml'
     path=PATH_TO_CUSTOM_XML
-    env = Social_Humanoid(path, robot_name=robot_name, model_xml=model_xml)
+    env = Social_Torso(path, robot_name=robot_name, model_xml=model_xml)
     env.MAX_TIME = 1000
+
+    asize = env.action_space.shape[0]
+
     s = env.reset()
 
-    asize = 13
+    def random_action(idx, size):
+        z = np.zeros(size)
+        if type(idx) is int:
+            z[idx] = np.random.rand()*2 - 1
+        else:
+            z[idx] = np.random.rand(len(idx))*2 - 1
+        return z
 
-    for i in range(1000):
+    arms = [np.arange(13)[-6:]]  # only move arms.
+    abdom = [np.arange(13)[:4]]  # only move abdomen.
+    neck = [np.arange(13)[5:8]]  # only move neck.
+    alls = [np.arange(13)]
+
+    for i in range(8000):
         env.render()
-        a = np.random.rand(asize)*2 - 1
+        a = random_action(alls, asize)
         env.step(a)
+
+        # if i % 400 == 0 and i is not 0:
+        #     idx += 1
+        #     print('idx', idx)
+        #     input()
+
 
 
 
