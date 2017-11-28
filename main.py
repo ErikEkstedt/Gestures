@@ -397,7 +397,7 @@ def main():
             ent_total   /= args.vis_interval
 
             # Take mean b/c several processes
-            R = agent.episode_rewards/(agent.tmp_steps+1)
+            R = agent.episode_rewards
             R = R.mean()
             std = torch.Tensor(agent.std).mean()
 
