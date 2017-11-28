@@ -48,7 +48,6 @@ def exploration(agent, env):
 
         # Observe reward and next state
         state, reward, done, info = env.step(cpu_actions)
-        print(done)
         reward = torch.from_numpy(reward).view(agent.args.num_processes, -1).float()
         masks = torch.FloatTensor([[0.0] if done_ else [1.0] for done_ in done])
 

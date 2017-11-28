@@ -134,7 +134,6 @@ class Shared_Mem(SharedMemoryClientEnv):
         done = False
         if abs(self.potential) < self.precision:
             done = True
-        print(self.frame)
         if self.frame>=self.MAX_TIME:
             done = True
         if (done and not self.done) or self.frame>=self.MAX_TIME:
