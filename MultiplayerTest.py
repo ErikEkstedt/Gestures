@@ -6,6 +6,7 @@ import os, gym, roboschool
 import numpy as np
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
 
+from environment import Social_Torso
 # ======= Own Test =========
 class RandomAction(object):
     def __init__(self, env):
@@ -18,16 +19,19 @@ stadium = roboschool.scene_stadium.MultiplayerStadiumScene(gravity=0.8, timestep
 
 participants = []
 # Agent 0
-env_id = "RoboschoolHumanoid-v1"
-env = gym.make(env_id)
+# env_id = "RoboschoolHumanoid-v1"
+# env = gym.make(env_id)
+env = Social_Torso()
 env.unwrapped.scene = stadium   # if you set scene before first reset(), it will be used.
 env.unwrapped.player_n = 0   # mutliplayer scenes will also use player_n
 pi = RandomAction(env)
 participants.append((env,pi))
 
 # Agent 1
-env_id = "RoboschoolHumanoid-v1"
-env = gym.make(env_id)
+# env_id = "RoboschoolHumanoid-v1"
+# env = gym.make(env_id)
+
+env = Social_Torso()
 env.unwrapped.scene = stadium   # if you set scene before first reset(), it will be used.
 env.unwrapped.player_n = 1   # mutliplayer scenes will also use player_n
 pi = RandomAction(env)

@@ -1,10 +1,17 @@
 Roboschool
 ==========
 
+# Todo
+
+- [x] **Get back relative coordinates**
+- [ ] **Rewards**
+	- Start: distance between left hand and a target.
+		- train and see if it works.
+- [ ] **Targets**
+
+
 # Custom Environment
 Wants:
-- [ ] **Customising initial pose**
-	- [ ] fix joints, fix such that robot always standing.
 - [ ] **Customizing rewards**
 	* [x] How to get positions and information from joints?
 	* [x] coordinates
