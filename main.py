@@ -6,6 +6,7 @@ from torch.utils.data.sampler import BatchSampler, SubsetRandomSampler
 from itertools import count
 import os
 import gym
+import numpy as np
 from baselines import bench
 from baselines.common.vec_env.subproc_vec_env import SubprocVecEnv
 import roboschool
@@ -13,7 +14,7 @@ import roboschool
 from memory import RolloutStorage, StackedState
 from arguments import FakeArgs, get_args
 from AgentRobo import AgentRoboSchool
-
+from environment import Social_Torso
 
 # ---------------------
 def log_print(agent, dist_entropy, value_loss, floss, action_loss, j):
@@ -47,6 +48,7 @@ def exploration(agent, env):
 
         # Observe reward and next state
         state, reward, done, info = env.step(cpu_actions)
+        print(done)
         reward = torch.from_numpy(reward).view(agent.args.num_processes, -1).float()
         masks = torch.FloatTensor([[0.0] if done_ else [1.0] for done_ in done])
 
@@ -98,13 +100,13 @@ def training(agent, VLoss, verbose=False):
 
             # Reshape to do in a single forward pass for all steps
             values, action_log_probs, dist_entropy = agent.evaluate_actions(Variable(states_batch),
-                                                                                    Variable(actions_batch))
+                                                                            Variable(actions_batch))
 
             adv_targ = Variable(adv_targ)
             ratio = torch.exp(action_log_probs - Variable(old_action_log_probs_batch))
             surr1 = ratio * adv_targ
             surr2 = torch.clamp(ratio, 1.0 - args.clip_param, 1.0 + args.clip_param) * adv_targ
-            sction_loss = -torch.min(surr1, surr2).mean() # PPO's pessimistic surrogate (L^CLIP)
+            action_loss = -torch.min(surr1, surr2).mean() # PPO's pessimistic surrogate (L^CLIP)
 
             value_loss = (Variable(return_batch) - values).pow(2).mean()
 
@@ -260,6 +262,14 @@ def make_env(env_id, seed, rank, log_dir):
         return env
     return _thunk
 
+def make_social_torso(seed, rank, log_dir):
+    def _thunk():
+        env = Social_Torso()
+        env.seed(seed + rank)
+        env = bench.Monitor(env, os.path.join(log_dir, "{}.monitor.json".format(rank)))
+        return env
+    return _thunk
+
 
 def main():
     args = get_args()  # Real argparser
@@ -281,8 +291,12 @@ def main():
     use_cuda = False
 
 
+    # env = SubprocVecEnv([
+    #     make_env(env_id, args.seed, i, monitor_log_dir)
+    #     for i in range(args.num_processes)])
+
     env = SubprocVecEnv([
-        make_env(env_id, args.seed, i, monitor_log_dir)
+        make_social_torso(args.seed, i, monitor_log_dir)
         for i in range(args.num_processes)])
 
 

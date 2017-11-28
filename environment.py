@@ -132,7 +132,12 @@ class Shared_Mem(SharedMemoryClientEnv):
         self.rewards = [float(self.potential - potential_old)]
         self.frame  += 1
         done = False
-        if (done and not self.done) or self.frame==self.MAX_TIME:
+        if abs(self.potential) < self.precision:
+            done = True
+        print(self.frame)
+        if self.frame>=self.MAX_TIME:
+            done = True
+        if (done and not self.done) or self.frame>=self.MAX_TIME:
             self.episode_over(self.frame)
         self.done   += done   # 2 == 1+True
         self.reward += sum(self.rewards)
@@ -301,8 +306,9 @@ class GYM_XML_MEM(Shared_Mem, GYM_XML):
 
 
 class Social_Torso(GYM_XML_MEM):
-    def __init__(self, path=PATH_TO_CUSTOM_XML, robot_name='lwaist', model_xml='Social_torso.xml'):
+    def __init__(self, path=PATH_TO_CUSTOM_XML, robot_name='lwaist', model_xml='Social_torso.xml', precision=5):
         GYM_XML_MEM.__init__(self, path=path, model_xml=model_xml, robot_name=robot_name, action_dim=13, obs_dim=29, power=0.41)
+        self.precision = precision
         # 17 joints, 4 of them important for walking (hip, knee), others may as well be turned off, 17/4 = 4.25
         self.electricity_cost  = 4.25*GYM_XML_MEM.electricity_cost
         self.stall_torque_cost = 4.25*GYM_XML_MEM.stall_torque_cost
@@ -395,6 +401,8 @@ class Social_Torso(GYM_XML_MEM):
         self.jdict["target0_y"].reset_current_position(self.np_random.uniform( low=-0.3, high=0.3), 0)
         self.jdict["target0_z"].reset_current_position(self.np_random.uniform( low=0, high=0.3), 0)
 
+    def set_precision(self, p):
+        self.set_precision = p
 
 def test():
     from environment import Social_Torso
@@ -420,9 +428,7 @@ def test():
     for i in range(8000):
         env.render()
         a = random_action(alls, asize)
-        print(a)
         s, r, d, _ = env.step(a)
-        print(r)
 
         if i % 400 == 0 and i is not 0:
             env.switch_target()
