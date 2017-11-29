@@ -380,7 +380,7 @@ def main():
     CurrentState = StackedState(args.num_processes,
                                 args.num_stack,
                                 state_shape,
-                                args.use_cuda)
+                                args.cuda)
 
     # ====== Agent ==============
     torch.manual_seed(args.seed)
