@@ -192,50 +192,83 @@ def PPOLoss(agent, states, actions, returns, adv_target, VLoss, verbose=False):
         input()
     return value_loss, action_loss, dist_entropy
 
-def test(agent, tries=10, render=False):
-    ''' FIx this so testing is possible'''
-    state_before_test= agent.CurrentState()
+def test_and_render(agent, tries=10):
+    '''Test
+    :param agent         - The agent playing
+    :param tries         - int, number oftest runs
+    '''
+
+def test(agent, tries=10):
+    '''Test
+
+    :param agent         - The agent playing
+    :param tries         - int, number oftest runs
+
+    Testing might occur right in the middle of exploring/training, i.e the agent
+    has `active` current states.
+    Test should save these current states, reset the state, test, then reinitialize
+    the current states from before.
+    '''
+    # Use same number of testing envs as in training.
+    TestState = StackedState(agent.args.num_processes,
+                             agent.args.num_stack,
+                             agent.state_shape,
+                             agent.use_cuda)
+
+    # Test environments
+    testenv = SubprocVecEnv([
+        make_social_torso(agent.args.seed, i, '/tmp')
+        for i in range(agent.args.num_processes)])
 
     total_reward = 0
-    testenv = Social_Torso()
-    for run in range(tries):
-        done = False
-        R = 0
-        state  = env.reset()
-        agent.CurrentState.update(state)
-        for i in count(1):
-            value, action, _, _ = agent.sample(agent.test_state(), deterministic=True)  # no variance
-            # cpu_action   = action.data.squeeze(1).cpu().numpy()[0]
-            value, action, action_log_prob, a_std = agent.sample(agent.CurrentState())
-            stds.append(a_std.data.mean())  # Averaging the std for all actions (really blunt info)
+    done = False
+    episode_rewards = 0
+    final_rewards = 0
 
-            cpu_actions = action.data.squeeze(1).cpu().numpy()  # gym takes np.ndarrays
+    TestState.reset()  # reset test state
+    state  = testenv.reset()
+    TestState.update(state)
 
-            # Observe reward and next state
-            state, reward, done, info = env.step(cpu_actions)
-            reward = torch.from_numpy(reward).view(agent.args.num_processes, -1).float()
+    total_done = 0
+    while total_done <= tries:
+        # Sample actions
+        value, action, _, _ = agent.sample(TestState(), deterministic=True)
+        cpu_actions = action.data.squeeze(1).cpu().numpy()  # gym takes np.ndarrays
 
-            # reset current states for envs done
-            agent.CurrentState.check_and_reset(masks)
+        # Observe reward and next state
+        state, reward, done, info = testenv.step(cpu_actions)
+        total_done += sum(done)  # keep track of number of completed runs
 
-            # Update current state and add data to memory
-            agent.CurrentState.update(state)
+        reward = torch.from_numpy(reward).view(agent.args.num_processes, -1).float()
+        masks = torch.FloatTensor([[0.0] if done_ else [1.0] for done_ in done])
 
+        # If done then update final rewards and reset episode reward
+        episode_rewards += reward
+        final_rewards *= masks  # set final_reward[i] to zero if masks[i] = 0 -> testenv[i] is done
+        final_rewards += (1 - masks) * episode_rewards # update final_reward to cummulative episodic reward
+        episode_rewards *= masks # reset episode reward
 
-            if render and run >7:
-                env.render()
+        if sum(done)>0:
+            print('done', done)
+            print('episode reward', episode_rewards)
+            print('final reward', final_rewards)
+            print('total_done', total_done)
+            final_rewards *= (1-masks)  # keep the actual completed score.
+            total_reward += final_rewards.sum()
+            print('final_reward after mask', final_rewards)
+            print('total_reward', total_reward)
+            input()
 
-            if done:
-                print('Did it!')
-                print('... in {} iterations'.format(i))
-                break
+        if agent.args.cuda:
+            masks = masks.cuda()
 
-            if i > agent.args.max_test_length:
-                print('Did not make it')
-                R /= i
-                break
-        total_reward += R
-    return total_reward/tries
+        # reset current states for testenvs done
+        TestState.check_and_reset(masks)
+
+        # Update current state and add data to memory
+        TestState.update(state)
+
+    return total_reward/total_done
 
 def description_string(args):
     '''Some useful descriptions for the logger/visualizer'''
@@ -332,6 +365,7 @@ def main():
                     fixed_std=False,
                     std=0.5)
 
+    agent.state_shape = state_shape     # Save non-stack state-shape for testing
     VLoss = nn.MSELoss()                     # Value loss function
 
     agent.final_rewards = torch.zeros([args.num_processes, 1])   # total episode reward
@@ -370,6 +404,10 @@ def main():
         exploration(agent, env)  # Explore the environment for args.num_steps
         value_loss, action_loss, dist_entropy = training(agent, VLoss, verbose=False)  # Train models for args.ppo_epoch
 
+        print('TESTING')
+        testreward = test(agent, tries=5)
+        print('Average test reward: ', testreward)
+
         vloss_total += value_loss
         ploss_total += action_loss
         ent_total += dist_entropy
@@ -389,7 +427,7 @@ def main():
                 effect the data. Equivialent to `done` ?
                 should be the same.'''
                 print('Testing')
-                test_reward = test(env, agent, tries=args.num_test, render = args.render)
+                test_reward = test(agent, tries=10)
                 vis.line_update(Xdata=frame, Ydata=test_reward, name='Test Score')
                 print('Done testing')
                 #  ==== RESET ====
@@ -404,7 +442,7 @@ def main():
             ent_total   /= args.vis_interval
 
             # Take mean b/c several processes
-            R = agent.episode_rewards/(agent.tmp_steps+1)
+            R = agent.final_rewards
             R = R.mean()
             std = torch.Tensor(agent.std).mean()
 

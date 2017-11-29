@@ -9,6 +9,12 @@ Roboschool
 		- train and see if it works.
 - [ ] **Targets**
 
+1. Fix test method so debugging can be made.
+	 * A test method for visualization - one processor
+	 * A test method for mult. procs for progress measuring.
+	
+2. Define "done" in the environment in a good way that gives monotonical increasing returns for better policies.
+
 
 # Custom Environment
 Wants:
@@ -27,14 +33,15 @@ Wants:
 - [x] **Control the camera**
 
 
-# Code 
-
+# Code
 ## Roboschool Inspired Environment
 These scripts mimicks the structure of roboschool.
 
 Here I try to make an environment that fixates the hips and legs of a humonoid in order to train the upper body. This task does not want to solve balance or walking, only upper body gestures.
 
 ## [Environment](environment.py)
+The script for my custom gym/roboschool environment.
+
 ### Social_Torso 
 Base class which defines my custom environment.
 
@@ -77,7 +84,7 @@ Contains:
 * \_step
 * episode_over
 
-## Other
+
 ### [camera](camera.py)
 Contains the camera class. Used to get rgb observation (optonal: depth, label).
 

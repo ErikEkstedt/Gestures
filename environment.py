@@ -314,7 +314,7 @@ class Social_Torso(GYM_XML_MEM):
         self.electricity_cost  = 4.25*GYM_XML_MEM.electricity_cost
         self.stall_torque_cost = 4.25*GYM_XML_MEM.stall_torque_cost
         # self.initial_z = 0.8
-        self.MAX_TIME = 10000
+        self.MAX_TIME = 1000
 
     def robot_specific_reset(self):
         GYM_XML_MEM.robot_specific_reset(self)
