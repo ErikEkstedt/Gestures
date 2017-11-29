@@ -18,15 +18,17 @@ from environment import Social_Torso
 
 # ---------------------
 def log_print(agent, dist_entropy, value_loss, floss, action_loss, j):
-    print("\nUpdates {}, num frames {}\nRL: \
-            Average final reward {}, entropy \
-            {:.5f}, value loss {:.5f}, \
-            policy loss {:.5f}".format(j,
+    print("\nUpdate: {}, frames:    {} \
+          \nAverage final reward:   {}, \
+          \nentropy:                {:.4f}, \
+          \ncurrent value loss:     {:.4f}, \
+          \ncurrent policy loss:    {:.4f}".format(j,
                 (j + 1) * agent.args.num_steps,
-                agent.final_rewards[0],
+                agent.final_rewards.mean(),
                 -dist_entropy.data[0],
                 value_loss.data[0],
                 action_loss.data[0],))
+
 
 def exploration(agent, env):
     ''' Exploration part of PPO training:
@@ -198,25 +200,18 @@ def test_and_render(agent, tries=10):
     :param tries         - int, number oftest runs
     '''
 
-def test(agent, tries=10):
-    '''Test
+def test(agent, tries=10, verbose=False):
+    '''Test with multiple processes.
+    :param agent - The agent playing
+    :param tries - int, number oftest runs
 
-    :param agent         - The agent playing
-    :param tries         - int, number oftest runs
-
-    Testing might occur right in the middle of exploring/training, i.e the agent
-    has `active` current states.
-    Test should save these current states, reset the state, test, then reinitialize
-    the current states from before.
+    :output      - Average complete episodic reward
     '''
     # Use same number of testing envs as in training.
     TestState = StackedState(agent.args.num_processes,
                              agent.args.num_stack,
                              agent.state_shape,
                              agent.use_cuda)
-
-    if agent.use_cuda:
-        TestState.cuda()
 
     # Test environments
     testenv = SubprocVecEnv([
@@ -234,8 +229,6 @@ def test(agent, tries=10):
     total_done = 0
     while total_done <= tries:
         # Sample actions
-        print('state is cuda?', TestState().is_cuda)
-        input()
         value, action, _, _ = agent.sample(TestState(), deterministic=True)
         cpu_actions = action.data.squeeze(1).cpu().numpy()  # gym takes np.ndarrays
 
@@ -253,15 +246,8 @@ def test(agent, tries=10):
         episode_rewards *= masks # reset episode reward
 
         if sum(done)>0:
-            print('done', done)
-            print('episode reward', episode_rewards)
-            print('final reward', final_rewards)
-            print('total_done', total_done)
             final_rewards *= (1-masks)  # keep the actual completed score.
-            total_reward += final_rewards.sum()
-            print('final_reward after mask', final_rewards)
-            print('total_reward', total_reward)
-            input()
+            total_reward += final_rewards.sum() # add it to total
 
         if agent.args.cuda:
             masks = masks.cuda()
@@ -272,6 +258,8 @@ def test(agent, tries=10):
         # Update current state and add data to memory
         TestState.update(state)
 
+    testenv.close()
+    del testenv
     return total_reward/total_done
 
 def description_string(args):
@@ -347,7 +335,6 @@ def main():
     stacked_state_shape = (state_shape[0] * num_stack,)
     action_shape = env.action_space.shape
 
-
     # memory
     memory = RolloutStorage(args.num_steps,
                             args.num_processes,
@@ -408,10 +395,6 @@ def main():
         exploration(agent, env)  # Explore the environment for args.num_steps
         value_loss, action_loss, dist_entropy = training(agent, VLoss, verbose=False)  # Train models for args.ppo_epoch
 
-        print('TESTING')
-        testreward = test(agent, tries=5)
-        print('Average test reward: ', testreward)
-
         vloss_total += value_loss
         ploss_total += action_loss
         ent_total += dist_entropy
@@ -434,11 +417,6 @@ def main():
                 vis.line_update(Xdata=frame, Ydata=test_reward, name='Test Score')
                 print('Done testing')
                 #  ==== RESET ====
-                s, o = env.reset()
-                s = state_mask(s)
-                agent.update_current(s)
-                agent.rollouts.states[0].copy_(agent.current_state())
-                agent.rollouts.obs[0].copy_(rgbToTensor(o)[0])
 
             vloss_total /= args.vis_interval
             ploss_total /= args.vis_interval
