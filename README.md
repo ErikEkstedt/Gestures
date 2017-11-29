@@ -51,6 +51,8 @@ Contains:
 * set_initial_orientation
 * apply_action
 
+Uses [this](Social_torso.xml) xml-file.
+
 Inherits from....
 
 ### GYM_XML_MEM
