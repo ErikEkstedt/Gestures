@@ -23,7 +23,7 @@ agent = TestAgentRoboSchool(stacked_state_shape=stacked_state_shape,
 
 agent.state_shape = state_shape     # Save non-stack state-shape for testing
 
-sdict = torch.load('model2.pt')
+sdict = torch.load('model.pt')
 agent.policy.load_state_dict(sdict)
 
 total_reward = 0
@@ -35,6 +35,7 @@ for j in count(1):
     # Sample actions
     value, action, _, _ = agent.sample(TestState(), deterministic=True)
     cpu_actions = action.data.squeeze(1).cpu().numpy()[0]  # gym takes np.ndarrays
+    print(cpu_actions)
     # Observe reward and next state
     state, reward, done, info = env.step(cpu_actions)
     total_reward += reward

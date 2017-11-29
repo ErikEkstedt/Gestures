@@ -89,7 +89,6 @@ def training(agent, VLoss, verbose=False):
     # Calculate Advantage
     advantages = agent.memory.returns[:-1] - agent.memory.value_preds[:-1]
     advantages = (advantages - advantages.mean()) / (advantages.std() + 1e-5)
-    agent.update_old_policy() # update old policy before training loop
 
     vloss, ploss, ent = 0, 0, 0
     for e in range(args.ppo_epoch):
@@ -143,6 +142,7 @@ def OBSLoss(agent, states, observations, FLoss, goal_state_size=12, verbose=Fals
     return loss
 
 def PPOLoss(agent, states, actions, returns, adv_target, VLoss, verbose=False):
+    ''' PPOLOSS when using two policies. This is the older way.'''
     values, action_log_probs, dist_entropy = agent.evaluate_actions(
                                                     Variable(states, volatile=False),
                                                     Variable(actions, volatile=False),
@@ -386,7 +386,7 @@ def main():
     agent = AgentRoboSchool(args,
                     stacked_state_shape=stacked_state_shape,
                     action_shape=action_shape,
-                    hidden=64,
+                    hidden=args.hidden,
                     fixed_std=False,
                     std=0.5)
 
