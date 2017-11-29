@@ -228,13 +228,14 @@ def test(agent, tries=10):
     episode_rewards = 0
     final_rewards = 0
 
-    TestState.reset()  # reset test state
-    state  = testenv.reset()
+    state = testenv.reset()
     TestState.update(state)
 
     total_done = 0
     while total_done <= tries:
         # Sample actions
+        print('state is cuda?', TestState().is_cuda)
+        input()
         value, action, _, _ = agent.sample(TestState(), deterministic=True)
         cpu_actions = action.data.squeeze(1).cpu().numpy()  # gym takes np.ndarrays
 

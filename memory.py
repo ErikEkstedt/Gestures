@@ -23,6 +23,7 @@ class StackedState(object):
         self.num_stack = num_stack
         self.state_shape = state_shape
         self.num_processes = num_processes
+        self.use_cuda = use_cuda
         if use_cuda:
             self.cuda()
 
@@ -52,6 +53,8 @@ class StackedState(object):
 
     def reset(self):
         self.current_state = torch.zeros(self.num_processes, self.num_stack, *self.state_shape)
+        if self.use_cuda:
+            self.current_state = self.current_state.cuda()
 
     def reset_to(self):
         self.current_state.copy_(state)
