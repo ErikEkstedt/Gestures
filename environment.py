@@ -136,7 +136,11 @@ class Shared_Mem(SharedMemoryClientEnv):
         electricity_cost += self.stall_torque_cost * float(np.square(a).mean())
         joints_at_limit_cost = float(self.joints_at_limit_cost * self.joints_at_limit)
 
-        self.rewards = [float(self.potential - potential_old),
+        # print('el cost: ', electricity_cost)
+        # print('joint cost: ', joints_at_limit_cost)
+        # print('progress : ', progress)
+
+        self.rewards = [progress,
                         electricity_cost,
                         joints_at_limit_cost]
 
