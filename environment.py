@@ -65,9 +65,6 @@ class Shared_Mem(SharedMemoryClientEnv):
 
         self.joints_at_limit = np.count_nonzero(np.abs(j[0::2]) > 0.99)
 
-        if verbose:
-            print('Reset')
-
         # Target
         target_x, _ = self.jdict["target0_x"].current_position()
         target_y, _ = self.jdict["target0_y"].current_position()
@@ -247,7 +244,7 @@ class GYM_XML(gym.Env):
         self.robot_specific_reset()
         for r in self.mjcf:
             r.query_position()
-        s = self.calc_state(verbose=True)    # optimization: calc_state() can calculate something in self.* for calc_potential() to use
+        s = self.calc_state()    # optimization: calc_state() can calculate something in self.* for calc_potential() to use
         self.potential = self.calc_potential()
         self.camera = self.scene.cpp_world.new_camera_free_float(self.VIDEO_W, self.VIDEO_H, "video_camera")
         return s
