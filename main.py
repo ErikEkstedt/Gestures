@@ -487,6 +487,8 @@ def main():
 
 
     print('saving')
+    agent.cpu()
+    agent.policy.cpu()
     torch.save(agent.policy.state_dict(), 'model.pt')
 
 
