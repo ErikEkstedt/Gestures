@@ -20,7 +20,6 @@ class StackedState(object):
     '''
     def __init__(self, num_processes=4, num_stack=4, state_shape=(44,), use_cuda=False):
         self.current_state = torch.zeros(num_processes, num_stack, *state_shape)
-        self.use_cuda = use_cuda
         self.num_stack = num_stack
         self.state_shape = state_shape
         self.num_processes = num_processes
