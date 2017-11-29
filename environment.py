@@ -112,9 +112,6 @@ class Shared_Mem(SharedMemoryClientEnv):
         self.rewards = [float(self.potential - potential_old)]
         self.frame  += 1
         done = False
-        if abs(self.potential) < self.precision:
-            print('#'*50)
-            print('Precision under 1 !!!!')
 
         if self.frame>=self.MAX_TIME:
             done = True

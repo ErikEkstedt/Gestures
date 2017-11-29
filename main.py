@@ -23,7 +23,7 @@ def log_print(agent, dist_entropy, value_loss, floss, action_loss, j):
           \nentropy:                {:.4f}, \
           \ncurrent value loss:     {:.4f}, \
           \ncurrent policy loss:    {:.4f}".format(j,
-                (j + 1) * agent.args.num_steps,
+                (j + 1) * agent.args.num_steps * agent.args.num_processes,
                 agent.final_rewards.mean(),
                 -dist_entropy.data[0],
                 value_loss.data[0],
@@ -232,7 +232,6 @@ def test_and_render(agent):
     test_env.close()
     del test_env
 
-
 def test(agent, runs=10, verbose=False):
     '''Test with multiple processes.
     :param agent - The agent playing
@@ -413,7 +412,7 @@ def main():
     agent.memory = memory
 
     # ==== Training ====
-    num_updates = int(args.num_frames) // args.num_steps
+    num_updates = int(args.num_frames) // args.num_steps // args.num_processes
 
     print('-'*55)
     print()
@@ -451,8 +450,9 @@ def main():
                 test_reward = test(agent, runs=10)
                 vis.line_update(Xdata=frame, Ydata=test_reward, name='Test Score')
                 print('Done testing')
-                print('RENDER')
-                test_and_render(agent)
+                if args.test_render:
+                    print('RENDER')
+                    test_and_render(agent)
 
                 #  ==== RESET ====
 
