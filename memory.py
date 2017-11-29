@@ -24,6 +24,8 @@ class StackedState(object):
         self.num_stack = num_stack
         self.state_shape = state_shape
         self.num_processes = num_processes
+        if use_cuda:
+            self.cuda()
 
     def update(self, s):
         if type(s) is np.ndarray:

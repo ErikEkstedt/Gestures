@@ -415,7 +415,6 @@ def main():
         agent.memory.last_to_first() #updates rollout memory and puts the last state first.
 
         #  ==== LOG ======
-
         if j % args.log_interval == 0: log_print(agent, dist_entropy, value_loss, 1, action_loss, j)
 
         if j % args.vis_interval == 0 and j is not 0 and not args.no_vis:
