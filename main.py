@@ -307,7 +307,7 @@ def description_string(args):
     slist.append('\nFixed std: ' + str(args.fixed_std))
     slist.append('\nStd(if fixed): ' + str(args.std))
     slist.append('\nTotal frames: ' + str(args.num_frames))
-    slist.append('\nRender: ' + str(args.render))
+    slist.append('\nTest Render: ' + str(args.test_render))
     slist.append('\nTest iters: ' + str(args.num_test))
     slist.append('\nmax test length: ' + str(args.max_test_length))
     slist.append('\nNo-Test: ' + str(args.no_test))
