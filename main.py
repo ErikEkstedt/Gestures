@@ -424,10 +424,10 @@ def main():
 
             # Take mean b/c several processes
             # Training score now resets to zero alot.
-            # Which makes this visualization bad.
             R = agent.final_rewards
             R = R.mean()
-            if R is not 0:
+            if abs(R) > 0 :
+                # when reward mean is exactly zero it does not count.
                 vis.line_update(Xdata=frame, Ydata=R, name='Training Score')
 
             std = torch.Tensor(agent.std).mean()
