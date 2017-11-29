@@ -130,8 +130,7 @@ class PolicyBody(nn.Module):
         print('obs cuda')
 
     def cpu(self, **args):
-        super(MLPPolicy, self).cpu(**args)
-
+        super(PolicyBody, self).cpu(**args)
 
 class Policy(nn.Module):
     def __init__(self, input_size, action_shape, hidden=64, fixed_std=False, std=None):
@@ -290,6 +289,7 @@ class AgentRoboSchool(object):
         self.old_policy.cpu()
         self.old_policy.body.cpu()
         self.use_cuda = False
+
 
     def update_old_policy(self):
         self.old_policy.load_state_dict(self.policy.state_dict())
