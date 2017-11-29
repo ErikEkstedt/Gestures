@@ -192,34 +192,41 @@ def PPOLoss(agent, states, actions, returns, adv_target, VLoss, verbose=False):
         input()
     return value_loss, action_loss, dist_entropy
 
-def test(env, agent, tries=10, render=False):
+def test(agent, tries=10, render=False):
+    ''' FIx this so testing is possible'''
+    state_before_test= agent.CurrentState()
+
     total_reward = 0
+    testenv = Social_Torso()
     for run in range(tries):
         done = False
         R = 0
-        state, _ = env.reset()
-        state = agent.state_mask(state)
-        agent.test_state.update(state)
+        state  = env.reset()
+        agent.CurrentState.update(state)
         for i in count(1):
             value, action, _, _ = agent.sample(agent.test_state(), deterministic=True)  # no variance
             # cpu_action   = action.data.squeeze(1).cpu().numpy()[0]
+            value, action, action_log_prob, a_std = agent.sample(agent.CurrentState())
+            stds.append(a_std.data.mean())  # Averaging the std for all actions (really blunt info)
 
-            cpu_action   = action.data.squeeze(1).cpu()
-            cpu_action = agent.action_mask(cpu_action)
-            state, obs   = env.step(cpu_action)
-            state = agent.state_mask(state)
+            cpu_actions = action.data.squeeze(1).cpu().numpy()  # gym takes np.ndarrays
 
-            reward, done = agent.reward_done(npToTensor(state)) # reward: torch.Tensor, done: boolean
+            # Observe reward and next state
+            state, reward, done, info = env.step(cpu_actions)
+            reward = torch.from_numpy(reward).view(agent.args.num_processes, -1).float()
 
-            R += reward[0]
-            agent.test_state.update(state)
+            # reset current states for envs done
+            agent.CurrentState.check_and_reset(masks)
+
+            # Update current state and add data to memory
+            agent.CurrentState.update(state)
+
 
             if render and run >7:
                 env.render()
-                print(cpu_action)
 
             if done:
-                print('Pepper did it!')
+                print('Did it!')
                 print('... in {} iterations'.format(i))
                 break
 
@@ -397,7 +404,7 @@ def main():
             ent_total   /= args.vis_interval
 
             # Take mean b/c several processes
-            R = agent.episode_rewards
+            R = agent.episode_rewards/(agent.tmp_steps+1)
             R = R.mean()
             std = torch.Tensor(agent.std).mean()
 
