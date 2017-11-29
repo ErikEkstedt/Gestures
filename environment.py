@@ -14,6 +14,10 @@ PATH_TO_XML = "/home/erik/anaconda3/envs/robo/lib/python3.5/site-packages/robosc
 PATH_TO_CUSTOM_XML = "/home/erik/com_sci/Master_code/Roboschool"
 
 class Shared_Mem(SharedMemoryClientEnv):
+    electricity_cost     = -2.0    # cost for using motors -- this parameter should be carefully tuned against reward for making progress, other values less improtant
+    stall_torque_cost    = -0.1    # cost for running electric current through a motor even at zero rotational speed, small
+    joints_at_limit_cost = -0.2    # discourage stuck joints
+
     def __init__(self, power):
         self.power = power
         self.camera_x = 0
@@ -70,10 +74,6 @@ class Shared_Mem(SharedMemoryClientEnv):
         target_y, _ = self.jdict["target0_y"].current_position()
         target_z, _ = self.jdict["target0_z"].current_position()
 
-        # print('target_x' , target_x)
-        # print('target_y' , target_y)
-        # print('target_z' , target_z)
-
         hand_coords = np.array(self.key_parts[0].pose().xyz())
         target_coords = np.array(self.target.pose().xyz())
         self.to_target_vec = np.array(hand_coords - target_coords)
@@ -84,14 +84,7 @@ class Shared_Mem(SharedMemoryClientEnv):
                                        np.array((target_x, target_y, target_z)),
                                        ), -5, +5)
 
-    def calc_potential(self):
-        '''norm between hand and target. No other input than vector -> frobious norm
-        2 p-norm, euclidean distance'''
-        return -100*np.linalg.norm(self.to_target_vec)
 
-    electricity_cost     = -2.0    # cost for using motors -- this parameter should be carefully tuned against reward for making progress, other values less improtant
-    stall_torque_cost    = -0.1    # cost for running electric current through a motor even at zero rotational speed, small
-    joints_at_limit_cost = -0.2    # discourage stuck joints
 
     def _step(self, a):
         if not self.scene.multiplayer:  # if multiplayer, action first applied to all robots, then global step() called, then _step() for all robots with the same actions
@@ -100,16 +93,17 @@ class Shared_Mem(SharedMemoryClientEnv):
 
         state = self.calc_state()  # also calculates self.joints_at_limit
 
-        potential_old = self.potential
-        self.potential = self.calc_potential()
-        progress = float(self.potential - potential_old)
+        # potential_old = self.potential
+        # self.potential = self.calc_potential()
+        # progress = float(self.potential - potential_old)
 
         # electricity_cost  = self.electricity_cost  * float(np.abs(a*self.joint_speeds).mean())  # let's assume we have DC motor with controller, and reverse current braking
         # electricity_cost += self.stall_torque_cost * float(np.square(a).mean())
         # joints_at_limit_cost = float(self.joints_at_limit_cost * self.joints_at_limit)
         # self.rewards = [ electricity_cost, joints_at_limit_cost]
 
-        self.rewards = [float(self.potential - potential_old)]
+        # self.rewards = [float(self.potential - potential_old)]
+        self.rewards = [float(self.calc_potential())]
         self.frame  += 1
         done = False
 
@@ -260,8 +254,8 @@ class GYM_XML(gym.Env):
         else:
             assert(0)
 
-    def calc_potential(self):
-        return 0
+    # def calc_potential(self):
+    #     return 0
 
     def HUD(self, s, a, done):
         ''' Visualization on top of rendering, might be usefull for something
@@ -339,6 +333,11 @@ class Social_Torso(GYM_XML_MEM):
     def alive_bonus(self, z, pitch):
         return +2 if z > 0.78 else -1   # 2 here because 17 joints produce a lot of electricity cost just from policy noise, living must be better than dying
 
+    def calc_potential(self):
+        '''norm between hand and target. No other input than vector -> frobious norm
+        2 p-norm, euclidean distance'''
+        return -100*np.linalg.norm(self.to_target_vec)
+    # ------------------------------
     def get_mjcf(self):
         return self.mjcf
 
@@ -400,33 +399,33 @@ def test():
     alls = list(np.arange(asize))
 
     s = env.reset()
-    for i in range(2):
+    for i in range(200):
         env.render()
         a = random_action(alls, asize)
         s, r, d, _ = env.step(a)
-        print(i)
+        print(r)
         if i % 400 == 0 and i is not 0:
             env.switch_target()
 
-    print('Reset env')
-    input('enter')
-    env.close()
-    del env
-
-    env = Social_Torso()
-    s = env.reset()
-    for i in range(100):
-        print('before render')
-        input()
-        env.render()
-        print('after render')
-        input()
-        a = random_action(alls, asize)
-        s, r, d, _ = env.step(a)
-        print(i)
-        input()
-        if i % 400 == 0 and i is not 0:
-            env.switch_target()
+    # print('Reset env')
+    # input('enter')
+    # env.close()
+    # del env
+    #
+    # env = Social_Torso()
+    # s = env.reset()
+    # for i in range(100):
+    #     print('before render')
+    #     input()
+    #     env.render()
+    #     print('after render')
+    #     input()
+    #     a = random_action(alls, asize)
+    #     s, r, d, _ = env.step(a)
+    #     print(i)
+    #     input()
+    #     if i % 400 == 0 and i is not 0:
+    #         env.switch_target()
 
 
 if __name__ == '__main__':
