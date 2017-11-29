@@ -423,6 +423,8 @@ def main():
             ent_total   /= args.vis_interval
 
             # Take mean b/c several processes
+            # Training score now resets to zero alot.
+            # Which makes this visualization bad.
             R = agent.final_rewards
             R = R.mean()
             std = torch.Tensor(agent.std).mean()

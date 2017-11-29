@@ -133,9 +133,9 @@ class Shared_Mem(SharedMemoryClientEnv):
         self.frame  += 1
         done = False
         if abs(self.potential) < self.precision:
-            done = True
             print('#'*50)
             print('Precision under 1 !!!!')
+
         if self.frame>=self.MAX_TIME:
             done = True
         if (done and not self.done) or self.frame>=self.MAX_TIME:
