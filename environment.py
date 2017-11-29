@@ -86,6 +86,41 @@ class Shared_Mem(SharedMemoryClientEnv):
 
 
 
+        state = self.calc_state()  # also calculates self.joints_at_limit
+
+        alive = float(self.alive_bonus(state[0]+self.initial_z, self.body_rpy[1]))   # state[0] is body height above ground, body_rpy[1] is pitch
+        done = alive < 0
+        if not np.isfinite(state).all():
+            print("~INF~", state)
+            done = True
+
+        potential_old = self.potential
+        self.potential = self.calc_potential()
+        progress = float(self.potential - potential_old)
+
+        feet_collision_cost = 0.0
+        for i,f in enumerate(self.feet):
+            contact_names = set(x.name for x in f.contact_list())
+            #print("CONTACT OF '%s' WITH %s" % (f.name, ",".join(contact_names)) )
+            self.feet_contact[i] = 1.0 if (self.foot_ground_object_names & contact_names) else 0.0
+            if contact_names - self.foot_ground_object_names:
+                feet_collision_cost += self.foot_collision_cost
+
+        electricity_cost  = self.electricity_cost  * float(np.abs(a*self.joint_speeds).mean())  # let's assume we have DC motor with controller, and reverse current braking
+        electricity_cost += self.stall_torque_cost * float(np.square(a).mean())
+
+        joints_at_limit_cost = float(self.joints_at_limit_cost * self.joints_at_limit)
+
+        self.rewards = [
+            alive,
+            progress,
+            electricity_cost,
+            joints_at_limit_cost,
+            feet_collision_cost
+            ]
+
+
+
     def _step(self, a):
         if not self.scene.multiplayer:  # if multiplayer, action first applied to all robots, then global step() called, then _step() for all robots with the same actions
             self.apply_action(a)
@@ -93,17 +128,19 @@ class Shared_Mem(SharedMemoryClientEnv):
 
         state = self.calc_state()  # also calculates self.joints_at_limit
 
-        # potential_old = self.potential
-        # self.potential = self.calc_potential()
-        # progress = float(self.potential - potential_old)
+        potential_old = self.potential
+        self.potential = self.calc_potential()
+        progress = float(self.potential - potential_old)
 
-        # electricity_cost  = self.electricity_cost  * float(np.abs(a*self.joint_speeds).mean())  # let's assume we have DC motor with controller, and reverse current braking
-        # electricity_cost += self.stall_torque_cost * float(np.square(a).mean())
-        # joints_at_limit_cost = float(self.joints_at_limit_cost * self.joints_at_limit)
-        # self.rewards = [ electricity_cost, joints_at_limit_cost]
+        electricity_cost  = self.electricity_cost  * float(np.abs(a*self.joint_speeds).mean())  # let's assume we have DC motor with controller, and reverse current braking
+        electricity_cost += self.stall_torque_cost * float(np.square(a).mean())
+        joints_at_limit_cost = float(self.joints_at_limit_cost * self.joints_at_limit)
 
-        # self.rewards = [float(self.potential - potential_old)]
-        self.rewards = [float(self.calc_potential())]
+        self.rewards = [float(self.potential - potential_old),
+                        electricity_cost,
+                        joints_at_limit_cost]
+
+        # self.rewards = [float(self.calc_potential())]
         self.frame  += 1
         done = False
 

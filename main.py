@@ -382,7 +382,7 @@ def main():
                                 use_cuda)
 
     # ====== Agent ==============
-    torch.manual_seed(10)
+    torch.manual_seed(args.seed)
     agent = AgentRoboSchool(args,
                     stacked_state_shape=stacked_state_shape,
                     action_shape=action_shape,
