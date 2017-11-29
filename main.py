@@ -427,10 +427,12 @@ def main():
             # Which makes this visualization bad.
             R = agent.final_rewards
             R = R.mean()
+            if R is not 0:
+                vis.line_update(Xdata=frame, Ydata=R, name='Training Score')
+
             std = torch.Tensor(agent.std).mean()
 
             # Draw plots
-            vis.line_update(Xdata=frame, Ydata=R, name='Training Score')
             vis.line_update(Xdata=frame, Ydata=vloss_total, name='Value Loss')
             vis.line_update(Xdata=frame, Ydata=ploss_total, name='Policy Loss')
             vis.line_update(Xdata=frame, Ydata=std, name='Action std')
