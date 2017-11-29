@@ -215,6 +215,9 @@ def test(agent, tries=10):
                              agent.state_shape,
                              agent.use_cuda)
 
+    if agent.use_cuda:
+        TestState.cuda()
+
     # Test environments
     testenv = SubprocVecEnv([
         make_social_torso(agent.args.seed, i, '/tmp')
