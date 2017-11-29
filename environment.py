@@ -332,7 +332,6 @@ class Social_Torso(GYM_XML_MEM):
         cpose.set_xyz(0, 0, 0 )
         cpose.set_rpy(roll, pitch, yaw)
         self.cpp_robot.set_pose_and_speed(cpose, 0,0,0)
-        print('set_initial_orientation')
         self.initial_z = 0.0
 
     def apply_action(self, a):

@@ -440,7 +440,7 @@ def main():
         if j % args.log_interval == 0: log_print(agent, dist_entropy, value_loss, 1, action_loss, j)
 
         if j % args.vis_interval == 0 and j is not 0 and not args.no_vis:
-            frame = (j + 1) * args.num_steps
+            frame = (j + 1) * args.num_steps * args.num_processes
 
             if not args.no_test and j % args.test_interval == 0:
                 ''' TODO

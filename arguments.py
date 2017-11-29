@@ -8,7 +8,7 @@ def get_args():
 
 
     # gym
-    parser.add_argument('--render', action='store_true', default=False,
+    parser.add_argument('--test-render', action='store_true', default=False,
             help='Render during test')
     parser.add_argument('--fixed-std', action='store_true', default=False,
             help='Use a fixed standard deviation for actions')
