@@ -350,10 +350,11 @@ def main():
 
     # == Environment ========
     monitor_log_dir = "/tmp/"
-    env_id = "RoboschoolHumanoid-v1"
-    num_stack = 4
-    num_steps = 10
-    use_cuda = False
+
+    # env_id = "RoboschoolHumanoid-v1"
+    # num_stack = 4
+    # num_steps = 10
+    # use_cuda = False
 
 
     # env = SubprocVecEnv([
@@ -366,7 +367,7 @@ def main():
 
 
     state_shape = env.observation_space.shape
-    stacked_state_shape = (state_shape[0] * num_stack,)
+    stacked_state_shape = (state_shape[0] * args.num_stack,)
     action_shape = env.action_space.shape
 
     # memory
