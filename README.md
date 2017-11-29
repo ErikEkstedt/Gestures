@@ -3,6 +3,7 @@ Roboschool
 
 # Todo
 
+
 - [x] **Get back relative coordinates**
 - [ ] **Rewards**
 	- Start: distance between left hand and a target.
@@ -10,8 +11,9 @@ Roboschool
 - [ ] **Targets**
 
 1. Fix test method so debugging can be made.
-	 * A test method for visualization - one processor
-	 * A test method for mult. procs for progress measuring.
+	 - [ ] A test method for visualization - one processor
+		- Needs reset and reset is broken ?
+	 - [x] A test method for mult. procs for progress measuring.
 	
 2. Define "done" in the environment in a good way that gives monotonical increasing returns for better policies.
 

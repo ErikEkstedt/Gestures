@@ -29,7 +29,6 @@ def log_print(agent, dist_entropy, value_loss, floss, action_loss, j):
                 value_loss.data[0],
                 action_loss.data[0],))
 
-
 def exploration(agent, env):
     ''' Exploration part of PPO training:
 
@@ -194,16 +193,50 @@ def PPOLoss(agent, states, actions, returns, adv_target, VLoss, verbose=False):
         input()
     return value_loss, action_loss, dist_entropy
 
-def test_and_render(agent, tries=10):
+def test_and_render(agent):
     '''Test
-    :param agent         - The agent playing
-    :param tries         - int, number oftest runs
-    '''
+    :param agent - The agent playing
+    :param runs - int, number oftest runs
 
-def test(agent, tries=10, verbose=False):
+    :output      - Average complete episodic reward
+    '''
+    # Use only 1 processor for render
+    TestState = StackedState(1,
+                             agent.args.num_stack,
+                             agent.state_shape,
+                             agent.use_cuda)
+
+    # Test environments
+    test_env = Social_Torso()
+    total_reward = 0
+    state = test_env.reset()
+    for j in count(1):
+        test_env.render()
+
+        # Update current state and add data to memory
+        TestState.update(state)
+
+        # Sample actions
+        value, action, _, _ = agent.sample(TestState(), deterministic=True)
+        cpu_actions = action.data.squeeze(1).cpu().numpy()[0]  # gym takes np.ndarrays
+
+        # Observe reward and next state
+        state, reward, done, info = test_env.step(cpu_actions)
+        total_reward += reward
+        if j % 100 == 0:
+            print('frame: {}, total_reward: {}'.format(j, total_reward))
+        if done:
+            break
+            print('Total reward: ', total_reward)
+
+    test_env.close()
+    del test_env
+
+
+def test(agent, runs=10, verbose=False):
     '''Test with multiple processes.
     :param agent - The agent playing
-    :param tries - int, number oftest runs
+    :param runs - int, number oftest runs
 
     :output      - Average complete episodic reward
     '''
@@ -214,7 +247,7 @@ def test(agent, tries=10, verbose=False):
                              agent.use_cuda)
 
     # Test environments
-    testenv = SubprocVecEnv([
+    test_env = SubprocVecEnv([
         make_social_torso(agent.args.seed, i, '/tmp')
         for i in range(agent.args.num_processes)])
 
@@ -223,17 +256,17 @@ def test(agent, tries=10, verbose=False):
     episode_rewards = 0
     final_rewards = 0
 
-    state = testenv.reset()
+    state = test_env.reset()
     TestState.update(state)
 
     total_done = 0
-    while total_done <= tries:
+    while total_done <= runs:
         # Sample actions
         value, action, _, _ = agent.sample(TestState(), deterministic=True)
         cpu_actions = action.data.squeeze(1).cpu().numpy()  # gym takes np.ndarrays
 
         # Observe reward and next state
-        state, reward, done, info = testenv.step(cpu_actions)
+        state, reward, done, info = test_env.step(cpu_actions)
         total_done += sum(done)  # keep track of number of completed runs
 
         reward = torch.from_numpy(reward).view(agent.args.num_processes, -1).float()
@@ -241,7 +274,7 @@ def test(agent, tries=10, verbose=False):
 
         # If done then update final rewards and reset episode reward
         episode_rewards += reward
-        final_rewards *= masks  # set final_reward[i] to zero if masks[i] = 0 -> testenv[i] is done
+        final_rewards *= masks  # set final_reward[i] to zero if masks[i] = 0 -> test_env[i] is done
         final_rewards += (1 - masks) * episode_rewards # update final_reward to cummulative episodic reward
         episode_rewards *= masks # reset episode reward
 
@@ -252,14 +285,16 @@ def test(agent, tries=10, verbose=False):
         if agent.args.cuda:
             masks = masks.cuda()
 
-        # reset current states for testenvs done
+        # reset current states for test_envs done
         TestState.check_and_reset(masks)
 
         # Update current state and add data to memory
         TestState.update(state)
 
-    testenv.close()
-    del testenv
+    # cleaning (unneccessary ? )
+    test_env.close()
+    del test_env
+    del TestState
     return total_reward/total_done
 
 def description_string(args):
@@ -413,9 +448,12 @@ def main():
                 effect the data. Equivialent to `done` ?
                 should be the same.'''
                 print('Testing')
-                test_reward = test(agent, tries=10)
+                test_reward = test(agent, runs=10)
                 vis.line_update(Xdata=frame, Ydata=test_reward, name='Test Score')
                 print('Done testing')
+                print('RENDER')
+                test_and_render(agent)
+
                 #  ==== RESET ====
 
             vloss_total /= args.vis_interval
@@ -447,6 +485,9 @@ def main():
             agent.num_done = 0
             agent.final_rewards = 0
 
+
+    print('saving')
+    torch.save(agent.policy.state_dict(), 'model.pt')
 
 
 if __name__ == '__main__':

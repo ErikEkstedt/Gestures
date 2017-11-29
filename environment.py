@@ -3,7 +3,6 @@ from roboschool.scene_stadium import SinglePlayerStadiumScene
 from roboschool.scene_abstract import SingleRobotEmptyScene
 
 from roboschool.gym_mujoco_xml_env import RoboschoolMujocoXmlEnv
-
 from roboschool.multiplayer import SharedMemoryClientEnv
 
 import gym, gym.spaces, gym.utils, gym.utils.seeding
@@ -26,7 +25,7 @@ class Shared_Mem(SharedMemoryClientEnv):
 
     def create_single_player_scene(self):
         return SinglePlayerStadiumScene(gravity=9.8, timestep=0.0165/4, frame_skip=4)
-        # return SingleRobotEmptyScene(gravity=0, timestep=0.0165/4, frame_skip=4)
+        # return SingleRobotEmptyScene(gravity=9.8, timestep=0.0165/4, frame_skip=4)
 
     def robot_specific_reset(self):
         for j in self.ordered_joints:
@@ -47,13 +46,27 @@ class Shared_Mem(SharedMemoryClientEnv):
         for n,j in enumerate(self.ordered_joints):
             j.set_motor_torque( self.power*j.power_coef*float(np.clip(a[n], -1, +1)) )
 
-    def calc_state(self):
+    def calc_state(self, verbose=False):
         j = np.array([j.current_relative_position() for j in self.ordered_joints], dtype=np.float32).flatten()
         # even elements [0::2] position, scaled to -1..+1 between limits
         # odd elements  [1::2] angular speed, scaled to show -1..+1
         self.joint_positions = j[0::2]
         self.joint_speeds = j[1::2]
+        if verbose:
+            print('np.abs(j[0::2])')
+            print(np.abs(j[0::2]))
+            # input()
+            print('np.abs(j[0::2]) > 0.99')
+            print(np.abs(j[0::2]) > 0.99)
+            print()
+            print('np.count_nonzero(np.abs(j[0::2]) > 0.99)')
+            print(np.count_nonzero(np.abs(j[0::2]) > 0.99))
+            # input()
+
         self.joints_at_limit = np.count_nonzero(np.abs(j[0::2]) > 0.99)
+
+        if verbose:
+            print('Reset')
 
         # Target
         target_x, _ = self.jdict["target0_x"].current_position()
@@ -73,36 +86,6 @@ class Shared_Mem(SharedMemoryClientEnv):
                                        [self.to_target_vec]+\
                                        np.array((target_x, target_y, target_z)),
                                        ), -5, +5)
-
-    # def calc_state(self):
-    #     j = np.array([j.current_relative_position() for j in self.ordered_joints], dtype=np.float32).flatten()
-    #     # even elements [0::2] position, scaled to -1..+1 between limits
-    #     # odd elements  [1::2] angular speed, scaled to show -1..+1
-    #     self.joint_speeds = j[1::2]
-    #     self.joints_at_limit = np.count_nonzero(np.abs(j[0::2]) > 0.99)
-    #
-    #     body_pose = self.robot_body.pose()
-    #     parts_xyz = np.array( [p.pose().xyz() for p in self.parts.values()] ).flatten()
-    #     self.body_xyz = (parts_xyz[0::3].mean(), parts_xyz[1::3].mean(), body_pose.xyz()[2])  # torso z is more informative than mean z
-    #     self.body_rpy = body_pose.rpy()
-    #     z = self.body_xyz[2]
-    #     r, p, yaw = self.body_rpy
-    #     if self.initial_z==None:
-    #         self.initial_z = z
-    #
-    #     self.rot_minus_yaw = np.array(
-    #         [[np.cos(-yaw), -np.sin(-yaw), 0],
-    #         [np.sin(-yaw),  np.cos(-yaw), 0],
-    #         [           0,             0, 1]]
-    #         )
-    #     vx, vy, vz = np.dot(self.rot_minus_yaw, self.robot_body.speed())  # rotate speed back to body point of view
-    #     j = [j]
-    #     j.append(vx)
-    #     j.append(vy)
-    #     j.append(vz)
-    #
-    #     # return np.clip( np.concatenate([j]), -5, +5)
-    #     return j
 
     def calc_potential(self):
         '''norm between hand and target. No other input than vector -> frobious norm
@@ -140,6 +123,7 @@ class Shared_Mem(SharedMemoryClientEnv):
             done = True
         if (done and not self.done) or self.frame>=self.MAX_TIME:
             self.episode_over(self.frame)
+
         self.done   += done   # 2 == 1+True
         self.reward += sum(self.rewards)
         return state, sum(self.rewards), bool(done), {}
@@ -263,7 +247,7 @@ class GYM_XML(gym.Env):
         self.robot_specific_reset()
         for r in self.mjcf:
             r.query_position()
-        s = self.calc_state()    # optimization: calc_state() can calculate something in self.* for calc_potential() to use
+        s = self.calc_state(verbose=True)    # optimization: calc_state() can calculate something in self.* for calc_potential() to use
         self.potential = self.calc_potential()
         self.camera = self.scene.cpp_world.new_camera_free_float(self.VIDEO_W, self.VIDEO_H, "video_camera")
         return s
@@ -314,7 +298,7 @@ class Social_Torso(GYM_XML_MEM):
         self.electricity_cost  = 4.25*GYM_XML_MEM.electricity_cost
         self.stall_torque_cost = 4.25*GYM_XML_MEM.stall_torque_cost
         # self.initial_z = 0.8
-        self.MAX_TIME = 2000
+        self.MAX_TIME = 1000
 
     def robot_specific_reset(self):
         GYM_XML_MEM.robot_specific_reset(self)
@@ -351,6 +335,7 @@ class Social_Torso(GYM_XML_MEM):
         cpose.set_xyz(0, 0, 0 )
         cpose.set_rpy(roll, pitch, yaw)
         self.cpp_robot.set_pose_and_speed(cpose, 0,0,0)
+        print('set_initial_orientation')
         self.initial_z = 0.0
 
     def apply_action(self, a):
@@ -409,13 +394,6 @@ def test():
     from environment import Social_Torso
     import numpy as np
 
-    env = Social_Torso()
-    asize = env.action_space.shape[0]
-    s = env.reset()
-    print(len(s))
-    print(s)
-    input()
-
     def random_action(idx, size):
         z = np.zeros(size)
         if type(idx) is int:
@@ -424,15 +402,39 @@ def test():
             z[idx] = np.random.rand(len(idx))*2 - 1
         return z
 
+    env = Social_Torso()
+    asize = env.action_space.shape[0]
     alls = list(np.arange(asize))
-    print(alls)
-    for i in range(8000):
+
+    s = env.reset()
+    for i in range(2):
         env.render()
         a = random_action(alls, asize)
         s, r, d, _ = env.step(a)
-
+        print(i)
         if i % 400 == 0 and i is not 0:
             env.switch_target()
+
+    print('Reset env')
+    input('enter')
+    env.close()
+    del env
+
+    env = Social_Torso()
+    s = env.reset()
+    for i in range(100):
+        print('before render')
+        input()
+        env.render()
+        print('after render')
+        input()
+        a = random_action(alls, asize)
+        s, r, d, _ = env.step(a)
+        print(i)
+        input()
+        if i % 400 == 0 and i is not 0:
+            env.switch_target()
+
 
 if __name__ == '__main__':
     test()
