@@ -10,10 +10,6 @@ def get_args():
     # gym
     parser.add_argument('--test-render', action='store_true', default=False,
             help='Render during test')
-    parser.add_argument('--fixed-std', action='store_true', default=False,
-            help='Use a fixed standard deviation for actions')
-    parser.add_argument('--std', type=float, default=0.5,
-            help='Value for action standard  deviation (default: 0.5)')
     parser.add_argument('--num-processes', type=int, default=2,
                        help='Number of processors used (default: 2)')
 
@@ -51,7 +47,10 @@ def get_args():
                         help='number of frames to stack (default: 4)')
     parser.add_argument('--hidden', type=int, default=128,
                         help='Number of hidden neurons in policy (default: 128)')
-
+    parser.add_argument('--fixed-std', action='store_true', default=False,
+            help='Use a fixed standard deviation for actions')
+    parser.add_argument('--std', type=float, default=0.5,
+            help='Value for action standard  deviation (default: 0.5)')
 
     # Test
     parser.add_argument('--no-test', action='store_true', default=False,
@@ -82,12 +81,6 @@ def get_args():
                         help='disables CUDA training')
     parser.add_argument('--no-vis', action='store_true', default=False,
                         help='disables visdom visualization')
-
-    # Choregraphe
-    parser.add_argument('--PORT', type=str, default=None,
-                        help='The port number to the Choregraphe session')
-    parser.add_argument('--IP', type=str, default='localhost',
-                        help='The ip number to the Choregraphe session')
 
     args = parser.parse_args()
     args.cuda = not args.no_cuda and torch.cuda.is_available()

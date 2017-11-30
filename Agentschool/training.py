@@ -1,3 +1,7 @@
+import torch
+from torch.autograd import Variable
+import torch.nn as nn
+
 def Exploration(agent, env):
     ''' Exploration part of PPO training:
 

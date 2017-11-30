@@ -17,7 +17,7 @@ class CustomReacher(MyGymEnv):
                  robot_name='robot_arm',
                  target_name='target',
                  model_xml='custom_reacher.xml'):
-        MyGymEnv.__init__(self, action_dim=1, obs_dim=29)
+        MyGymEnv.__init__(self, action_dim=2, obs_dim=7)
         self.XML_PATH = path
         self.model_xml = model_xml
         self.robot_name = robot_name
@@ -171,15 +171,23 @@ def make_parallel_customReacher(seed, num_processes):
     return SubprocVecEnv([multiple_envs(CustomReacher,seed, i) for i in range(num_processes)])
 
 def test():
+
+    # # multiple processes
     # num_processes = 4
     # env = make_parallel_customReacher(10, num_processes)
+    # s = env.reset()
+    # for i in range(300):
+    #     env.render()
+    #     s, r, d, _ = env.step(num_processes * [np.random.rand(2)*2-1])
+    #     print(r)
+
+
+    # single process
     env = CustomReacher()
-
     s = env.reset()
-
     for i in range(300):
         env.render()
-        s, r, d, _ = env.step(np.random.rand(2)*2-1)
+        s, r, d, _ = env.step(np.random.rand(2)*2-1 )
         print(r)
 
 if __name__ == '__main__':
