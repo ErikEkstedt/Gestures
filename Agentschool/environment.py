@@ -11,7 +11,7 @@ import os, sys
 
 
 PATH_TO_XML = "/home/erik/anaconda3/envs/robo/lib/python3.5/site-packages/roboschool/roboschool/mujoco_assets"
-PATH_TO_CUSTOM_XML = "/home/erik/com_sci/Master_code/Roboschool"
+PATH_TO_CUSTOM_XML = "/home/erik/com_sci/Master_code/Roboschool/xml_files"
 
 class Shared_Mem(SharedMemoryClientEnv):
     electricity_cost     = -2.0    # cost for using motors -- this parameter should be carefully tuned against reward for making progress, other values less improtant
