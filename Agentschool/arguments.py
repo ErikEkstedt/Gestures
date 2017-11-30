@@ -8,7 +8,7 @@ def get_args():
 
 
     # gym
-    parser.add_argument('--render', action='store_true', default=False,
+    parser.add_argument('--test-render', action='store_true', default=False,
             help='Render during test')
     parser.add_argument('--fixed-std', action='store_true', default=False,
             help='Use a fixed standard deviation for actions')
@@ -49,6 +49,9 @@ def get_args():
                         help='number of ppo epochs (default: 8)')
     parser.add_argument('--num-stack', type=int, default=4,
                         help='number of frames to stack (default: 4)')
+    parser.add_argument('--hidden', type=int, default=128,
+                        help='Number of hidden neurons in policy (default: 128)')
+
 
     # Test
     parser.add_argument('--no-test', action='store_true', default=False,

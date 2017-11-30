@@ -20,9 +20,12 @@ class StackedState(object):
     '''
     def __init__(self, num_processes=4, num_stack=4, state_shape=(44,), use_cuda=False):
         self.current_state = torch.zeros(num_processes, num_stack, *state_shape)
-        self.use_cuda = use_cuda
         self.num_stack = num_stack
+        self.state_shape = state_shape
         self.num_processes = num_processes
+        self.use_cuda = use_cuda
+        if use_cuda:
+            self.cuda()
 
     def update(self, s):
         if type(s) is np.ndarray:
@@ -47,6 +50,14 @@ class StackedState(object):
         tmp = self.current_state.view(self.num_processes, -1)
         tmp *= mask
         self.current_state = tmp.view(self.num_processes, self.num_stack, -1)
+
+    def reset(self):
+        self.current_state = torch.zeros(self.num_processes, self.num_stack, *self.state_shape)
+        if self.use_cuda:
+            self.current_state = self.current_state.cuda()
+
+    def reset_to(self):
+        self.current_state.copy_(state)
 
     def __call__(self):
         return self.current_state.view(self.num_processes, -1)

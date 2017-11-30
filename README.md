@@ -3,7 +3,6 @@ Roboschool
 
 # Todo
 
-
 - [x] **Get back relative coordinates**
 - [ ] **Rewards**
 	- Start: distance between left hand and a target.
@@ -12,11 +11,12 @@ Roboschool
 
 1. Fix test method so debugging can be made.
 	 - [ ] A test method for visualization - one processor
-		- Needs reset and reset is broken ?
-	 - [x] A test method for mult. procs for progress measuring.
+		- After calling env.reset() the next env.step() breaks. The robot disappears from the scene and all joint values are infinite.
+	 - [x] A test method for mult. procs for progress measuring. [Without visualization]
 	
-2. Define "done" in the environment in a good way that gives monotonical increasing returns for better policies.
+2. Define "done" in the environment in a good way that gives monotonical increasing returns for better policies. Reacher and "Social_Torso" ends after fixed amount of steps.
 
+3. Make real gym.Wrapper ? Will it make reset and rendering more possible ?
 
 # Custom Environment
 Wants:
@@ -44,7 +44,7 @@ Here I try to make an environment that fixates the hips and legs of a humonoid i
 ## [Environment](environment.py)
 The script for my custom gym/roboschool environment.
 
-### Social_Torso 
+### Social_Torso  
 Base class which defines my custom environment.
 
 Contains:

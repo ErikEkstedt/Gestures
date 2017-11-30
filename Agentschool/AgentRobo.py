@@ -130,8 +130,7 @@ class PolicyBody(nn.Module):
         print('obs cuda')
 
     def cpu(self, **args):
-        super(MLPPolicy, self).cpu(**args)
-
+        super(PolicyBody, self).cpu(**args)
 
 class Policy(nn.Module):
     def __init__(self, input_size, action_shape, hidden=64, fixed_std=False, std=None):
@@ -291,8 +290,96 @@ class AgentRoboSchool(object):
         self.old_policy.body.cpu()
         self.use_cuda = False
 
+
     def update_old_policy(self):
         self.old_policy.load_state_dict(self.policy.state_dict())
+
+class TestAgentRoboSchool(object):
+    ''' Agent with MLP policy PI( a_t | s_t)
+
+    This agent is only for standard Roboschool Tasks.
+
+    :param   stacked_state_shape            (176,)
+    :param   action_shape                   (17,)
+
+    :param   hidden                         int, number of hidden neurons
+    :param   use_cuda                       bool
+
+    '''
+    def __init__(self,
+                 stacked_state_shape=(176,),
+                 action_shape=17,
+                 hidden=64,
+                 use_cuda=False):
+
+        # Data
+        if len(stacked_state_shape)>1:
+            self.stacked_state = stacked_state_shape
+        else:
+            self.stacked_state = stacked_state_shape[0]
+
+        self.action_shape = action_shape[0]  # action state size
+
+        # ======= Policy ========
+        self.hidden = hidden
+        self.policy = Policy(self.stacked_state,
+                             self.action_shape,
+                             hidden=hidden,
+                             fixed_std=False,
+                             std=0.5)
+
+    def sample(self, s_t, deterministic=False):
+        '''Samples an action based on input.
+        Computes an action (deterministic or stochastic / with or without noise)
+        also computes `old_action_log_probs` used in training.
+
+        :param s_t                      torch.Tensor
+
+        :return v                       Variable, value_prediction
+        :return action                  Variable, action to take
+        :return action_log_probs        Variable, `old_action_log_probs`
+        :return action_std              Variable, std
+        '''
+        input = Variable(s_t, volatile=True)
+        v, action_mean, action_logstd = self.policy(input)
+        action_std = action_logstd.exp()
+
+        if deterministic:
+            action = action_mean
+        else:
+            # only care about noise if stochastic
+            noise = Variable(torch.randn(action_std.size()))
+            if action_mean.is_cuda:
+                noise = noise.cuda()
+            action = action_mean + action_std * noise
+
+        # calculate `old_log_probs` directly in exploration.
+        action_log_probs = -0.5 * ((action - action_mean) / action_std).pow(2) - 0.5 * math.log(2 * math.pi) - action_logstd
+        action_log_probs = action_log_probs.sum(1, keepdim=True)
+        dist_entropy = 0.5 + math.log(2 * math.pi) + action_log_probs
+        dist_entropy = dist_entropy.sum(-1).mean()
+
+        return v, action, action_log_probs, action_std
+
+    def evaluate_actions(self, s_t, actions):
+        v, action_mean, action_logstd = self.policy(s_t)
+        action_std = action_logstd.exp()
+
+        action_log_probs = -0.5 * ((actions - action_mean) / action_std).pow(2) - 0.5 * math.log(2 * math.pi) - action_logstd
+        action_log_probs = action_log_probs.sum(1, keepdim=True)
+        dist_entropy = 0.5 + math.log(2 * math.pi) + action_log_probs
+        dist_entropy = dist_entropy.sum(-1).mean()
+        return v, action_log_probs, dist_entropy
+
+    def cuda(self, **args):
+        self.policy.cuda()
+        self.policy.body.cuda()
+        self.use_cuda = True
+
+    def cpu(self, **args):
+        self.policy.cpu()
+        self.policy.body.cpu()
+        self.use_cuda = False
 
 
 if __name__ == '__main__':

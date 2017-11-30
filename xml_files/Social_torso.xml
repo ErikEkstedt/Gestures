@@ -15,7 +15,6 @@
 	<worldbody>
 		<!-- Pelvis -->
 		<geom fromto="-.02 -.07 0 -.02 .07 0" name="butt" size="0.09" type="capsule"/>
-		
 		<!-- lower waist -->
 		<body name="lwaist" pos="-.01 0 0.10" quat="1.000 0 -0.002 0">
 			<!-- Three different joints connected to the butat. less independent movement in

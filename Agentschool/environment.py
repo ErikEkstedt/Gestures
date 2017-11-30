@@ -78,11 +78,17 @@ class Shared_Mem(SharedMemoryClientEnv):
         target_coords = np.array(self.target.pose().xyz())
         self.to_target_vec = np.array(hand_coords - target_coords)
 
-        return np.clip( np.concatenate([self.joint_positions]+\
-                                       [self.joint_speeds]+\
-                                       [self.to_target_vec]+\
-                                       np.array((target_x, target_y, target_z)),
-                                       ), -5, +5)
+        # return np.clip( np.concatenate([self.joint_positions]+\
+        #                                [self.joint_speeds]+\
+        #                                [self.to_target_vec]+\
+        #                                np.array((target_x, target_y, target_z)),
+        #                                ), -5, +5)
+
+        return np.concatenate([self.joint_positions]+\
+                              [self.joint_speeds]+\
+                              [self.to_target_vec]+\
+                              np.array((target_x, target_y, target_z)),)
+
 
 
 
@@ -118,8 +124,6 @@ class Shared_Mem(SharedMemoryClientEnv):
             joints_at_limit_cost,
             feet_collision_cost
             ]
-
-
 
     def _step(self, a):
         if not self.scene.multiplayer:  # if multiplayer, action first applied to all robots, then global step() called, then _step() for all robots with the same actions
@@ -386,15 +390,6 @@ class Social_Torso(GYM_XML_MEM):
         ''' dict containing the {motor_names : motors}'''
         return self.jdict
 
-    def get_scene(self):
-        return self.scene
-
-    def get_world(self):
-        return self.scene.cpp_world
-
-    def get_motor_names(self):
-        return self.motor_names
-
     def get_key_positions(self):
         ''' returns the x, y, z positions of key body parts'''
         coords = []
@@ -419,6 +414,13 @@ class Social_Torso(GYM_XML_MEM):
         self.jdict["target0_x"].reset_current_position(self.np_random.uniform( low=-0.3, high=0.3 ), 0)
         self.jdict["target0_y"].reset_current_position(self.np_random.uniform( low=-0.3, high=0.3), 0)
         self.jdict["target0_z"].reset_current_position(self.np_random.uniform( low=0, high=0.3), 0)
+
+    def get_target(self):
+        # Target
+        hand_coords = np.array(self.key_parts[0].pose().xyz())
+        target_coords = np.array(self.target.pose().xyz())
+        to_target_vec = np.array(hand_coords - target_coords)
+        return {'hand':hand_coords, 'target':target_coords}
 
     def set_precision(self, p):
         self.set_precision = p
