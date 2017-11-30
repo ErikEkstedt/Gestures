@@ -1,28 +1,13 @@
-# Environment: Social Torso
+# Environment
 
+## custom_reacher
+reacher
 
-## Action Space
+## Social_torso
+hej
 
-Thirteen controllable joints
+## Notes
 
-```python
-["abdomen_z",
-"abdomen_y", 
-"abdomen_x", 
-"upper_abs",
-"neck_y",
-"neck_z",
-"neck_x",
-"right_shoulder1",
-"right_shoulder2",
-"right_elbow",
-"left_shoulder1",
-"left_shoulder2",
-"left_elbow"]
-```
-
-## Defining Mujoco xml
-### default
 *joint*
 * armature - rotor inertia,
 * damping - Damping applied to all degrees of freedom created by this joint.
