@@ -10,6 +10,7 @@
 
 * pos - Position of the joint, specified in local or global coordinates as determined by the coordinate attribute of compiler. For free joints this attribute is ignored.
 
+* fromto - defines where from and where to a geom should be.
 
 ## geom
 * Collisions:

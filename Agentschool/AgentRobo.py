@@ -199,12 +199,11 @@ class AgentRoboSchool(object):
 
     '''
     def __init__(self, args,
-                    stacked_state_shape=(176,),
-                    action_shape=17,
-                    hidden=64,
-                    fixed_std=False,
-                    std=0.5):
-
+                 stacked_state_shape=(176,),
+                 action_shape=17,
+                 hidden=64,
+                 fixed_std=False,
+                 std=0.5):
         # Data
         if len(stacked_state_shape)>1:
             self.stacked_state = stacked_state_shape
@@ -273,9 +272,6 @@ class AgentRoboSchool(object):
         dist_entropy = dist_entropy.sum(-1).mean()
         return v, action_log_probs, dist_entropy
 
-    def understand(self, o):
-        return self.fnet(o)
-
     def cuda(self, **args):
         self.policy.cuda()
         self.policy.body.cuda()
@@ -290,9 +286,6 @@ class AgentRoboSchool(object):
         self.old_policy.body.cpu()
         self.use_cuda = False
 
-
-    def update_old_policy(self):
-        self.old_policy.load_state_dict(self.policy.state_dict())
 
 class TestAgentRoboSchool(object):
     ''' Agent with MLP policy PI( a_t | s_t)

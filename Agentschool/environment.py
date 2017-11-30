@@ -161,7 +161,6 @@ class Shared_Mem(SharedMemoryClientEnv):
         self.reward += sum(self.rewards)
         return state, sum(self.rewards), bool(done), {}
 
-
     def episode_over(self, frames):
         pass
 
@@ -245,7 +244,7 @@ class GYM_XML(gym.Env):
 
     def _reset(self):
         if self.scene is None:
-            self.scene = self.create_single_player_scene()
+            self.scene = self.initialize_scene()
         if not self.scene.multiplayer:
             self.scene.episode_restart()
         self.mjcf = self.scene.cpp_world.load_mjcf(os.path.join(self.XML_PATH, self.model_xml))

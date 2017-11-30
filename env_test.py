@@ -37,42 +37,39 @@ def main():
     # s = env.reset()
     # t = env.get_target()
 
-    seed = 10
-    num_processes = 2
-    env = SubprocVecEnv([
-        make_social_torso(seed, i)
-        for i in range(num_processes)])
+    # seed = 10
+    # num_processes = 2
+    # env = SubprocVecEnv([
+    #     make_social_torso(seed, i)
+    #     for i in range(num_processes)])
 
-    asize = env.action_space.shape[0]
-    alls = list(np.arange(asize))
-
-    s = env.reset()
-    t1,t2 = env.get_target()
-
-    target1 = t1['target']
-    target2 = t2['target']
-
-    random_r = 0
-    for i in range(4000):
-        a = random_action(alls, asize)
-        s, r, d, _ = env.step(num_processes*[a])
-        t1,t2 = env.get_target()
-
-        if not (t1['target'] == target1).all():
-            print('target 1 changed at ', i)
-            target1 = t1['target']
-        if not (t2['target'] == target2).all():
-            print('target 2 changed at ', i)
-            target2 = t2['target']
-
-        random_r += r
-        if sum(d) > 0:
-            print(i)
-            print(d)
-            print(random_r)
-            input()
-
-
+    # asize = env.action_space.shape[0]
+    # alls = list(np.arange(asize))
+    # s = env.reset()
+    # t1,t2 = env.get_target()
+    #
+    # target1 = t1['target']
+    # target2 = t2['target']
+    #
+    # random_r = 0
+    # for i in range(4000):
+    #     a = random_action(alls, asize)
+    #     s, r, d, _ = env.step(num_processes*[a])
+    #     t1,t2 = env.get_target()
+    #
+    #     if not (t1['target'] == target1).all():
+    #         print('target 1 changed at ', i)
+    #         target1 = t1['target']
+    #     if not (t2['target'] == target2).all():
+    #         print('target 2 changed at ', i)
+    #         target2 = t2['target']
+    #
+    #     random_r += r
+    #     if sum(d) > 0:
+    #         print(i)
+    #         print(d)
+    #         print(random_r)
+    #         input()
 
 
 
