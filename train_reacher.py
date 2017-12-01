@@ -11,11 +11,9 @@ from Agent.memory import RolloutStorage, StackedState
 from Agent.arguments import FakeArgs, get_args
 from Agent.lightAgent import Agent
 from Agent.AgentRobo import AgentRoboSchool
-# from Agent.training import Exploration, Training
-# from Agent.test import test, test_and_render
 
-from environments.custom_reacher import CustomReacher, make_parallel_customReacher
 
+import roboschool
 # ----------------------------
 def Exploration(agent, env):
     ''' Exploration part of PPO training:
@@ -274,14 +272,12 @@ def args_to_list(args):
         l.append(s)
     return l
 
-def make_env(env_id, seed, rank, log_dir):
+def make_env(env_id, seed, rank):
     def _thunk():
         env = gym.make(env_id)
         env.seed(seed + rank)
-        env = bench.Monitor(env, os.path.join(log_dir, "{}.monitor.json".format(rank)))
         return env
     return _thunk
-
 
 def main():
     args = get_args()  # Real argparser
@@ -296,7 +292,10 @@ def main():
 
     # == Environment ========
 
-    env = make_parallel_customReacher(args.seed, args.num_processes)
+    from baselines.common.vec_env.subproc_vec_env import SubprocVecEnv
+    envs = [make_env('RoboschoolReacher-v1', args.seed, i) for i in range(args.num_processes)]
+    env = SubprocVecEnv(envs)
+
 
     state_shape = env.observation_space.shape
     stacked_state_shape = (state_shape[0] * args.num_stack,)
@@ -316,6 +315,7 @@ def main():
 
     # ====== Agent ==============
     torch.manual_seed(args.seed)
+    Agent = AgentRoboSchool
     agent = Agent(args,
                   stacked_state_shape=stacked_state_shape,
                   action_shape=action_shape,
@@ -370,17 +370,17 @@ def main():
 
         #  ==== LOG & Test ======
         if j % args.log_interval == 0: log_print(agent, dist_entropy, value_loss, 1, action_loss, j)
-
         if j % args.vis_interval == 0 and j is not 0 and not args.no_vis:
             frame = (j + 1) * args.num_steps * args.num_processes
-
             if not args.no_test and j % args.test_interval == 0:
                 ''' TODO
                 Fix so that resetting the environment does not
                 effect the data. Equivialent to `done` ?
                 should be the same.'''
                 print('Testing')
-                test_reward = test(agent, CustomReacher, runs=10)
+                def testenv():
+                    return gym.make('RoboschoolReacher-v1')
+                test_reward = test(agent, testenv, runs=10)
                 vis.line_update(Xdata=frame, Ydata=test_reward, name='Test Score')
                 print('Done testing')
                 if args.test_render:

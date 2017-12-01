@@ -172,7 +172,6 @@ class CustomReacher(MyGymEnv):
                 j.reset_current_position(
                     self.np_random.uniform( low=-0.3, high=0.3 ), 0)
 
-
 def make_parallel_customReacher(seed, num_processes):
     ''' imports SubprocVecEnv from baselines.
     :param seed                 int

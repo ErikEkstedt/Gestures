@@ -220,7 +220,6 @@ class Agent(object):
                              hidden=hidden,
                              fixed_std=args.fixed_std,
                              std=std)
-        self.old_policy = copy.deepcopy(self.policy)
         self.optimizer_pi = optim.Adam(self.policy.parameters(), lr=args.pi_lr)
 
     def get_std(self):
