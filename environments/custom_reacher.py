@@ -69,7 +69,7 @@ class CustomReacher(MyGymEnv):
         ''' gets hand position, target position and the vector in bewteen'''
         self.target_position = np.array(self.target_parts['target'].pose().xyz())
         self.hand_position = np.array(self.parts['robot_hand'].pose().xyz())
-        self.to_target_vec = self.hand_position + self.target_position
+        self.to_target_vec = self.hand_position - self.target_position
 
     def calc_reward(self, a):
         potential_old = self.potential
