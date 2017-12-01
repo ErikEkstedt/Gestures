@@ -2,7 +2,7 @@ from roboschool.scene_abstract import Scene
 import os
 import numpy as np
 
-from gym_env import MyGymEnv
+from environments.gym_env import MyGymEnv
 ''' MyGymEnv expects some classes
 initialize_scene() - returns ROBO/../scene_abstract.Scene
 load_xml_get_robot() -
@@ -90,7 +90,7 @@ class CustomReacher(MyGymEnv):
     def initialize_scene(self):
         return Scene(self.gravity, self.timestep, self.frame_skip)
 
-    def load_xml_get_robot(self):
+    def load_xml_get_robot(self, verbose=False):
         self.mjcf = self.scene.cpp_world.load_mjcf( os.path.join(self.XML_PATH, self.model_xml))
         self.ordered_joints = []
         self.jdict = {}
@@ -98,23 +98,22 @@ class CustomReacher(MyGymEnv):
         self.frame = 0
         self.done = 0
         self.reward = 0
-        dump = 1
         for r in self.mjcf:
-            if dump: print("ROBOT '%s'" % r.root_part.name)
+            if verbose: print("ROBOT '%s'" % r.root_part.name)
             # store important parts
             if r.root_part.name==self.robot_name:
                 self.cpp_robot = r
                 self.robot_body = r.root_part
 
             for part in r.parts:
-                if dump: print("\tPART '%s'" % part.name)
+                if verbose: print("\tPART '%s'" % part.name)
                 self.parts[part.name] = part
                 if part.name==self.robot_name:
                     self.cpp_robot = r
                     self.robot_body = part
 
             for j in r.joints:
-                if dump: print("\tALL JOINTS '%s' limits = %+0.2f..%+0.2f effort=%0.3f speed=%0.3f" % ((j.name,) + j.limits()) )
+                if verbose: print("\tALL JOINTS '%s' limits = %+0.2f..%+0.2f effort=%0.3f speed=%0.3f" % ((j.name,) + j.limits()) )
                 j.power_coef = 100.0
                 self.ordered_joints.append(j)
                 self.jdict[j.name] = j

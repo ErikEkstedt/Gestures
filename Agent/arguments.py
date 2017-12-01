@@ -8,10 +8,8 @@ def get_args():
 
 
     # gym
-    parser.add_argument('--test-render', action='store_true', default=False,
-            help='Render during test')
-    parser.add_argument('--num-processes', type=int, default=2,
-                       help='Number of processors used (default: 2)')
+    parser.add_argument('--num-processes', type=int, default=4,
+                       help='Number of processors used (default: 4)')
 
     # PPO Loss
     parser.add_argument('--pi-lr', type=float, default=3e-4,
@@ -57,8 +55,8 @@ def get_args():
                         help='disables visdom visualization')
     parser.add_argument('--test-interval', type=int,  default=100,
             help='how many upgrades/test (default: 100)')
-    parser.add_argument('--max-test-length', type=int, default=200,
-                        help='maximum steps in a test episode (default: 700)')
+    parser.add_argument('--max-test-length', type=int, default=2000,
+                        help='maximum steps in a test episode (default: 2000)')
     parser.add_argument('--num-test', type=int, default=5,
             help='Number of test after training (default: 5)')
 
@@ -76,16 +74,17 @@ def get_args():
     parser.add_argument('--save-dir', default='./trained_models/',
                         help='directory to save agent logs (default: ./trained_models/)')
 
-    # Cuda
+    # Boolean
     parser.add_argument('--no-cuda', action='store_true', default=False,
                         help='disables CUDA training')
     parser.add_argument('--no-vis', action='store_true', default=False,
                         help='disables visdom visualization')
+    parser.add_argument('--test-render', action='store_true', default=False,
+            help='Render during test')
 
     args = parser.parse_args()
     args.cuda = not args.no_cuda and torch.cuda.is_available()
     args.vis = not args.no_vis
-
     return args
 
 

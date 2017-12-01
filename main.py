@@ -8,13 +8,13 @@ import os
 import gym
 import numpy as np
 
-from Agentschool.memory import RolloutStorage, StackedState
-from Agentschool.arguments import FakeArgs, get_args
-from Agentschool.lightAgent import Agent
-from Agentschool.training import Exploration, Training
-from Agentschool.test import test, test_and_render
+from Agent.memory import RolloutStorage, StackedState
+from Agent.arguments import FakeArgs, get_args
+from Agent.lightAgent import Agent
+from Agent.training import Exploration, Training
+from Agent.test import test, test_and_render
 
-from custom_reacher import CustomReacher, make_parallel_customReacher
+from environments.custom_reacher import CustomReacher, make_parallel_customReacher
 
 # ---------------------
 def log_print(agent, dist_entropy, value_loss, floss, action_loss, j):
@@ -43,7 +43,7 @@ def main():
         print(i)
 
     if args.vis:
-        from Agentschool.vislogger import VisLogger
+        from Agent.vislogger import VisLogger
         # Text is not pretty
         vis = VisLogger(description_list=args_string, log_dir=args.log_dir)
 
@@ -122,7 +122,7 @@ def main():
 
         agent.memory.last_to_first() #updates rollout memory and puts the last state first.
 
-        #  ==== LOG ======
+        #  ==== LOG & Test ======
         if j % args.log_interval == 0: log_print(agent, dist_entropy, value_loss, 1, action_loss, j)
 
         if j % args.vis_interval == 0 and j is not 0 and not args.no_vis:
@@ -134,12 +134,12 @@ def main():
                 effect the data. Equivialent to `done` ?
                 should be the same.'''
                 print('Testing')
-                test_reward = test(agent, runs=10)
+                test_reward = test(agent, CustomReacher, runs=10)
                 vis.line_update(Xdata=frame, Ydata=test_reward, name='Test Score')
                 print('Done testing')
                 if args.test_render:
                     print('RENDER')
-                    test_and_render(agent)
+                    test_and_render(agent, CustomReacher)
 
                 #  ==== RESET ====
 
