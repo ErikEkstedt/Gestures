@@ -48,7 +48,6 @@ def main():
         vis = VisLogger(description_list=args_string, log_dir=args.log_dir)
 
     # == Environment ========
-    monitor_log_dir = "/tmp/"
 
     env = make_parallel_customReacher(args.seed, args.num_processes)
 
@@ -150,7 +149,7 @@ def main():
             # Take mean b/c several processes
             # Training score now resets to zero alot.
             R = agent.final_rewards
-            R = R.mean()
+            R = R.sum()
             if abs(R) > 0 :
                 # when reward mean is exactly zero it does not count.
                 vis.line_update(Xdata=frame, Ydata=R, name='Training Score')

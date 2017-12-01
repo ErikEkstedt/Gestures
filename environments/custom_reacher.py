@@ -31,7 +31,7 @@ class CustomReacher(MyGymEnv):
         self.power = 0.5
 
         # # penalties/values used for calculating reward
-        self.potential_constant = 10
+        self.potential_constant = 100
         self.electricity_cost  = -0.1
         self.stall_torque_cost = -0.01
         self.joints_at_limit_cost = -0.01
