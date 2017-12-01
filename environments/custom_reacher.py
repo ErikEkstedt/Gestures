@@ -69,15 +69,15 @@ class CustomReacher(MyGymEnv):
         target_y, _ = self.jdict["target_y"].current_position()
         target_z, _ = self.jdict["target_z"].current_position()
 
-        print('Target: {}, {}, {}'.format(target_x, target_y, target_z))
-        print('Hand: {}'.format(self.hand_position))
-        print('Vector: ', self.to_target_vec)
-        print('Potential: ', self.calc_potential())
-
         reacher = np.array([ target_x, target_y, target_z, self.to_target_vec[0], self.to_target_vec[1], self.to_target_vec[2]])
         reacher = np.concatenate((reacher, self.hand_position, self.joint_positions, self.joint_speeds) )
 
-        print('state: ', reacher)
+        # print('Target: {}, {}, {}'.format(target_x, target_y, target_z))
+        # print('Hand: {}'.format(self.hand_position))
+        # print('Vector: ', self.to_target_vec)
+        # print('Potential: ', self.calc_potential())
+        # print('state: ', reacher)
+
         # return np.concatenate((self.target_position,
         #                       self.joint_positions,
         #                       self.joint_speeds), )
