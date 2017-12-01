@@ -12,9 +12,9 @@ def test_and_render(agent, Env):
     '''
     # Use only 1 processor for render
     TestState = StackedState(1,
-                             agent.args.num_stack,
-                             agent.state_shape,
-                             agent.use_cuda)
+                                agent.args.num_stack,
+                                agent.state_shape,
+                                agent.use_cuda)
 
     # Test environments
     test_env = Env()
