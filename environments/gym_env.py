@@ -67,6 +67,15 @@ class MyGymEnv(gym.Env):
         done = self.stop_condition() # max frame reached?
 
         self.done = done
+        self.HUD(state, a, done)
         return state, reward, bool(done), {}
+
+    def HUD(self, s, a, done):
+        # active = self.scene.actor_is_active(self)
+        self.scene.cpp_world.test_window_history_advance()
+        self.scene.cpp_world.test_window_observations(s.tolist())
+        self.scene.cpp_world.test_window_actions(a.tolist())
+        self.scene.cpp_world.test_window_rewards(self.rewards)
+            #self.camera.test_window_score(s)  # will appear on video ("rgb_array"), but not on cameras istalled on the robot (because that would be different camera)
 
 

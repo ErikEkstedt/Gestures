@@ -72,7 +72,6 @@ class AddBias_fixed(nn.Module):
         def __repr__(self):
             return self.__class__.__name__ + '(' + str(self.std[0]) + ')'
 
-
 class DiagonalGaussian(nn.Module):
     ''' Diagonal Gaussian used as the head of the policy networks'''
     def __init__(self, num_inputs, num_outputs, fixed_std=False, std=None):
@@ -250,7 +249,7 @@ class Agent(object):
             noise = Variable(torch.randn(action_std.size()))
             if action_mean.is_cuda:
                 noise = noise.cuda()
-            action = action_mean + action_std * noise
+            action = action_mean + action_std * noise * 0.1
 
         # calculate `old_log_probs` directly in exploration.
         action_log_probs = -0.5 * ((action - action_mean) / action_std).pow(2) - 0.5 * math.log(2 * math.pi) - action_logstd

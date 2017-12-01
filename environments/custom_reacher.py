@@ -2,7 +2,10 @@ from roboschool.scene_abstract import Scene
 import os
 import numpy as np
 
-from environments.gym_env import MyGymEnv
+try:
+    from environments.gym_env import MyGymEnv
+except:
+    from gym_env import MyGymEnv
 ''' MyGymEnv expects some classes
 initialize_scene() - returns ROBO/../scene_abstract.Scene
 load_xml_get_robot() -
@@ -17,7 +20,7 @@ class CustomReacher(MyGymEnv):
                  robot_name='robot_arm',
                  target_name='target',
                  model_xml='custom_reacher.xml'):
-        MyGymEnv.__init__(self, action_dim=2, obs_dim=10)
+        MyGymEnv.__init__(self, action_dim=2, obs_dim=13)
         self.XML_PATH = path
         self.model_xml = model_xml
         self.robot_name = robot_name
@@ -66,9 +69,15 @@ class CustomReacher(MyGymEnv):
         target_y, _ = self.jdict["target_y"].current_position()
         target_z, _ = self.jdict["target_z"].current_position()
 
-        reacher = np.array([ target_x, target_y, target_z, self.to_target_vec[0], self.to_target_vec[1], self.to_target_vec[2]])
-        reacher = np.concatenate((reacher, self.joint_positions, self.joint_speeds) )
+        print('Target: {}, {}, {}'.format(target_x, target_y, target_z))
+        print('Hand: {}'.format(self.hand_position))
+        print('Vector: ', self.to_target_vec)
+        print('Potential: ', self.calc_potential())
 
+        reacher = np.array([ target_x, target_y, target_z, self.to_target_vec[0], self.to_target_vec[1], self.to_target_vec[2]])
+        reacher = np.concatenate((reacher, self.hand_position, self.joint_positions, self.joint_speeds) )
+
+        print('state: ', reacher)
         # return np.concatenate((self.target_position,
         #                       self.joint_positions,
         #                       self.joint_speeds), )
@@ -197,6 +206,7 @@ def test():
         env.render()
         s, r, d, _ = env.step(np.random.rand(2)*2-1 )
         print(r)
+        input()
 
 if __name__ == '__main__':
     test()
