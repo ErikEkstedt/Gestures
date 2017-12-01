@@ -149,7 +149,7 @@ def main():
             # Take mean b/c several processes
             # Training score now resets to zero alot.
             R = agent.final_rewards
-            R = R.sum()
+            R = R.sum()/args.num_processes
             if abs(R) > 0 :
                 # when reward mean is exactly zero it does not count.
                 vis.line_update(Xdata=frame, Ydata=R, name='Training Score')

@@ -34,8 +34,8 @@ def Exploration(agent, env):
         if sum(done) > 0:
             print('Finished episode')
             print('done', done)
-            print(agent.final_rewards[0])
-            print(agent.episode_rewards[0])
+            print(agent.final_rewards)
+            print(agent.episode_rewards)
 
         if agent.args.cuda:
             masks = masks.cuda()
