@@ -31,6 +31,12 @@ def Exploration(agent, env):
         agent.final_rewards += (1 - masks) * agent.episode_rewards # update final_reward to cummulative episodic reward
         agent.episode_rewards *= masks # reset episode reward
 
+        if sum(done) > 0:
+            print('Finished episode')
+            print('done', done)
+            print(agent.final_rewards[0])
+            print(agent.episode_rewards[0])
+
         if agent.args.cuda:
             masks = masks.cuda()
 

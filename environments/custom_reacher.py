@@ -44,10 +44,10 @@ class CustomReacher(MyGymEnv):
             m.set_motor_torque( float(power*self.power*np.clip(a[i], -1, +1)) )
 
     def stop_condition(self):
-        done = False
+        max_time = False
         if self.frame>=self.MAX_TIME:
-            done = True
-        return done
+            max_time = True
+        return max_time
 
     def calc_state(self):
         j = np.array([j.current_relative_position()

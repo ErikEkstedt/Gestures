@@ -32,6 +32,10 @@ class MyGymEnv(gym.Env):
             self.load_xml_get_robot()
         self.robot_specific_reset()
 
+        # Important Resets
+        self.done = False
+        self.frame = 0
+
         for r in self.mjcf:
             r.query_position()
 
@@ -60,7 +64,7 @@ class MyGymEnv(gym.Env):
 
         state = self.calc_state()  # also calculates self.joints_at_limit
         reward = self.calc_reward(a)
-        done = self.stop_condition()
+        done = self.stop_condition() # max frame reached?
 
         self.done = done
         return state, reward, bool(done), {}
