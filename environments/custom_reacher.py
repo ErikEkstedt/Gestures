@@ -31,7 +31,7 @@ class CustomReacher(MyGymEnv):
         self.power = 0.5
 
         # # penalties/values used for calculating reward
-        self.potential_constant = 1
+        self.potential_constant = 100
         self.electricity_cost  = -0.1
         self.stall_torque_cost = -0.01
         self.joints_at_limit_cost = -0.01
@@ -85,7 +85,7 @@ class CustomReacher(MyGymEnv):
         return sum(self.rewards)
 
     def calc_potential(self):
-        return self.potential_constant*np.linalg.norm(self.to_target_vec)
+        return -self.potential_constant*np.linalg.norm(self.to_target_vec)
 
     def initialize_scene(self):
         return Scene(self.gravity, self.timestep, self.frame_skip)

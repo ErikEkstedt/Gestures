@@ -1,7 +1,6 @@
 import torch
 import torch.nn as nn
 from torch.autograd import Variable
-from torch.utils.data.sampler import BatchSampler, SubsetRandomSampler
 
 from itertools import count
 import os
