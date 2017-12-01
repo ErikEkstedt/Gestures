@@ -17,7 +17,7 @@ class CustomReacher(MyGymEnv):
                  robot_name='robot_arm',
                  target_name='target',
                  model_xml='custom_reacher.xml'):
-        MyGymEnv.__init__(self, action_dim=2, obs_dim=7)
+        MyGymEnv.__init__(self, action_dim=2, obs_dim=10)
         self.XML_PATH = path
         self.model_xml = model_xml
         self.robot_name = robot_name
@@ -61,9 +61,18 @@ class CustomReacher(MyGymEnv):
         self.calc_to_target_vec()
 
         a = np.concatenate((self.target_position, self.joint_positions, self.joint_speeds), )
-        return np.concatenate((self.target_position,
-                              self.joint_positions,
-                              self.joint_speeds), )
+
+        target_x, _ = self.jdict["target_x"].current_position()
+        target_y, _ = self.jdict["target_y"].current_position()
+        target_z, _ = self.jdict["target_z"].current_position()
+
+        reacher = np.array([ target_x, target_y, target_z, self.to_target_vec[0], self.to_target_vec[1], self.to_target_vec[2]])
+        reacher = np.concatenate((reacher, self.joint_positions, self.joint_speeds) )
+
+        # return np.concatenate((self.target_position,
+        #                       self.joint_positions,
+        #                       self.joint_speeds), )
+        return reacher
 
     def calc_to_target_vec(self):
         ''' gets hand position, target position and the vector in bewteen'''
