@@ -14,7 +14,7 @@ calc_state()
 calc_reward(a)
 '''
 
-PATH_TO_CUSTOM_XML = "/home/erik/com_sci/Master_code/Roboschool/xml_files"
+PATH_TO_CUSTOM_XML = "/home/erik/com_sci/Master_code/Project/environments/xml_files"
 class CustomReacher(MyGymEnv):
     def __init__(self, path=PATH_TO_CUSTOM_XML,
                  robot_name='robot_arm',

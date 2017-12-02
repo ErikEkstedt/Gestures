@@ -9,6 +9,10 @@ import math
 
 # from utils import Conv2d_out_shape, ConvTranspose2d_out_shape
 Conv2d_out_shape, ConvTranspose2d_out_shapea = None, None
+try:
+    from memory import RolloutStorage, StackedState
+except:
+    from Agent.memory import RolloutStorage, StackedState
 # from running_stat import ObsNorm
 
 # This script is heavily inspired by
@@ -72,6 +76,7 @@ class AddBias_fixed(nn.Module):
         def __repr__(self):
             return self.__class__.__name__ + '(' + str(self.std[0]) + ')'
 
+
 class DiagonalGaussian(nn.Module):
     ''' Diagonal Gaussian used as the head of the policy networks'''
     def __init__(self, num_inputs, num_outputs, fixed_std=False, std=None):
@@ -130,6 +135,7 @@ class PolicyBody(nn.Module):
     def cpu(self, **args):
         super(PolicyBody, self).cpu(**args)
 
+
 class Policy(nn.Module):
     def __init__(self, input_size, action_shape, hidden=64, fixed_std=False, std=None):
         super(Policy, self).__init__()
@@ -155,35 +161,9 @@ class Policy(nn.Module):
             self.head.mean.weight.data.mul_(0.01)
 
 
-class FNet(nn.Module):
-    def __init__(self, obs_shape=(3,64,64), action_shape=12):
-        super(FNet, self).__init__()
-        self.obs_shape = obs_shape
-        self.in_channels = obs_shape[0]
-        self.action_shape = action_shape
-
-        self.conv1 = nn.Conv2d(self.in_channels, 32, kernel_size=8, stride=4)
-        self.out_shape1 = Conv2d_out_shape(self.conv1, input_shape=obs_shape)
-
-        self.conv2 = nn.Conv2d(32, 64, kernel_size=4, stride=2)
-        self.out_shape2 = Conv2d_out_shape(self.conv2, self.out_shape1)
-
-        self.conv3 = nn.Conv2d(64, 32, kernel_size=3, stride=1)
-        self.out_shape3 = Conv2d_out_shape(self.conv3, self.out_shape2)
-
-        self.linear1 = nn.Linear(total_params(self.out_shape3), action_shape)
-
-
-    def forward(self, obs):
-        x = F.relu(self.conv1(obs))
-        x = F.relu(self.conv2(x))
-        x = F.relu(self.conv3(x))
-        x = x.view(x.size()[0],-1)
-        return self.linear1(x)
-
-
-class Agent(object):
+class AgentRoboSchool(object):
     ''' Agent with MLP policy PI( a_t | s_t)
+
     This agent is only for standard Roboschool Tasks.
 
     :param   stacked_state_shape            (176,)
@@ -193,14 +173,9 @@ class Agent(object):
     :param   hidden                         int, number of hidden neurons
     :param   fixed_std                      boolean,fix the std of actions
     :param   std                            float, value of std if fixed
-
     '''
-    def __init__(self, args,
-                 stacked_state_shape=(176,),
-                 action_shape=17,
-                 hidden=64,
-                 fixed_std=False,
-                 std=0.5):
+
+    def __init__(self, args, stacked_state_shape=(176,), action_shape=17, hidden=64, fixed_std=False, std=0.5):
         # Data
         if len(stacked_state_shape)>1:
             self.stacked_state = stacked_state_shape
@@ -220,102 +195,11 @@ class Agent(object):
                              hidden=hidden,
                              fixed_std=args.fixed_std,
                              std=std)
+        self.old_policy = copy.deepcopy(self.policy)
         self.optimizer_pi = optim.Adam(self.policy.parameters(), lr=args.pi_lr)
 
     def get_std(self):
         return self.policy.head.logstd.std
-
-    def sample(self, s_t, deterministic=False):
-        '''Samples an action based on input.
-        Computes an action (deterministic or stochastic / with or without noise)
-        also computes `old_action_log_probs` used in training.
-
-        :param s_t                      torch.Tensor
-
-        :return v                       Variable, value_prediction
-        :return action                  Variable, action to take
-        :return action_log_probs        Variable, `old_action_log_probs`
-        :return action_std              Variable, std
-        '''
-        input = Variable(s_t, volatile=True)
-        v, action_mean, action_logstd = self.policy(input)
-        action_std = action_logstd.exp()
-
-        if deterministic:
-            action = action_mean
-        else:
-            # only care about noise if stochastic
-            noise = Variable(torch.randn(action_std.size()))
-            if action_mean.is_cuda:
-                noise = noise.cuda()
-            action = action_mean + action_std * noise * 0.1
-
-        # calculate `old_log_probs` directly in exploration.
-        action_log_probs = -0.5 * ((action - action_mean) / action_std).pow(2) - 0.5 * math.log(2 * math.pi) - action_logstd
-        action_log_probs = action_log_probs.sum(1, keepdim=True)
-        dist_entropy = 0.5 + math.log(2 * math.pi) + action_log_probs
-        dist_entropy = dist_entropy.sum(-1).mean()
-
-        return v, action, action_log_probs, action_std
-
-    def evaluate_actions(self, s_t, actions):
-        v, action_mean, action_logstd = self.policy(s_t)
-        action_std = action_logstd.exp()
-
-        action_log_probs = -0.5 * ((actions - action_mean) / action_std).pow(2) - 0.5 * math.log(2 * math.pi) - action_logstd
-        action_log_probs = action_log_probs.sum(1, keepdim=True)
-        dist_entropy = 0.5 + math.log(2 * math.pi) + action_log_probs
-        dist_entropy = dist_entropy.sum(-1).mean()
-        return v, action_log_probs, dist_entropy
-
-    def cuda(self, **args):
-        self.policy.cuda()
-        self.policy.body.cuda()
-        self.old_policy.cuda()
-        self.old_policy.body.cuda()
-        self.use_cuda = True
-
-    def cpu(self, **args):
-        self.policy.cpu()
-        self.policy.body.cpu()
-        self.old_policy.cpu()
-        self.old_policy.body.cpu()
-        self.use_cuda = False
-
-
-class TestAgentRoboSchool(object):
-    ''' Agent with MLP policy PI( a_t | s_t)
-
-    This agent is only for standard Roboschool Tasks.
-
-    :param   stacked_state_shape            (176,)
-    :param   action_shape                   (17,)
-
-    :param   hidden                         int, number of hidden neurons
-    :param   use_cuda                       bool
-
-    '''
-    def __init__(self,
-                 stacked_state_shape=(176,),
-                 action_shape=17,
-                 hidden=64,
-                 use_cuda=False):
-
-        # Data
-        if len(stacked_state_shape)>1:
-            self.stacked_state = stacked_state_shape
-        else:
-            self.stacked_state = stacked_state_shape[0]
-
-        self.action_shape = action_shape[0]  # action state size
-
-        # ======= Policy ========
-        self.hidden = hidden
-        self.policy = Policy(self.stacked_state,
-                             self.action_shape,
-                             hidden=hidden,
-                             fixed_std=False,
-                             std=0.5)
 
     def sample(self, s_t, deterministic=False):
         '''Samples an action based on input.
@@ -363,6 +247,119 @@ class TestAgentRoboSchool(object):
     def cuda(self, **args):
         self.policy.cuda()
         self.policy.body.cuda()
+        self.old_policy.cuda()
+        self.old_policy.body.cuda()
+        self.use_cuda = True
+
+    def cpu(self, **args):
+        self.policy.cpu()
+        self.policy.body.cpu()
+        self.old_policy.cpu()
+        self.old_policy.body.cpu()
+        self.use_cuda = False
+
+class Agent(object):
+    ''' Agent with MLP policy PI( a_t | s_t)
+
+    This agent is only for standard Roboschool Tasks.
+
+    :param   stacked_state_shape            (176,)
+    :param   action_shape                   (17,)
+
+    :param   optimizer_pi                   torch.optim
+    :param   hidden                         int, number of hidden neurons
+    :param   fixed_std                      boolean,fix the std of actions
+    :param   std                            float, value of std if fixed
+    '''
+    def __init__(self, args, env, hidden=64):
+        self.args = args                 # Argparse arguments
+
+        self.ac_shape = env.action_space.shape[0]  # `always` 1D-vector
+        ob_shape = env.observation_space.shape
+        # ======= Current State Stacked ========
+        self.CurrentState = StackedState(args.num_processes,
+                                         args.num_stack,
+                                         ob_shape,
+                                         args.cuda)
+
+
+        if len(ob_shape) == 1:
+            ob_shape = ob_shape[0]
+        self.ob_shape = ob_shape
+        if args.num_stack>1:
+            self.ob_shape = ob_shape * args.num_stack
+
+        # ======= Memory ========
+        self.memory = RolloutStorage(args.num_steps,
+                                     args.num_processes,
+                                     (self.ob_shape,),
+                                     (self.ac_shape,))
+
+
+        self.tmp_steps = 0
+        self.use_cuda = args.cuda
+        self.noise_scaler = 1
+
+        self.episode_rewards = 0
+        self.final_rewards = 0
+
+        # ======= Policy ========
+        self.hidden = hidden
+        self.policy = Policy(self.ob_shape,
+                             self.ac_shape,
+                             hidden=hidden,
+                             fixed_std=False,
+                             std=0.5)
+        self.optimizer_pi = optim.Adam(self.policy.parameters(), lr=args.pi_lr)
+
+    def get_std(self):
+        return self.policy.head.logstd.std
+
+    def sample(self, s_t, deterministic=False):
+        '''Samples an action based on input.
+        Computes an action (deterministic or stochastic / with or without noise)
+        also computes `old_action_log_probs` used in training.
+
+        :param s_t                      torch.Tensor
+
+        :return v                       Variable, value_prediction
+        :return action                  Variable, action to take
+        :return action_log_probs        Variable, `old_action_log_probs`
+        :return action_std              Variable, std
+        '''
+        input = Variable(s_t, volatile=True)
+        v, action_mean, action_logstd = self.policy(input)
+        action_std = action_logstd.exp()
+
+        if deterministic:
+            action = action_mean
+        else:
+            # only care about noise if stochastic
+            noise = Variable(torch.rand(action_std.size()))
+            if action_mean.is_cuda:
+                noise = noise.cuda()
+            action = action_mean + action_std * noise * self.noise_scaler
+
+        # calculate `old_log_probs` directly in exploration.
+        action_log_probs = -0.5 * ((action - action_mean) / action_std).pow(2) - 0.5 * math.log(2 * math.pi) - action_logstd
+        action_log_probs = action_log_probs.sum(1, keepdim=True)
+        dist_entropy = 0.5 + math.log(2 * math.pi) + action_log_probs
+        dist_entropy = dist_entropy.sum(-1).mean()
+        return v, action, action_log_probs, action_std
+
+    def evaluate_actions(self, s_t, actions):
+        v, action_mean, action_logstd = self.policy(s_t)
+        action_std = action_logstd.exp()
+
+        action_log_probs = -0.5 * ((actions - action_mean) / action_std).pow(2) - 0.5 * math.log(2 * math.pi) - action_logstd
+        action_log_probs = action_log_probs.sum(1, keepdim=True)
+        dist_entropy = 0.5 + math.log(2 * math.pi) + action_log_probs
+        dist_entropy = dist_entropy.sum(-1).mean()
+        return v, action_log_probs, dist_entropy
+
+    def cuda(self, **args):
+        self.policy.cuda()
+        self.policy.body.cuda()
         self.use_cuda = True
 
     def cpu(self, **args):
@@ -374,19 +371,42 @@ class TestAgentRoboSchool(object):
 if __name__ == '__main__':
     import gym
     from arguments  import FakeArgs
+    from training import Exploration, Training
+    from test import test, test_and_render
+
     args = FakeArgs()
 
     env = gym.make('Pendulum-v0')
-    agent = AgentPepperPendulum(args, hidden=64, reward='l2', env=env, action_coeff=1)
-    steps = 10
+    agent = Agent(args, env=env, hidden=64)
 
     print('env.action_space.high', env.action_space.high)
     print('env.action_space.low', env.action_space.low)
 
     s = env.reset()
     print('state', s)
-    agent.update_current(s)
-    agent.rollouts.states[0].copy_(agent.current_state())
+    agent.CurrentState.update(s)
+    agent.memory.states[0].copy_(agent.CurrentState())
+
+    # ==== Training ====
+    num_updates = int(args.num_frames) // args.num_steps // args.num_processes
+
+    floss_total = 0
+    vloss_total = 0
+    ploss_total = 0
+    ent_total= 0
+
+    for j in range(num_updates):
+        Exploration(agent, env)  # Explore the environment for args.num_steps
+        value_loss, action_loss, dist_entropy = Training(agent, VLoss, verbose=False)  # Train models for args.ppo_epoch
+
+        vloss_total += value_loss
+        ploss_total += action_loss
+        ent_total += dist_entropy
+
+        agent.memory.last_to_first() #updates rollout memory and puts the last state first.
+        print(value_loss)
+        print(action_loss)
+
 
 
 

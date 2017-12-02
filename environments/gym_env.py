@@ -1,7 +1,7 @@
 import gym
 import numpy as np
 
-PATH_TO_CUSTOM_XML = "/home/erik/com_sci/Master_code/Roboschool/xml_files"
+PATH_TO_CUSTOM_XML = "/home/erik/com_sci/Master_code/Project/environments/xml_files"
 
 class MyGymEnv(gym.Env):
     metadata = {

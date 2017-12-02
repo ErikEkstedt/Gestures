@@ -1,12 +1,15 @@
+import baselines
+
 from baselines.common import set_global_seeds, tf_util as U
 from baselines import bench
 import gym, logging
 from baselines import logger
 from environments.custom_reacher import CustomReacher
 
-def train(env_id, num_timesteps, seed):
+def trainPPO(env_id, num_timesteps, seed, num_processes=1):
     from baselines.ppo1 import mlp_policy, pposgd_simple
-    U.make_session(num_cpu=1).__enter__()
+
+    U.make_session(num_cpu=num_processes).__enter__()
     set_global_seeds(seed)
     # env = gym.make(env_id)
     env = CustomReacher()
@@ -16,6 +19,7 @@ def train(env_id, num_timesteps, seed):
     env = bench.Monitor(env, logger.get_dir())
     env.seed(seed)
     gym.logger.setLevel(logging.WARN)
+
     pposgd_simple.learn(env, policy_fn,
             max_timesteps=num_timesteps,
             timesteps_per_actorbatch=2048,
@@ -25,16 +29,29 @@ def train(env_id, num_timesteps, seed):
         )
     env.close()
 
+
 def main():
     import argparse
     parser = argparse.ArgumentParser(formatter_class=argparse.ArgumentDefaultsHelpFormatter)
-    parser.add_argument('--env', help='environment ID', default='RoboschoolReacher-v1')
-    parser.add_argument('--seed', help='RNG seed', type=int, default=0)
-    parser.add_argument('--num-timesteps', type=int, default=int(1e6))
+    parser.add_argument('--env',
+                        help='environment ID',
+                        default='RoboschoolReacher-v1')
+    parser.add_argument('--num_processes',
+                        help='CPU`s ',
+                        type=int, default=1)
+    parser.add_argument('--seed',
+                        help='RNG seed',
+                        type=int, default=2)
+    parser.add_argument('-num-timesteps',
+                        type=int,
+                        default=int(1e6))
     args = parser.parse_args()
     logger.configure()
-    import roboschool
-    train(args.env, num_timesteps=args.num_timesteps, seed=args.seed)
+
+    trainPPO(args.env,
+             num_timesteps=args.num_timesteps,
+             seed=args.seed,
+             num_processes=2)
 
 
 if __name__ == '__main__':

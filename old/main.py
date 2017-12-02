@@ -11,6 +11,7 @@ from baselines import bench
 from baselines.common.vec_env.subproc_vec_env import SubprocVecEnv
 import roboschool
 
+
 from memory import RolloutStorage, StackedState
 from arguments import FakeArgs, get_args
 from AgentRobo import AgentRoboSchool
@@ -65,7 +66,7 @@ def make_env(env_id, seed, rank, log_dir):
 
 def make_social_torso(seed, rank, log_dir):
     def _thunk():
-        env = Social_Torso()
+        env = gym.make('RoboschoolReacher-v1')
         env.seed(seed + rank)
         env = bench.Monitor(env, os.path.join(log_dir, "{}.monitor.json".format(rank)))
         return env
@@ -86,14 +87,15 @@ def main():
 
     # == Environment ========
     monitor_log_dir = "/tmp/"
-
-    # env = SubprocVecEnv([
-    #     make_env(env_id, args.seed, i, monitor_log_dir)
-    #     for i in range(args.num_processes)])
+    env_id = 'RoboschoolReacher-v1'
 
     env = SubprocVecEnv([
-        make_social_torso(args.seed, i, monitor_log_dir)
+        make_env(env_id, args.seed, i, monitor_log_dir)
         for i in range(args.num_processes)])
+
+    # env = SubprocVecEnv([
+    #     make_social_torso(args.seed, i, monitor_log_dir)
+    #     for i in range(args.num_processes)])
 
 
     state_shape = env.observation_space.shape

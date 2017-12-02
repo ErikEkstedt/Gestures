@@ -2,9 +2,10 @@ import argparse
 import torch
 
 def get_args():
-    parser = argparse.ArgumentParser(description='PPOAgent')
+    parser = argparse.ArgumentParser(description='AgentRoboSchool PPO Algorithm')
     parser.add_argument('--seed', type=int, default=10,
                         help='random seed (default: 10)')
+
 
     # gym
     parser.add_argument('--num-processes', type=int, default=4,
@@ -59,6 +60,7 @@ def get_args():
     parser.add_argument('--num-test', type=int, default=5,
             help='Number of test after training (default: 5)')
 
+
     # Log
     parser.add_argument('--vis-interval', type=int, default=10,
                         help='vis interval, one log per n updates (default: 100)')
@@ -88,46 +90,34 @@ def get_args():
 
 class FakeArgs:
     def __init__(self):
-        self.seed               = 1
-        self.num_processes      = 2
-        self.pi_lr              = 3e-4
-        self.eps                = 1e-5
-        self.use_gae            = True
-        self.gamma              = 0.99
-        self.tau                = 0.95
-        self.entropy_coef       = 0.01
-        self.clip_param         = 0.2
-        self.max_grad_norm      = 2
+        self.cuda = False
+        self.seed = 1
+        self.test_render = True
+        self.num_processes = 2
 
-        # PPO Training
-        self.num_frames         = int(1e6)
-        self.num_steps          = 2048
-        self.batch_size         = 64
+        self.fixed_std = False
+        self.std = 0.5
+        self.pi_lr = 3e-4                  # policy learning rate
+        self.entropy_coef = 0
+        self.use_gae = True
+        self.gamma = 0.99
+        self.tau = 0.95
+        self.eps = 1e-5
+
+        self.ppo_epoch = 8                # K
+        self.batch_size = 64
+        self.clip_param = 0.2              # eps in clip
+        self.num_steps = 2048              # horizon
+        self.num_stack = 1                 # imgs/states-observations to stack in one state
+        self.num_frames = int(2e6)         # total frames seen in training
         self.max_episode_length = 10000
-        self.ppo_epoch          = 8
-        self.num_stack          = 1
-        self.hidden             = 64
-        # self.fixed_std          = False
-        # self.std                = 0.2
 
-        # Test
-        self.no_test            = False
-        self.test_interval      = 1
-        self.max_test_length    = 10000
-        self.num_test           = 10
+        self.vis = True                    # use visdom for graphs
+        self.vis_interval = 10
+        self.log_interval = 100
+        self.save_interval = 1000
 
-        # Log
-        self.vis_interval       = 1
-        self.log_dir            = '/tmp/'
-        self.log_interval       = '/tmp/'
-        self.save_interval      = '/tmp/'
-        self.save_dir           = '/tmp/'
+        self.log_dir = "/tmp"
+        self.save_dir = "/tmp"
 
-        # Boolean
-        self.no_cuda            = True
-        self.no_vis             = True
-        self.test_render        = True
-
-        self.cuda = not self.no_cuda and torch.cuda.is_available()
-        self.vis = not self.no_vis
 

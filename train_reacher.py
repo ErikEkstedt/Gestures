@@ -44,12 +44,6 @@ def Exploration(agent, env):
         agent.final_rewards += (1 - masks) * agent.episode_rewards # update final_reward to cummulative episodic reward
         agent.episode_rewards *= masks # reset episode reward
 
-        if sum(done) > 0:
-            print('Finished episode')
-            print('done', done)
-            print(agent.final_rewards)
-            print(agent.episode_rewards)
-
         if agent.args.cuda:
             masks = masks.cuda()
 
@@ -306,7 +300,6 @@ def main():
                             args.num_processes,
                             stacked_state_shape,
                             action_shape)
-
 
     CurrentState = StackedState(args.num_processes,
                                 args.num_stack,

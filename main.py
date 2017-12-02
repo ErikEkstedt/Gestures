@@ -9,7 +9,7 @@ import numpy as np
 
 from Agent.memory import RolloutStorage, StackedState
 from Agent.arguments import FakeArgs, get_args
-from Agent.lightAgent import Agent
+# from Agent.lightAgent import Agent
 from Agent.AgentRobo import AgentRoboSchool
 # from Agent.training import Exploration, Training
 # from Agent.test import test, test_and_render
