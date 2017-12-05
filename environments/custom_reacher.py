@@ -6,6 +6,7 @@ try:
     from environments.gym_env import MyGymEnv
 except:
     from gym_env import MyGymEnv
+
 ''' MyGymEnv expects some classes
 initialize_scene() - returns ROBO/../scene_abstract.Scene
 load_xml_get_robot() -
@@ -16,12 +17,12 @@ calc_reward(a)
 
 PATH_TO_CUSTOM_XML = "/home/erik/com_sci/Master_code/Project/environments/xml_files"
 
-
 class CustomReacher(MyGymEnv):
     def __init__(self, path=PATH_TO_CUSTOM_XML,
                  robot_name='robot_arm',
                  target_name='target',
                  model_xml='custom_reacher.xml'):
+
         MyGymEnv.__init__(self, action_dim=2, obs_dim=13)
         self.XML_PATH = path
         self.model_xml = model_xml
