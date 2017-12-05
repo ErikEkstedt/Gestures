@@ -10,8 +10,8 @@ def trainPPO(env_id, num_timesteps, seed, num_processes=1):
     from baselines.ppo1 import mlp_policy, pposgd_simple
     U.make_session(num_cpu=num_processes).__enter__()
     set_global_seeds(seed)
-    # env = gym.make(env_id)
-    env = CustomReacher()
+    env = gym.make(env_id)
+    # env = CustomReacher()
     def policy_fn(name, ob_space, ac_space):
         return mlp_policy.MlpPolicy(name=name, ob_space=ob_space, ac_space=ac_space,
             hid_size=64, num_hid_layers=2)

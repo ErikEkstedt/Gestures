@@ -15,6 +15,8 @@ calc_reward(a)
 '''
 
 PATH_TO_CUSTOM_XML = "/home/erik/com_sci/Master_code/Project/environments/xml_files"
+
+
 class CustomReacher(MyGymEnv):
     def __init__(self, path=PATH_TO_CUSTOM_XML,
                  robot_name='robot_arm',
@@ -28,14 +30,14 @@ class CustomReacher(MyGymEnv):
 
         # Scene
         self.gravity = 9.81
-        self.timestep=0.0165/4
+        self.timestep=0.0165 / 4
         self.frame_skip = 1
 
         self.power = 0.5
 
         # # penalties/values used for calculating reward
         self.potential_constant = 100
-        self.electricity_cost  = -0.1
+        self.electricity_cost = -0.1
         self.stall_torque_cost = -0.01
         self.joints_at_limit_cost = -0.01
 
@@ -204,7 +206,6 @@ def test():
         while True:
             env.render()
             s, r, d, _ = env.step(np.random.rand(2)*2-1 )
-
 
 if __name__ == '__main__':
     test()
