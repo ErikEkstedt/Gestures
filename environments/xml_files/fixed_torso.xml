@@ -1,0 +1,31 @@
+<mujoco model="Fixed torso">
+	<compiler angle="degree" inertiafromgeom="true"/>
+	<default>
+		<joint armature="1" damping="1" limited="true"/>
+		<geom conaffinity="1" condim="3" friction="0.8 0.1 0.1" contype="1" margin="0.001" material="geom" rgba="0.8 0.6 .4 0.8"/>
+		<motor ctrllimited="true" ctrlrange="-.4 .4"/>
+	</default>
+	<option integrator="RK4" iterations="50" solver="PGS" timestep="0.003">
+		<!-- <flags solverstat="enable" energy="enable"/>-->
+	</option>
+	<size nkey="5" nuser_geom="1"/>
+	<visual>
+		<map fogend="5" fogstart="3"/>
+	</visual>
+	<worldbody>
+		<!-- Torso -->
+		<body name="torso" pos="0 0 0">		
+			<!-- Pelvis -->
+			<geom fromto="-.02 -.07 0 -.02 .07 0" name="pelvis" size="0.09" type="capsule"/>
+			<joint axis="1 0 0" limited="true" name="robot_abd_x" pos="0 0 0" type="hinge"/>
+			<!-- Mid-section -->
+			<body name="mid" pos="0 0 0">		
+				<geom fromto="-.02 -.07 0 -.02 .07 0" name="mid" size="0.09" type="capsule"/>
+			</body>
+		</body>
+	</worldbody>
+
+	<actuator>
+		<motor ctrllimited="true" ctrlrange="-1.0 1.0" gear="200.0" joint="robot_abd_x"/>
+	</actuator>
+</mujoco>

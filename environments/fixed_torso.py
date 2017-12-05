@@ -6,20 +6,14 @@ try:
     from environments.gym_env import MyGymEnv
 except:
     from gym_env import MyGymEnv
-''' MyGymEnv expects some classes
-initialize_scene() - returns ROBO/../scene_abstract.Scene
-load_xml_get_robot() -
-robot_specific_reset()
-calc_state()
-calc_reward(a)
-'''
+
 
 PATH_TO_CUSTOM_XML = "/home/erik/com_sci/Master_code/Project/environments/xml_files"
-class CustomReacher(MyGymEnv):
+class FixedTorso(MyGymEnv):
     def __init__(self, path=PATH_TO_CUSTOM_XML,
-                 robot_name='robot_arm',
-                 target_name='target',
-                 model_xml='custom_reacher.xml'):
+                    robot_name='torso',
+                    target_name='target',
+                    model_xml='fixed_torso.xml'):
         MyGymEnv.__init__(self, action_dim=2, obs_dim=13)
         self.XML_PATH = path
         self.model_xml = model_xml
@@ -31,15 +25,20 @@ class CustomReacher(MyGymEnv):
         self.timestep=0.0165/4
         self.frame_skip = 1
 
+
+        # Robot
         self.power = 0.5
 
-        # # penalties/values used for calculating reward
+        # penalties/values used for calculating reward
         self.potential_constant = 100
         self.electricity_cost  = -0.1
         self.stall_torque_cost = -0.01
         self.joints_at_limit_cost = -0.01
 
         self.MAX_TIME = 1000
+
+    def initialize_scene(self):
+        return Scene(self.gravity, self.timestep, self.frame_skip)
 
     def apply_action(self, a):
         assert( np.isfinite(a).all() )
@@ -61,27 +60,15 @@ class CustomReacher(MyGymEnv):
         self.joint_speeds = j[1::2]
 
         self.joints_at_limit = np.count_nonzero(np.abs(j[0::2]) > 0.99)
-        self.calc_to_target_vec()
+        # self.calc_to_target_vec()
 
-        a = np.concatenate((self.target_position, self.joint_positions, self.joint_speeds), )
+        # a = np.concatenate((self.target_position,
+        #                     self.joint_positions,
+        #                     self.joint_speeds), )
 
-        target_x, _ = self.jdict["target_x"].current_position()
-        target_y, _ = self.jdict["target_y"].current_position()
-        target_z, _ = self.jdict["target_z"].current_position()
-
-        reacher = np.array([ target_x, target_y, target_z, self.to_target_vec[0], self.to_target_vec[1], self.to_target_vec[2]])
-        reacher = np.concatenate((reacher, self.hand_position, self.joint_positions, self.joint_speeds) )
-
-        # print('Target: {}, {}, {}'.format(target_x, target_y, target_z))
-        # print('Hand: {}'.format(self.hand_position))
-        # print('Vector: ', self.to_target_vec)
-        # print('Potential: ', self.calc_potential())
-        # print('state: ', reacher)
-
-        # return np.concatenate((self.target_position,
-        #                       self.joint_positions,
-        #                       self.joint_speeds), )
-        return reacher
+        print(self.joint_positions.shape)
+        print(self.joint_speeds.shape)
+        return [self.joint_positions, self.joint_speeds]
 
     def calc_to_target_vec(self):
         ''' gets hand position, target position and the vector in bewteen'''
@@ -90,23 +77,10 @@ class CustomReacher(MyGymEnv):
         self.to_target_vec = self.hand_position - self.target_position
 
     def calc_reward(self, a):
-        potential_old = self.potential
-        self.potential = self.calc_potential()
-
-        # cost
-        electricity_cost  = self.electricity_cost  * float(np.abs(a*self.joint_speeds).mean())  # let's assume we have DC motor with controller, and reverse current braking
-        electricity_cost += self.stall_torque_cost * float(np.square(a).mean())
-        # joints_at_limit_cost = float(self.joints_at_limit_cost * self.joints_at_limit)
-
-        # Save rewards ?
-        self.rewards = [float(self.potential - potential_old), float(electricity_cost)]
-        return sum(self.rewards)
+        return 0
 
     def calc_potential(self):
-        return -self.potential_constant*np.linalg.norm(self.to_target_vec)
-
-    def initialize_scene(self):
-        return Scene(self.gravity, self.timestep, self.frame_skip)
+        return 0
 
     def load_xml_get_robot(self, verbose=False):
         self.mjcf = self.scene.cpp_world.load_mjcf( os.path.join(self.XML_PATH, self.model_xml))
@@ -152,14 +126,15 @@ class CustomReacher(MyGymEnv):
         return joints, parts
 
     def robot_specific_reset(self):
-        self.motor_names = ["robot_shoulder_joint", "robot_elbow_joint"] # , "right_shoulder2", "right_elbow"]
-        self.motor_power = [100, 100] #, 75, 75]
+        self.motor_names = ["robot_abd_x"]
+        self.motor_power = [100] #, 75, 75]
         self.motors = [self.jdict[n] for n in self.motor_names]
 
+        pass
         # target and potential
-        self.target_reset()
-        self.calc_to_target_vec()
-        self.potential = self.calc_potential()
+        # self.target_reset()
+        # self.calc_to_target_vec()
+        # self.potential = self.calc_potential()
 
     def target_reset(self):
         ''' self.np_random for correct seed. '''
@@ -172,19 +147,6 @@ class CustomReacher(MyGymEnv):
                 j.reset_current_position(
                     self.np_random.uniform( low=-0.3, high=0.3 ), 0)
 
-def make_parallel_customReacher(seed, num_processes):
-    ''' imports SubprocVecEnv from baselines.
-    :param seed                 int
-    :param num_processes        int, # env
-    '''
-    from baselines.common.vec_env.subproc_vec_env import SubprocVecEnv
-    def multiple_envs(Env, seed, rank):
-        def _thunk():
-            env = CustomReacher()
-            env.seed(seed + rank)
-            return env
-        return _thunk
-    return SubprocVecEnv([multiple_envs(CustomReacher,seed, i) for i in range(num_processes)])
 
 def test():
     multiple_procs = False
@@ -199,7 +161,7 @@ def test():
             print(r)
     else:
         # single process
-        env = CustomReacher()
+        env = FixedTorso()
         s = env.reset()
         while True:
             env.render()

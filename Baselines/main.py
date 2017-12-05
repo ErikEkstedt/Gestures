@@ -8,7 +8,6 @@ from environments.custom_reacher import CustomReacher
 
 def trainPPO(env_id, num_timesteps, seed, num_processes=1):
     from baselines.ppo1 import mlp_policy, pposgd_simple
-
     U.make_session(num_cpu=num_processes).__enter__()
     set_global_seeds(seed)
     # env = gym.make(env_id)

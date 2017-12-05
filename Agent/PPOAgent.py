@@ -40,20 +40,20 @@ class AddBias(nn.Module):
         def __repr__(self):
             return self.__class__.__name__ + '(' + str(self.size) + ')'
 
+
 class DiagonalGaussian(nn.Module):
-    ''' Diagonal Gaussian used as the head of the policy networks'''
+    ''' Diagonal Gaussian used as the head of the policy networks
+    '''
     def __init__(self, num_inputs, num_outputs, fixed_std=False, std=None):
         super(DiagonalGaussian, self).__init__()
         self.mean = nn.Linear(num_inputs, num_outputs)
-        if fixed_std:
-            self.logstd = AddBias_fixed(std)
-        else:
-            self.logstd = AddBias(num_outputs)
+        self.logstd = AddBias(num_outputs)
+
         weights_init_mlp(self)
         self.train()
 
     def forward(self, x):
-        action_mean = F.tanh(self.mean(x))  # tanh to constrain co-domain, image of function.
+        action_mean = self.mean(x)
         zeros = Variable(torch.zeros(action_mean.size()), volatile=x.volatile)
         if x.is_cuda:
             zeros = zeros.cuda()
@@ -65,18 +65,53 @@ class DiagonalGaussian(nn.Module):
     def cuda(self, *args):
         super(DiagonalGaussian).cuda()
 
+
 class MLPPolicy(nn.Module):
     ''' Todo: should be dynamic in amounts of layers'''
     def __init__(self, input_size, action_shape, hidden=64, fixed_std=False, std=None):
-        super(Policy, self).__init__()
-        self.body = PolicyBody(input_size, hidden=hidden)
-        self.head = DiagonalGaussian(hidden, action_shape, fixed_std=fixed_std, std=std)
+        super(MLPPolicy, self).__init__()
+        self.mlp1 = nn.Linear(input_size, hidden)
+        self.mlp2 = nn.Linear(hidden, hidden)
 
-    def forward(self, input):
-        assert type(input) is Variable, 'input to' + self.__name__ + 'not a variable'
-        v, x = self.body(input)
-        action_mean, action_logstd = self.head(x)
-        return v, action_mean, action_logstd
+        self.value = nn.Linear(hidden, 1)
+        self.diag_gauss = DiagonalGaussian(hidden, action_shape, fixed_std=fixed_std, std=std)
+
+    def forward(self, x):
+        x = F.tanh(self.mlp1(x))
+        x = F.tanh(self.mlp2(x))
+        v = self.value(x)
+
+        ac_mean, ac_std = self.diag_gauss(x)
+        return v, ac_mean, ac_std
+
+    def _body(self, hidden, hidden_layers=2):
+        pass
+
+    def act(self, x):
+        pass
+
+    def sample(self, s_t, deterministic=False):
+        input = Variable(s_t, volatile=True)
+        v, action_mean, action_logstd = self(input)
+        action_std = action_logstd.exp()
+        if deterministic:
+            action = action_mean
+        else:
+            # only care about noise if stochastic
+            # normal dist. mean=0, std=1
+            noise = Variable(torch.randn(action_std.size()))
+            if action_mean.is_cuda:
+                noise = noise.cuda()
+            # noise_scaler is for scaling the randomneww on the fly.
+            # debugging exploration
+            action = action_mean + action_std * noise
+
+        # calculate `old_log_probs` directly in exploration.
+        action_log_probs = -0.5 * ((action - action_mean) / action_std).pow(2) - 0.5 * math.log(2 * math.pi) - action_logstd
+        action_log_probs = action_log_probs.sum(1, keepdim=True)
+        dist_entropy = 0.5 + math.log(2 * math.pi) + action_log_probs
+        dist_entropy = dist_entropy.sum(-1).mean()
+        return v, action, action_log_probs, action_std
 
     def reset_parameters(self):
         self.apply(weights_init_mlp)
@@ -89,6 +124,7 @@ class MLPPolicy(nn.Module):
         """
         if self.head.__class__.__name__ == "DiagonalGaussian":
             self.head.mean.weight.data.mul_(0.01)
+
 
 class Agent(object):
     ''' Agent with MLP policy PI( a_t | s_t)
@@ -194,23 +230,26 @@ class Agent(object):
 if __name__ == '__main__':
     import roboschool
     import gym
+    import numpy as np
     from arguments import FakeArgs
-    args = FakeArgs()
-    env_id='RoboschoolReacher-v1'
 
+    args = FakeArgs()
+
+    env_id = 'RoboschoolReacher-v1'
     env = gym.make(env_id)
 
-    agent = Agent(args, hidden=64, env=env)
-    steps = 10
+    ob_shape = env.observation_space.shape[0]
+    ac_shape = env.action_space.shape[0]
 
-    print('env.action_space.high', env.action_space.high)
-    print('env.action_space.low', env.action_space.low)
+    pi = MLPPolicy(ob_shape, ac_shape, hidden=64)
+    print(pi)
 
     s = env.reset()
-    print('state', s)
-    agent.update_current(s)
-    agent.rollouts.states[0].copy_(agent.current_state())
-
+    for i in range(100):
+        s_t = torch.from_numpy(s).float()
+        v, ac, ac_log_probs, ac_std = pi.sample(s_t)
+        s, r, done, _ = env.step(ac[0].data.numpy())
+        print(r)
 
 
 

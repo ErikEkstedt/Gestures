@@ -11,7 +11,6 @@ state_shape = env.observation_space.shape
 stacked_state_shape = (state_shape[0] * num_stack,)
 action_shape = env.action_space.shape
 
-
 TestState = StackedState(1, 4, state_shape, use_cuda=False)
 
 # ====== Agent ==============

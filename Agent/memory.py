@@ -18,10 +18,14 @@ class StackedState(object):
     :param num_proc         int
     :param use_cuda         bool
     '''
-    def __init__(self, num_processes=4, num_stack=4, state_shape=(44,), use_cuda=False):
-        self.current_state = torch.zeros(num_processes, num_stack, *state_shape)
+    def __init__(self, num_processes=4, num_stack=4, state_shape=44, use_cuda=False):
+        if type(state_shape) is tuple:
+            self.current_state = torch.zeros(num_processes, num_stack, *state_shape)
+        else:
+            self.current_state = torch.zeros(num_processes, num_stack, state_shape)
+
         self.num_stack = num_stack
-        self.state_shape = state_shape
+        self.state_shape = state_shape * num_stack
         self.num_processes = num_processes
         self.use_cuda = use_cuda
         if use_cuda:
@@ -60,10 +64,12 @@ class StackedState(object):
         self.current_state.copy_(state)
 
     def __call__(self):
+        ''' Returns the flatten state (num_processes, -1)'''
         return self.current_state.view(self.num_processes, -1)
 
     def size(self):
-        return self.current_state.size()
+        ''' Returns torch.Size '''
+        return self.current_state.view(self.num_processes, -1).size()
 
     def cuda(self):
         self.current_state = self.current_state.cuda()
@@ -102,7 +108,7 @@ class RolloutStorage(object):
         self.value_preds      = torch.zeros(num_steps+1, num_processes, 1)
         self.returns          = torch.zeros(num_steps+1, num_processes, 1)
         self.masks            = torch.ones(num_steps+1, num_processes, 1)
-        self.actions          = torch.zeros(num_steps, num_processes, *action_shape)
+        self.actions          = torch.zeros(num_steps, num_processes, action_shape)
         self.action_log_probs = torch.zeros(num_steps, num_processes, 1)
         self.rewards          = torch.zeros(num_steps, num_processes, 1)
         self.num_processes    = num_processes
