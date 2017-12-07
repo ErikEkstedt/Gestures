@@ -12,8 +12,7 @@ from arguments import FakeArgs, get_args
 from model import MLPPolicy
 from memory import RolloutStorage, StackedState, Results
 from training import Training, Exploration
-
-from test import test, test_and_render
+from testing import Test
 
 
 def make_gym(env_id, seed, num_processes):
@@ -93,8 +92,7 @@ def main():
             print('MAX:', MAX_REWARD)
             print()
 
-
-        #  ==== LOG ======
+        #  ==== SHELL LOG ======
         if j % args.log_interval == 0 and j > 0 :
             v, p, e = result.get_loss_mean()
             print('Steps: ', (j +1) * args.num_steps * args.num_processes)
@@ -103,28 +101,21 @@ def main():
             print('Policy loss: ', p)
             print('Entropy: ', e)
 
+        #  ==== TEST ======
+        if not args.no_test and j % args.test_interval == 0 and j>0:
+            print('Testing {} episodes'.format(args.num_test))
+            test_reward = Test(pi, args, ob_shape)
+            vis.line_update(Xdata=frame, Ydata=test_reward, name='Test Score')
+            print('Done testing')
+
+        #  ==== VISDOM PLOT ======
         if j % args.vis_interval == 0 and j > 0 and not args.no_vis:
             frame = (j + 1) * args.num_steps * args.num_processes
-
-            if not args.no_test and j % args.test_interval == 0:
-                ''' TODO
-                Fix so that resetting the environment does not
-                effect the data. Equivialent to `done` ?
-                should be the same.'''
-                print('Testing')
-                test_reward = test(pi, runs=10)
-                vis.line_update(Xdata=frame, Ydata=test_reward, name='Test Score')
-                print('Done testing')
-                if args.test_render:
-                    print('RENDER')
-                    test_and_render(agent)
 
             R = result.get_reward_mean()
             vis.line_update(Xdata=frame,
                             Ydata=R,
                             name='Training Score')
-
-                        # std = torch.Tensor(std).mean()
 
             # Draw plots
             v, p, e = result.get_loss_mean()
@@ -133,8 +124,7 @@ def main():
             # vis.line_update(Xdata=frame, Ydata=std, name ='Action std')
             vis.line_update(Xdata=frame, Ydata=-e,  name ='Entropy')
 
-
-        #  ==== Save best model ======
+        #  ==== Save model ======
         if j % args.save_interval == 0 and j > 0:
             R = result.get_reward_mean()
             print('Interval Saving')

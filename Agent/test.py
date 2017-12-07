@@ -2,6 +2,7 @@ from OpenGL import GLU # fix for opengl issues on desktop  / nvidia
 import argparse
 import gym
 import roboschool
+import math
 
 import torch
 import torch.nn as nn
@@ -62,17 +63,16 @@ def Load_and_Test():
 
 
     for i in range(args.num_test):
+        CurrentState.reset()
         s = env.reset()
-        CurrentState.update(s)
-        done = False
         episode_reward = 0
         # while not done:
         while True:
             env.render()
+            CurrentState.update(s)
             value, action, _, _ = pi.sample(CurrentState(),
                                             deterministic=args.no_deterministic)
             cpu_actions = action.data.cpu().numpy()[0]
-            print(cpu_actions)
 
             # Observe reward and next state
             state, reward, done, info = env.step(cpu_actions)
@@ -82,7 +82,7 @@ def Load_and_Test():
             if done:
                 print('Episode Reward:', episode_reward)
                 episode_reward = 0
-                env.close()
+                done = False
                 state = env.reset()
 
             CurrentState.update(state)

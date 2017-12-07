@@ -63,8 +63,10 @@ class StackedState(object):
     '''
     def __init__(self, num_processes=4, num_stack=4, state_shape=44, use_cuda=False):
         if type(state_shape) is tuple:
+            print('TUUUUUUUUUUUUUUPLE')
             self.current_state = torch.zeros(num_processes, num_stack, *state_shape)
         else:
+            print('IIIIIIIIIIIIINT')
             self.current_state = torch.zeros(num_processes, num_stack, state_shape)
 
         self.num_stack = num_stack
@@ -99,7 +101,7 @@ class StackedState(object):
         self.current_state = tmp.view(self.num_processes, self.num_stack, -1)
 
     def reset(self):
-        self.current_state = torch.zeros(self.num_processes, self.num_stack, *self.state_shape)
+        self.current_state = torch.zeros(self.current_state.size())
         if self.use_cuda:
             self.current_state = self.current_state.cuda()
 

@@ -1,59 +1,26 @@
 import torch
+import gym
 from itertools import count
+from memory import StackedState
 
-try:
-    from Agent.memory import StackedState
-except:
-    from memory import StackedState
-
-def test_and_render(agent, Env):
+def Test(pi, args, ob_shape, verbose=False):
     '''Test
-    :param agent - The agent playing
-    :param Env  - Environment function/constructor
+    :param pi - The policy playing
+    :param args - arguments
 
     :output      - Average complete episodic reward
     '''
+    print(ob_shape)
+    print(type(ob_shape))
     # Use only 1 processor for render
     TestState = StackedState(1,
-                                agent.args.num_stack,
-                                agent.state_shape,
-                                agent.use_cuda)
+                             args.num_stack,
+                             ob_shape)
 
     # Test environments
-    test_env = Env()
+    env = gym.make(args.env_id)
     total_reward = 0
-    state = test_env.reset()
-    for j in count(1):
-        test_env.render()
-        # Update current state and add data to memory
-        TestState.update(state)
-        # Sample actions
-        value, action, _, _ = agent.sample(TestState(), deterministic=True)
-        cpu_actions = action.data.squeeze(1).cpu().numpy()[0]  # gym takes np.ndarrays
-        # Observe reward and next state
-        state, reward, done, info = test_env.step(cpu_actions)
-        total_reward += reward
-        if done:
-            break
-            print('Total reward: ', total_reward)
-
-def test(agent, Env, runs=10, verbose=False):
-    '''Test
-    :param agent - The agent playing
-    :param runs - int, number oftest runs
-
-    :output      - Average complete episodic reward
-    '''
-    # Use only 1 processor for render
-    TestState = StackedState(1,
-                             agent.args.num_stack,
-                             agent.state_shape,
-                             agent.use_cuda)
-
-    # Test environments
-    test_env = Env()
-    total_reward = 0
-    for i in range(runs):
+    for i in range(args.num_test):
         TestState.reset()
         state = test_env.reset()
         for j in count(1):
@@ -61,12 +28,18 @@ def test(agent, Env, runs=10, verbose=False):
             TestState.update(state)
 
             # Sample actions
-            value, action, _, _ = agent.sample(TestState(), deterministic=True)
-            cpu_actions = action.data.squeeze(1).cpu().numpy()[0]  # gym takes np.ndarrays
+            value, action, _, _ = pi.sample(TestState(), deterministic=True)
+            cpu_actions = action.data.cpu().numpy()[0]
 
             # Observe reward and next state
-            state, reward, done, info = test_env.step(cpu_actions)
-            total_reward += reward
+            state, reward, done, info = env.step(cpu_actions)
+
+            # If done then update final rewards and reset episode reward
+            toal_reward += reward
             if done:
+                print('Episode Reward:', episode_reward)
+                episode_reward = 0
+                done = False
                 break
+
     return total_reward/runs
