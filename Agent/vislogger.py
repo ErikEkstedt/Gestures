@@ -43,6 +43,31 @@ class VisLogger(object):
             self.viz.text(line, win=self.description, append=True)
         self.windows = {}
 
+    def get_logdir(self):
+        return self.log_dir, self.checkpoint_dir
+
+    def _mkdirs(self, log_dir, name):
+        if not os.path.exists(log_dir):
+            os.mkdir(log_dir)
+
+        day = get_today()
+        if name:
+            log_dir = os.path.join(log_dir, name, day)
+        else:
+            log_dir = os.path.join(log_dir, day)
+
+        if not os.path.exists(log_dir):
+            os.mkdir(log_dir)
+
+        run = 0
+        while os.path.exists("%s/run-%d" % (log_dir, run)):
+            run += 1
+
+        self.log_dir = "%s/run-%d" % (log_dir, run)
+        self.checkpoint_dir = "%s/checkpoints" % (self.log_dir)
+        os.mkdir(self.log_dir)
+        os.mkdir(self.checkpoint_dir)
+
     def line_update(self, Xdata, Ydata, name):
         '''
         :param Xdata - torch.Tensor or float
@@ -74,28 +99,6 @@ class VisLogger(object):
         else:
             self.windows[name] = self.viz.bar(X=X,
                     opts=dict(showlegend=True, title=name,),)
-
-    def _mkdirs(self, log_dir, name):
-        if not os.path.exists(log_dir):
-            os.mkdir(log_dir)
-
-        day = get_today()
-        if name:
-            log_dir = os.path.join(log_dir, name, day)
-        else:
-            log_dir = os.path.join(log_dir, day)
-
-        if not os.path.exists(log_dir):
-            os.mkdir(log_dir)
-
-        run = 0
-        while os.path.exists("%s/run-%d" % (log_dir, run)):
-            run += 1
-
-        self.log_dir = "%s/run-%d" % (log_dir, run)
-        self.checkpoint_dir = "%s/checkpoints" % (self.log_dir)
-        os.mkdir(self.log_dir)
-        os.mkdir(self.checkpoint_dir)
 
     def save_checkpoint(self, model, optimizer, frame, score, fname='checkpoint.pth.tar'):
         filename = os.path.join(self.checkpoint_dir, fname)

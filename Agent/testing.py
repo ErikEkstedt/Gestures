@@ -10,16 +10,16 @@ def Test(pi, args, ob_shape, verbose=False):
 
     :output      - Average complete episodic reward
     '''
-    print(ob_shape)
-    print(type(ob_shape))
     # Use only 1 processor for render
     TestState = StackedState(1,
                              args.num_stack,
                              ob_shape)
 
+    if args.cuda:
+        TestState.cuda()
     # Test environments
-    env = gym.make(args.env_id)
-    total_reward = 0
+    test_env = gym.make(args.env_id)
+    total_reward, episode_reward = 0, 0
     for i in range(args.num_test):
         TestState.reset()
         state = test_env.reset()
@@ -32,14 +32,14 @@ def Test(pi, args, ob_shape, verbose=False):
             cpu_actions = action.data.cpu().numpy()[0]
 
             # Observe reward and next state
-            state, reward, done, info = env.step(cpu_actions)
+            state, reward, done, info = test_env.step(cpu_actions)
 
             # If done then update final rewards and reset episode reward
-            toal_reward += reward
+            total_reward += reward
+            episode_reward += reward
             if done:
-                print('Episode Reward:', episode_reward)
+                if verbose: print(episode_reward)
                 episode_reward = 0
                 done = False
                 break
-
-    return total_reward/runs
+    return total_reward/args.num_test

@@ -1,6 +1,7 @@
 import numpy as np
 import gym
 import roboschool
+import os
 
 import torch
 import torch.nn as nn
@@ -30,6 +31,18 @@ def make_gym(env_id, seed, num_processes):
     return SubprocVecEnv([multiple_envs(env_id, seed, i) for i in range(num_processes)])
 
 
+class Optimizer(object):
+    def __init__(self, lr, opt, total_len):
+        self.optim = opt
+        self.lr = lr
+        self.final_lr = lr/100
+
+    def adjust_learning_rate(update):
+        """Sets the learning rate to the initial LR decayed by 10 every 30 epochs"""
+        lr = args.lr * (0.1 ** (epoch // 30))
+        for param_group in optimizer.param_groups:
+            param_group['lr'] = lr
+
 def main():
     args = get_args()  # Real argparser
     ds = print_args(args)
@@ -37,8 +50,8 @@ def main():
     if args.vis:
         from vislogger import VisLogger
         vis = VisLogger(description_list=ds, log_dir=args.log_dir)
+        _, checkpoint_dir = vis.get_logdir()
 
-    # args.env_id = 'RoboschoolReacher-v1'
     env = make_gym(args.env_id, args.seed, args.num_processes)
 
     ob_shape = env.observation_space.shape[0]
@@ -55,7 +68,7 @@ def main():
 
     result = Results(max_n=200, max_u=10)
 
-    pi = MLPPolicy(CurrentState.state_shape, ac_shape, hidden=64)
+    pi = MLPPolicy(CurrentState.state_shape, ac_shape, hidden=args.hidden)
     optimizer_pi = optim.Adam(pi.parameters(), lr=args.pi_lr)
 
     s = env.reset()
@@ -101,9 +114,9 @@ def main():
             if test_reward > MAX_REWARD:
                 print('Saving best latest episode score')
                 print('Reward: ', test_reward)
-                name = 'model_tmp_best%.2f'%test_reward+'.pt'
+                name = os.path.join(checkpoint_dir, 'model_best.pt')
                 print(name)
-                torch.save(pi.cpu().state_dict(), 'trained_models/tmp_best/'+name)
+                torch.save(pi.cpu().state_dict(), name)
                 pi.cuda()
                 MAX_REWARD = test_reward
                 print('MAX:', MAX_REWARD)
@@ -127,9 +140,10 @@ def main():
         if j % args.save_interval == 0 and j > 0:
             R = result.get_reward_mean()
             print('Interval Saving')
-            name = 'model%d_%.2f.pt'%(j+1, R)
+            fname = 'model%d_%.2f.pt'%(j+1, R)
+            name = os.path.join(checkpoint_dir, fname)
             print(name)
-            torch.save(pi.cpu().state_dict(), 'trained_models/'+name)
+            torch.save(pi.cpu().state_dict(), name)
             pi.cuda()
 
 

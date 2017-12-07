@@ -1,25 +1,5 @@
 Project
 ==========
-# [Agent](Agent/)
-
-# [Baselines](Baselines/)
-
-Testing out ppo from OpenAI's Baselines.
-
-# [Environments](environments/)
-
-Directory for the environments.
-## [xml_files](environments/xml_files)
-
-* custom_reacher
-* half_humanoid
-* humanoid
-* fixed torso
-
-
-### [camera](camera.py)
-Contains the camera class. Used to get rgb observation (optonal: depth, label).
-
 
 todo 
 * [x] Train a roboschoolreacher with baselines and watch play.
@@ -33,4 +13,33 @@ todo
 * [ ] Look into PPO2 for gpu
 * [ ] Add video observation and think how that might help.
 * [ ] Try with different baseline algorithms.
-* [ ] fix Pytorch - full insight
+
+
+# [Agent](Agent/)
+Pytorch training
+
+# [Baselines](Baselines/)
+OpenAI baselines training
+
+# [Environments](environments/)
+
+##  custom.py
+
+All custom environments. Wrapper for gym_env code.
+
+##  gym_env.py
+
+Base script that communicates with cpp_houshold, scene and so forth.
+
+## [xml_files](environments/xml_files)
+Directory for the xml files.
+
+* custom_reacher
+* half_humanoid
+* humanoid
+* fixed torso
+
+
+
+# Old
+all old code implementations not used...

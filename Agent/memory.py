@@ -63,10 +63,8 @@ class StackedState(object):
     '''
     def __init__(self, num_processes=4, num_stack=4, state_shape=44, use_cuda=False):
         if type(state_shape) is tuple:
-            print('TUUUUUUUUUUUUUUPLE')
             self.current_state = torch.zeros(num_processes, num_stack, *state_shape)
         else:
-            print('IIIIIIIIIIIIINT')
             self.current_state = torch.zeros(num_processes, num_stack, state_shape)
 
         self.num_stack = num_stack
