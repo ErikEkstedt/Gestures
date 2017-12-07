@@ -40,6 +40,7 @@ class MyGymEnv(gym.Env):
             r.query_position()
 
         s = self.calc_state()
+        self.potential = self.calc_potential()
         self.camera = self.scene.cpp_world.new_camera_free_float(self.VIDEO_W, self.VIDEO_H, "video_camera")
         return s
 

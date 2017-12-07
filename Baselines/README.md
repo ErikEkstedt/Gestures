@@ -25,7 +25,6 @@ Connect to vislogger - or tensorboard to visualize results.
 * Merge: Value estimation/Policy optimization
 * One common base for actor/critic
 * Separate Nets
-
  
 	`MLP`
 

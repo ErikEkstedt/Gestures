@@ -8,25 +8,7 @@ from baselines.common.mpi_moments import mpi_moments
 from mpi4py import MPI
 from collections import deque
 
-
 def traj_segment_generator(pi, env, horizon, stochastic):
-    ''' Trajectory segment generator
-
-    :params pi          Policy-network: act, sample, pd
-    :params env         Gym environment: step, reset
-    :params horizon     ...
-    :params stochastic  ...
-
-    yield {"ob" : obs,
-           "rew" : rews,
-           "vpred" : vpreds,
-           "new" : news,
-           "ac" : acs,
-           "prevac" : prevacs,
-           "nextvpred": vpred * (1 - new),
-           "ep_rets" : ep_rets,
-           "ep_lens" : ep_lens}
-    '''
     t = 0
     ac = env.action_space.sample() # not used, just so we have the datatype
     new = True # marks if we're on first timestep of an episode
@@ -38,11 +20,11 @@ def traj_segment_generator(pi, env, horizon, stochastic):
     ep_lens = [] # lengths of ...
 
     # Initialize history arrays
-    obs = np.array([ob for _ in range(horizon)]) # np.arange?
+    obs = np.array([ob for _ in range(horizon)])
     rews = np.zeros(horizon, 'float32')
     vpreds = np.zeros(horizon, 'float32')
     news = np.zeros(horizon, 'int32')
-    acs = np.array([ac for _ in range(horizon)]) # np.arange?
+    acs = np.array([ac for _ in range(horizon)])
     prevacs = acs.copy()
 
     while True:
@@ -96,70 +78,53 @@ def add_vtarg_and_adv(seg, gamma, lam):
     seg["tdlamret"] = seg["adv"] + seg["vpred"]
 
 def learn(env, policy_func, *,
-        timesteps_per_actorbatch,                                    # timesteps per actor per update
-        clip_param, entcoeff,                                        # clipping parameter epsilon, entropy coeff
-        optim_epochs, optim_stepsize, optim_batchsize,               # optimization hypers
-        gamma, lam,                                                  # advantage estimation
-        max_timesteps=0, max_episodes=0, max_iters=0, max_seconds=0, # time constraint
-        callback=None,                                               # you can do anything in the callback, since it takes locals(), globals()
-        adam_epsilon=1e-5,
-        schedule='constant'                                          # annealing for stepsize parameters (epsilon and adam)
+        timesteps_per_batch, # timesteps per actor per update
+        clip_param, entcoeff, # clipping parameter epsilon, entropy coeff
+        optim_epochs, optim_stepsize, optim_batchsize,# optimization hypers
+        gamma, lam, # advantage estimation
+        max_timesteps=0, max_episodes=0, max_iters=0, max_seconds=0,  # time constraint
+        callback=None, # you can do anything in the callback, since it takes locals(), globals()
+        schedule='constant' # annealing for stepsize parameters (epsilon and adam)
         ):
-
     # Setup losses and stuff
     # ----------------------------------------
     ob_space = env.observation_space
     ac_space = env.action_space
-
-    # Policy
     pi = policy_func("pi", ob_space, ac_space) # Construct network for new policy
     oldpi = policy_func("oldpi", ob_space, ac_space) # Network for old policy
-
-    # Placeholder for returns/advantages
     atarg = tf.placeholder(dtype=tf.float32, shape=[None]) # Target advantage function (if applicable)
     ret = tf.placeholder(dtype=tf.float32, shape=[None]) # Empirical return
 
-    # Optimizer placeholders. Annealing parameter. Clip.
     lrmult = tf.placeholder(name='lrmult', dtype=tf.float32, shape=[]) # learning rate multiplier, updated with schedule
     clip_param = clip_param * lrmult # Annealed cliping parameter epislon
 
     ob = U.get_placeholder_cached(name="ob")
     ac = pi.pdtype.sample_placeholder([None])
 
-    # UPDATE--------------------------------------
-    # KL-oldnew
     kloldnew = oldpi.pd.kl(pi.pd)
-    meankl = U.mean(kloldnew)
     ent = pi.pd.entropy()
+    meankl = U.mean(kloldnew)
     meanent = U.mean(ent)
-    pol_entpen = (-entcoeff) * meanent  # Entropy penalty
+    pol_entpen = (-entcoeff) * meanent
 
-    # Loss
     ratio = tf.exp(pi.pd.logp(ac) - oldpi.pd.logp(ac)) # pnew / pold
     surr1 = ratio * atarg # surrogate from conservative policy iteration
     surr2 = U.clip(ratio, 1.0 - clip_param, 1.0 + clip_param) * atarg #
     pol_surr = - U.mean(tf.minimum(surr1, surr2)) # PPO's pessimistic surrogate (L^CLIP)
-    vf_loss = U.mean(tf.square(pi.vpred - ret))
+    vfloss1 = tf.square(pi.vpred - ret)
+    vpredclipped = oldpi.vpred + tf.clip_by_value(pi.vpred - oldpi.vpred, -clip_param, clip_param)
+    vfloss2 = tf.square(vpredclipped - ret)
+    vf_loss = .5 * U.mean(tf.maximum(vfloss1, vfloss2)) # we do the same clipping-based trust region for the value function
     total_loss = pol_surr + pol_entpen + vf_loss
     losses = [pol_surr, pol_entpen, vf_loss, meankl, meanent]
     loss_names = ["pol_surr", "pol_entpen", "vf_loss", "kl", "ent"]
 
-    # Computation ?
     var_list = pi.get_trainable_variables()
-    lossandgrad = U.function([ob,
-                              ac,
-                              atarg,
-                              ret,
-                              lrmult],
-                             losses + [U.flatgrad(total_loss,
-                                                  var_list)])
+    lossandgrad = U.function([ob, ac, atarg, ret, lrmult], losses + [U.flatgrad(total_loss, var_list)])
+    adam = MpiAdam(var_list)
 
-    adam = MpiAdam(var_list, epsilon=adam_epsilon)
-
-    assign_old_eq_new = U.function([], [], updates=[tf.assign(oldv, newv)
-                                                    for (oldv, newv)
-                                                    in zipsame(oldpi.get_variables(), pi.get_variables())])
-
+    assign_old_eq_new = U.function([],[], updates=[tf.assign(oldv, newv)
+        for (oldv, newv) in zipsame(oldpi.get_variables(), pi.get_variables())])
     compute_losses = U.function([ob, ac, atarg, ret, lrmult], losses)
 
     U.initialize()
@@ -167,10 +132,7 @@ def learn(env, policy_func, *,
 
     # Prepare for rollouts
     # ----------------------------------------
-    seg_gen = traj_segment_generator(pi,
-                                     env,
-                                     timesteps_per_actorbatch,
-                                     stochastic=True)
+    seg_gen = traj_segment_generator(pi, env, timesteps_per_batch, stochastic=True)
 
     episodes_so_far = 0
     timesteps_so_far = 0
@@ -221,7 +183,7 @@ def learn(env, policy_func, *,
             losses = [] # list of tuples, each of which gives the loss for a minibatch
             for batch in d.iterate_once(optim_batchsize):
                 *newlosses, g = lossandgrad(batch["ob"], batch["ac"], batch["atarg"], batch["vtarg"], cur_lrmult)
-                adam.update(g, optim_stepsize * cur_lrmult)
+                adam.update(g, optim_stepsize * cur_lrmult) 
                 losses.append(newlosses)
             logger.log(fmt_row(13, np.mean(losses, axis=0)))
 
@@ -229,25 +191,20 @@ def learn(env, policy_func, *,
         losses = []
         for batch in d.iterate_once(optim_batchsize):
             newlosses = compute_losses(batch["ob"], batch["ac"], batch["atarg"], batch["vtarg"], cur_lrmult)
-            losses.append(newlosses)
+            losses.append(newlosses)            
         meanlosses,_,_ = mpi_moments(losses, axis=0)
         logger.log(fmt_row(13, meanlosses))
-
         for (lossval, name) in zipsame(meanlosses, loss_names):
             logger.record_tabular("loss_"+name, lossval)
-
         logger.record_tabular("ev_tdlam_before", explained_variance(vpredbefore, tdlamret))
         lrlocal = (seg["ep_lens"], seg["ep_rets"]) # local values
-
         listoflrpairs = MPI.COMM_WORLD.allgather(lrlocal) # list of tuples
         lens, rews = map(flatten_lists, zip(*listoflrpairs))
         lenbuffer.extend(lens)
         rewbuffer.extend(rews)
-
         logger.record_tabular("EpLenMean", np.mean(lenbuffer))
         logger.record_tabular("EpRewMean", np.mean(rewbuffer))
         logger.record_tabular("EpThisIter", len(lens))
-
         episodes_so_far += len(lens)
         timesteps_so_far += sum(lens)
         iters_so_far += 1

@@ -10,6 +10,7 @@ parser.add_argument('--env_id', type=str, default='RoboschoolReacher-v1',
                     help='Roboschool Environment')
 
 
+
 args = parser.parse_args()
 
 env = gym.make(args.env_id)

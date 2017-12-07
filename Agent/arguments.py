@@ -13,9 +13,9 @@ def get_args():
     # PPO Loss
     parser.add_argument('--pi-lr', type=float, default=3e-4,
                         help='policy learning rate (default: 4e-4)')
-    parser.add_argument('--eps', type=float, default=1e-5,
+    parser.add_argument('--eps', type=float, default=1e-7,
                         help='epsilon value(default: 1e-5)')
-    parser.add_argument('--use-gae', action='store_true', default=False,
+    parser.add_argument('--no-gae', action='store_true', default=False,
                         help='use generalized advantage estimation')
     parser.add_argument('--gamma', type=float, default=0.99,
                         help='discount factor for rewards (default: 0.99)')
@@ -36,18 +36,18 @@ def get_args():
                         help='number of exploration steps in ppo (default: ?)')
     parser.add_argument('--batch-size', type=int, default=64,
                         help='ppo batch size (default: 64)')
-    parser.add_argument('--max-episode-length', type=int, default=10000,
+    parser.add_argument('--max-episode-length', type=int, default=100000,
                         help='maximum steps in one episode (default: 10000)')
     parser.add_argument('--ppo-epoch', type=int, default=8,
                         help='number of ppo epochs (default: 8)')
-    parser.add_argument('--num-stack', type=int, default=4,
-                        help='number of frames to stack (default: 4)')
+    parser.add_argument('--num-stack', type=int, default=1,
+                        help='number of frames to stack (default: 1)')
     parser.add_argument('--hidden', type=int, default=128,
                         help='Number of hidden neurons in policy (default: 128)')
     parser.add_argument('--fixed-std', action='store_true', default=False,
-            help='Use a fixed standard deviation for actions')
+                        help='Use a fixed standard deviation for actions')
     parser.add_argument('--std', type=float, default=0.5,
-            help='Value for action standard  deviation (default: 0.5)')
+                        help='Value for action standard  deviation (default: 0.5)')
 
     # Test
     parser.add_argument('--no-test', action='store_true', default=False,

@@ -11,6 +11,7 @@ state_shape = env.observation_space.shape
 stacked_state_shape = (state_shape[0] * num_stack,)
 action_shape = env.action_space.shape
 
+
 TestState = StackedState(1, 4, state_shape, use_cuda=False)
 
 # ====== Agent ==============
@@ -33,7 +34,7 @@ for j in count(1):
     TestState.update(state)
     # Sample actions
     value, action, _, _ = agent.sample(TestState(), deterministic=True)
-    cpu_actions = action.data.squeeze(1).cpu().numpy()[0]  # gym takes np.ndarrays
+    cpu_actions = action.data.squeeze(1).cpu().numpy()[0]
     print(cpu_actions)
     # Observe reward and next state
     state, reward, done, info = env.step(cpu_actions)

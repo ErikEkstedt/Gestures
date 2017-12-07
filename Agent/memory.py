@@ -104,7 +104,7 @@ class RolloutStorage(object):
     returns.
     '''
     def __init__(self, num_steps, num_processes, stacked_state_shape, action_shape):
-        self.states           = torch.zeros(num_steps+1, num_processes, *stacked_state_shape)
+        self.states           = torch.zeros(num_steps+1, num_processes, stacked_state_shape)
         self.value_preds      = torch.zeros(num_steps+1, num_processes, 1)
         self.returns          = torch.zeros(num_steps+1, num_processes, 1)
         self.masks            = torch.ones(num_steps+1, num_processes, 1)
@@ -146,8 +146,8 @@ class RolloutStorage(object):
         '''
         return self.states[-1].view(self.num_processes, -1)
 
-    def compute_returns(self, next_value, use_gae, gamma, tau):
-        if use_gae:
+    def compute_returns(self, next_value, no_gae, gamma, tau):
+        if not no_gae:
             self.value_preds[-1] = next_value
             gae = 0
             for step in reversed(range(self.rewards.size(0))):
@@ -159,6 +159,7 @@ class RolloutStorage(object):
             for step in reversed(range(self.rewards.size(0))):
                 self.returns[step] = self.returns[step + 1] * \
                     gamma * self.masks[step + 1] + self.rewards[step]
+
 
     def Batch(self, advantages, mini_batch):
         '''
