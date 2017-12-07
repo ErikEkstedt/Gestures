@@ -2,6 +2,49 @@ import torch
 import numpy as np
 from torch.utils.data.sampler import BatchSampler, SubsetRandomSampler
 
+
+class Results(object):
+    def __init__(self, max_n=200, max_u=200):
+        self.episode_rewards = 0
+        self.final_reward_list = []
+        self.n = 0
+        self.max_n = max_n
+
+        self.vloss = []
+        self.ploss = []
+        self.ent = []
+        self.updates = 0
+        self.max_u = max_u
+
+    def update_list(self, idx):
+        # The worlds ugliest score tracker. not all process might be done
+        for i in range(len(idx)):
+            if idx[i][0]:
+                self.final_reward_list.insert(0, self.episode_rewards[i])
+                self.n += 1
+                if self.n > self.max_n:
+                    self.final_reward_list.pop()
+
+    def update_loss(self, v, p, e):
+        self.vloss.insert(0, v)
+        self.ploss.insert(0, p)
+        self.ent.insert(0, e)
+        self.updates += 1
+        if self.updates > self.max_u:
+            self.vloss.pop()
+            self.ploss.pop()
+            self.ent.pop()
+
+    def get_reward_mean(self):
+        return torch.stack(self.final_reward_list).mean()
+
+    def get_loss_mean(self):
+        v = torch.stack(self.vloss).mean()
+        p = torch.stack(self.ploss).mean()
+        e = torch.stack(self.ent).mean()
+        return v, p, e
+
+
 class StackedState(object):
     ''' stacked state for Roboschool
 
@@ -78,6 +121,7 @@ class StackedState(object):
     def cpu(self):
         self.state = self.state.cpu()
         self.use_cuda = False
+
 
 # https://github.com/ikostrikov/pytorch-a2c-ppo-acktr
 class RolloutStorage(object):
@@ -199,6 +243,7 @@ class RolloutStorage(object):
             yield states_batch, actions_batch, return_batch, masks_batch, old_action_log_probs_batch, adv_targ
 
 
+# not really working on/using
 class Memory(object):
     '''Memory
     Larger memory class that can store many states and use the latest for

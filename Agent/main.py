@@ -7,12 +7,13 @@ import torch.nn as nn
 from torch.autograd import Variable
 import torch.optim as optim
 
-from arguments import FakeArgs, get_args
-from PPOAgent import MLPPolicy
-from memory import RolloutStorage, StackedState
-from training import Training, Exploration
-from test import test, test_and_render
 from utils import args_to_list, print_args, log_print
+from arguments import FakeArgs, get_args
+from model import MLPPolicy
+from memory import RolloutStorage, StackedState, Results
+from training import Training, Exploration
+
+from test import test, test_and_render
 
 
 def make_gym(env_id, seed, num_processes):
@@ -30,144 +31,15 @@ def make_gym(env_id, seed, num_processes):
     return SubprocVecEnv([multiple_envs(env_id, seed, i) for i in range(num_processes)])
 
 
-def Exploration(pi, CurrentState, rollouts, args, result,  env):
-    ''' Exploration part of PPO training:
-    1. Sample actions and gather rewards trajectory for num_steps.
-    2. Reset states and rewards if some environments are done.
-    3. Keep track of means and std fo
-    visualizing progress.
-    '''
-    stds = []
-    for step in range(args.num_steps):
-        # Sample actions
-        value, action, action_log_prob, a_std = pi.sample(CurrentState())
-        stds.append(a_std.data.mean())  # Averaging the std for all actions (really blunt info)
-        cpu_actions = action.data.cpu().numpy()  # gym takes np.ndarrays
-
-        # Observe reward and next state
-        state, reward, done, info = env.step(list(cpu_actions))
-        reward = torch.from_numpy(reward).view(args.num_processes, -1).float()
-        masks = torch.FloatTensor([[0.0] if done_ else [1.0] for done_ in done])
-
-        # If done then update final rewards and reset episode reward
-        result.episode_rewards += reward
-        if sum(done) > 0:
-            idx = (1-masks)
-            result.update_list(idx)
-
-        result.episode_rewards *= masks                                # reset episode reward
-        if args.cuda:
-            masks = masks.cuda()
-
-        # reset current states for envs done
-        CurrentState.check_and_reset(masks)
-
-        # Update current state and add data to rollouts
-        CurrentState.update(state)
-        rollouts.insert(step,
-                        CurrentState(),
-                        action.data,
-                        action_log_prob.data,
-                        value.data,
-                        reward,
-                        masks)
-
-
-def Training(pi, args, rollouts, optimizer_pi):
-    value, _, _, _ = pi.sample(rollouts.get_last_state())
-    rollouts.compute_returns(value.data, args.no_gae, args.gamma, args.tau)
-
-    # Calculate Advantage (normalize)
-    advantages = rollouts.returns[:-1] - rollouts.value_preds[:-1]
-    advantages = (advantages - advantages.mean()) / (advantages.std() + 1e-5)
-
-    vloss, ploss, ent = 0, 0, 0
-    for e in range(args.ppo_epoch):
-        data_generator = rollouts.Batch(advantages, args.batch_size)
-        for sample in data_generator:
-            states_batch, actions_batch, return_batch, \
-                masks_batch, old_action_log_probs_batch, adv_targ = sample
-
-            # Reshape to do in a single forward pass for all steps
-            values, action_log_probs, dist_entropy = pi.evaluate_actions(
-                Variable(states_batch), Variable(actions_batch))
-
-            adv_targ = Variable(adv_targ)
-            ratio = torch.exp(action_log_probs - Variable(old_action_log_probs_batch))
-            surr1 = ratio * adv_targ
-            surr2 = torch.clamp(ratio, 1.0 - args.clip_param, 1.0 + args.clip_param) * adv_targ
-            action_loss = -torch.min(surr1, surr2).mean()  # PPO's pessimistic surrogate (L^CLIP)
-
-            value_loss = (Variable(return_batch) - values).pow(2).mean()
-
-            # update
-            optimizer_pi.zero_grad()
-            (value_loss+action_loss-dist_entropy*args.entropy_coef).backward()
-            nn.utils.clip_grad_norm(pi.parameters(), args.max_grad_norm)
-            optimizer_pi.step()
-
-            vloss += value_loss
-            ploss += action_loss.abs()
-            ent += dist_entropy
-
-    vloss /= args.ppo_epoch
-    ploss /= args.ppo_epoch
-    ent /= args.ppo_epoch
-    # return value_loss, action_loss, dist_entropy
-    return vloss, ploss, ent
-
-
-class Results(object):
-    def __init__(self, max_n=200, max_u=200):
-        self.episode_rewards = 0
-        self.final_reward_list = []
-        self.n = 0
-        self.max_n = max_n
-
-        self.vloss = []
-        self.ploss = []
-        self.ent = []
-        self.updates = 0
-        self.max_u = max_u
-
-    def update_list(self, idx):
-        # The worlds ugliest score tracker. not all process might be done
-        for i in range(len(idx)):
-            if idx[i][0]:
-                self.final_reward_list.insert(0, self.episode_rewards[i])
-                self.n += 1
-                if self.n > self.max_n:
-                    self.final_reward_list.pop()
-
-    def update_loss(self, v, p, e):
-        self.vloss.insert(0, v)
-        self.ploss.insert(0, p)
-        self.ent.insert(0, e)
-        self.updates += 1
-        if self.updates > self.max_u:
-            self.vloss.pop()
-            self.ploss.pop()
-            self.ent.pop()
-
-    def get_reward_mean(self):
-        return torch.stack(self.final_reward_list).mean()
-
-    def get_loss_mean(self):
-        v = torch.stack(self.vloss).mean()
-        p = torch.stack(self.ploss).mean()
-        e = torch.stack(self.ent).mean()
-        return v, p, e
-
 def main():
     args = get_args()  # Real argparser
     ds = print_args(args)
 
     if args.vis:
         from vislogger import VisLogger
-        # Text is not pretty
         vis = VisLogger(description_list=ds, log_dir=args.log_dir)
 
-    args.env_id = 'RoboschoolReacher-v1'
+    # args.env_id = 'RoboschoolReacher-v1'
     env = make_gym(args.env_id, args.seed, args.num_processes)
 
     ob_shape = env.observation_space.shape[0]

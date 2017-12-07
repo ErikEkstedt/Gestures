@@ -1,137 +1,94 @@
+from OpenGL import GLU # fix for opengl issues on desktop  / nvidia
+import argparse
+import gym
+import roboschool
+
 import torch
-from itertools import count
+import torch.nn as nn
+from torch.autograd import Variable
+import torch.optim as optim
 
-try:
-    from Agent.memory import StackedState
-except:
-    from memory import StackedState
+from utils import args_to_list, print_args, log_print
+from arguments import FakeArgs, get_args
+from model import MLPPolicy
+from memory import RolloutStorage, StackedState, Results
+from training import Training, Exploration
 
-def test_and_render(agent, Env):
-    '''Test
-    :param agent - The agent playing
-    :param Env  - Environment function/constructor
+def get_args():
+    parser = argparse.ArgumentParser(description='Test PPOAgent')
+    parser.add_argument('--env-id', default='RoboschoolReacher-v1',
+                        help='Environment used (default: RoboschoolReacher-v1)')
+    parser.add_argument('--seed', type=int, default=10,
+                        help='random seed (default: 10)')
+    parser.add_argument('--load-file',
+                        default='trained_models/tmp_best/model_tmp_best37.56.pt',
+                        help='Policy data')
+    parser.add_argument('--num-stack', type=int, default=1,
+                        help='number of frames to stack (default: 1)')
+    parser.add_argument('--hidden', type=int, default=128,
+                        help='Number of hidden neurons in policy (default: 128)')
+    parser.add_argument('--num-test', type=int, default=10,
+                        help='Number of test episodes (default: 10)')
+    parser.add_argument('--no-cuda', action='store_true', default=False,
+                        help='disables CUDA training')
+    parser.add_argument('--no-deterministic', action='store_false', default=True,
+                        help='Do not test deterministically')
 
-    :output      - Average complete episodic reward
-    '''
-    # Use only 1 processor for render
-    TestState = StackedState(1,
-                                agent.args.num_stack,
-                                agent.state_shape,
-                                agent.use_cuda)
+    args = parser.parse_args()
+    args.cuda = not args.no_cuda and torch.cuda.is_available()
 
-    # Test environments
-    test_env = Env()
-    total_reward = 0
-    state = test_env.reset()
-    for j in count(1):
-        test_env.render()
-        # Update current state and add data to memory
-        TestState.update(state)
-        # Sample actions
-        value, action, _, _ = agent.sample(TestState(), deterministic=True)
-        cpu_actions = action.data.squeeze(1).cpu().numpy()[0]  # gym takes np.ndarrays
-        # Observe reward and next state
-        state, reward, done, info = test_env.step(cpu_actions)
-        total_reward += reward
-        if done:
-            break
-            print('Total reward: ', total_reward)
 
-def test(agent, Env, runs=10, verbose=False):
-    '''Test
-    :param agent - The agent playing
-    :param runs - int, number oftest runs
+    return args
 
-    :output      - Average complete episodic reward
-    '''
-    # Use only 1 processor for render
-    TestState = StackedState(1,
-                             agent.args.num_stack,
-                             agent.state_shape,
-                             agent.use_cuda)
 
-    # Test environments
-    test_env = Env()
-    total_reward = 0
-    for i in range(runs):
-        TestState.reset()
-        state = test_env.reset()
-        for j in count(1):
-            # Update current state
-            TestState.update(state)
+def Load_and_Test():
+    args = get_args()
 
-            # Sample actions
-            value, action, _, _ = agent.sample(TestState(), deterministic=True)
-            cpu_actions = action.data.squeeze(1).cpu().numpy()[0]  # gym takes np.ndarrays
+    env = gym.make(args.env_id)
+    ob_shape = env.observation_space.shape[0]
+    ac_shape = env.action_space.shape[0]
+
+    CurrentState = StackedState(1,
+                                args.num_stack,
+                                ob_shape)
+
+    state_dict = torch.load(args.load_file)
+
+    pi = MLPPolicy(CurrentState.state_shape, ac_shape, hidden=64)
+
+    if args.cuda:
+        CurrentState.cuda()
+        pi.cuda()
+
+
+    for i in range(args.num_test):
+        s = env.reset()
+        CurrentState.update(s)
+        done = False
+        episode_reward = 0
+        # while not done:
+        while True:
+            env.render()
+            value, action, _, _ = pi.sample(CurrentState(),
+                                            deterministic=args.no_deterministic)
+            cpu_actions = action.data.cpu().numpy()[0]
+            print(cpu_actions)
 
             # Observe reward and next state
-            state, reward, done, info = test_env.step(cpu_actions)
-            total_reward += reward
+            state, reward, done, info = env.step(cpu_actions)
+
+            # If done then update final rewards and reset episode reward
+            episode_reward += reward
             if done:
-                break
-    return total_reward/runs
+                print('Episode Reward:', episode_reward)
+                episode_reward = 0
+                env.close()
+                state = env.reset()
+
+            CurrentState.update(state)
 
 
-# def test(agent, Env, runs=10, verbose=False):
-#     '''Test with multiple processes.
-#     :param agent - The agent playing
-#     :param runs - int, number oftest runs
-#
-#     :output      - Average complete episodic reward
-#     '''
-#     # Use same number of testing envs as in training.
-#     TestState = StackedState(agent.args.num_processes,
-#                              agent.args.num_stack,
-#                              agent.state_shape,
-#                              agent.use_cuda)
-#
-#     # Test environments
-#     test_env = Env(agent.args.seed, agent.args.num_processes)
-#
-#     total_reward = 0
-#     done = False
-#     episode_rewards = 0
-#     final_rewards = 0
-#
-#     state = test_env.reset()
-#     TestState.update(state)
-#
-#     total_done = 0
-#     while total_done <= runs:
-#         # Sample actions
-#         value, action, _, _ = agent.sample(TestState(), deterministic=True)
-#         cpu_actions = action.data.squeeze(1).cpu().numpy()  # gym takes np.ndarrays
-#
-#         # Observe reward and next state
-#         state, reward, done, info = test_env.step(cpu_actions)
-#         total_done += sum(done)  # keep track of number of completed runs
-#
-#         reward = torch.from_numpy(reward).view(agent.args.num_processes, -1).float()
-#         masks = torch.FloatTensor([[0.0] if done_ else [1.0] for done_ in done])
-#
-#         # If done then update final rewards and reset episode reward
-#         episode_rewards += reward
-#         final_rewards *= masks  # set final_reward[i] to zero if masks[i] = 0 -> test_env[i] is done
-#         final_rewards += (1 - masks) * episode_rewards # update final_reward to cummulative episodic reward
-#         episode_rewards *= masks # reset episode reward
-#
-#         if sum(done)>0:
-#             final_rewards *= (1-masks)  # keep the actual completed score.
-#             total_reward += final_rewards.sum() # add it to total
-#
-#         if agent.args.cuda:
-#             masks = masks.cuda()
-#
-#         # reset current states for test_envs done
-#         TestState.check_and_reset(masks)
-#
-#         # Update current state and add data to memory
-#         TestState.update(state)
-#
-#     # cleaning (unneccessary ? )
-#     test_env.close()
-#     del test_env
-#     del TestState
-#     return total_reward/total_done
-#
+if __name__ == '__main__':
+    Load_and_Test()
+
 

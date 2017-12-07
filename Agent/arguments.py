@@ -9,6 +9,8 @@ def get_args():
     # gym
     parser.add_argument('--num-processes', type=int, default=4,
                        help='Number of processors used (default: 4)')
+    parser.add_argument('--env-id', default='RoboschoolReacher-v1',
+                       help='Environment used (default: RoboschoolReacher-v1)')
 
     # PPO Loss
     parser.add_argument('--pi-lr', type=float, default=3e-4,

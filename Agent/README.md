@@ -17,7 +17,7 @@ TODO:
 * [ ] Fix plot 
 * [ ] fix annealing STD on actions (baselines and paper)
 * [x] Train on RoboschoolReacher-v1
-* [ ] Create Load_model and run test.
+* [x] Create Load_model and run test.
 
 Questions:
 * PPO update old_policy every iter of ppo_epoch??
