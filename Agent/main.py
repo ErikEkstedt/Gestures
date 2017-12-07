@@ -78,40 +78,39 @@ def main():
         rollouts.last_to_first() #updates rollout memory and puts the last state first.
 
         result.update_loss(vloss.data, ploss.data, ent.data)
-
-        #  ==== Save best model ======
-        r = result.final_reward_list[-1][0]
-        if r > MAX_REWARD:
-            print('Saving best latest episode score')
-            print('Reward: ', r)
-            name = 'model_tmp_best%.2f'%r+'.pt'
-            print(name)
-            torch.save(pi.cpu().state_dict(), 'trained_models/tmp_best/'+name)
-            pi.cuda()
-            MAX_REWARD = r
-            print('MAX:', MAX_REWARD)
-            print()
+        frame = (j +1) * args.num_steps * args.num_processes
 
         #  ==== SHELL LOG ======
         if j % args.log_interval == 0 and j > 0 :
             v, p, e = result.get_loss_mean()
-            print('Steps: ', (j +1) * args.num_steps * args.num_processes)
+            print('Steps: ', frame)
             print('Rewards: ', result.get_reward_mean())
             print('Value loss: ', v)
             print('Policy loss: ', p)
             print('Entropy: ', e)
+            print()
 
         #  ==== TEST ======
         if not args.no_test and j % args.test_interval == 0 and j>0:
             print('Testing {} episodes'.format(args.num_test))
-            test_reward = Test(pi, args, ob_shape)
+            test_reward = Test(pi, args, ob_shape, verbose=False)
             vis.line_update(Xdata=frame, Ydata=test_reward, name='Test Score')
-            print('Done testing')
+            print('Done testing\n')
+
+            #  ==== Save best model ======
+            if test_reward > MAX_REWARD:
+                print('Saving best latest episode score')
+                print('Reward: ', test_reward)
+                name = 'model_tmp_best%.2f'%test_reward+'.pt'
+                print(name)
+                torch.save(pi.cpu().state_dict(), 'trained_models/tmp_best/'+name)
+                pi.cuda()
+                MAX_REWARD = test_reward
+                print('MAX:', MAX_REWARD)
+                print()
 
         #  ==== VISDOM PLOT ======
         if j % args.vis_interval == 0 and j > 0 and not args.no_vis:
-            frame = (j + 1) * args.num_steps * args.num_processes
-
             R = result.get_reward_mean()
             vis.line_update(Xdata=frame,
                             Ydata=R,
