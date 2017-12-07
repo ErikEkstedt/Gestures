@@ -13,7 +13,7 @@ from arguments import FakeArgs, get_args
 from model import MLPPolicy
 from memory import RolloutStorage, StackedState, Results
 from training import Training, Exploration
-from testing import Test
+from testing import Test, Test_and_See
 
 
 def make_gym(env_id, seed, num_processes):
@@ -29,7 +29,6 @@ def make_gym(env_id, seed, num_processes):
             return env
         return _thunk
     return SubprocVecEnv([multiple_envs(env_id, seed, i) for i in range(num_processes)])
-
 
 class Optimizer(object):
     def __init__(self, lr, opt, total_len):
@@ -53,7 +52,6 @@ def main():
         _, checkpoint_dir = vis.get_logdir()
 
     env = make_gym(args.env_id, args.seed, args.num_processes)
-
     ob_shape = env.observation_space.shape[0]
     ac_shape = env.action_space.shape[0]
 
@@ -68,7 +66,13 @@ def main():
 
     result = Results(max_n=200, max_u=10)
 
-    pi = MLPPolicy(CurrentState.state_shape, ac_shape, hidden=args.hidden)
+    pi = MLPPolicy(CurrentState.state_shape,
+                   ac_shape,
+                   hidden=args.hidden,
+                   total_frames=args.num_frames)
+
+    pi.train()
+
     optimizer_pi = optim.Adam(pi.parameters(), lr=args.pi_lr)
 
     s = env.reset()
@@ -106,21 +110,34 @@ def main():
         #  ==== TEST ======
         if not args.no_test and j % args.test_interval == 0 and j>0:
             print('Testing {} episodes'.format(args.num_test))
-            test_reward = Test(pi, args, ob_shape, verbose=False)
-            vis.line_update(Xdata=frame, Ydata=test_reward, name='Test Score')
-            print('Done testing\n')
+            pi.eval()
+            # R = Test(pi, args, ob_shape, verbose=True)
+            R = Test_and_See(pi, args, ob_shape, verbose=True)
+            pi.train()
+            vis.line_update(Xdata=frame, Ydata=R, name='Test Score')
+            print('Test Average:', R)
 
             #  ==== Save best model ======
-            if test_reward > MAX_REWARD:
-                print('Saving best latest episode score')
-                print('Reward: ', test_reward)
-                name = os.path.join(checkpoint_dir, 'model_best.pt')
+            # if test_reward > MAX_REWARD:
+            if True:
+                print('--'*45)
+                print('Saving after test')
+                print('Reward: ', R)
+                name = os.path.join(checkpoint_dir, 'model_best'+str(R))
                 print(name)
-                torch.save(pi.cpu().state_dict(), name)
+                torch.save(pi, name + '.pt')
+                torch.save(pi.state_dict(), name+'dict_cuda.pt')
+                pi.cpu()
+                torch.save(pi, name+'cpu.pt')
+                torch.save(pi.state_dict(), name+'dict_cuda.pt')
                 pi.cuda()
-                MAX_REWARD = test_reward
+                MAX_REWARD = R
                 print('MAX:', MAX_REWARD)
                 print()
+                pi.train()
+                input()
+
+
 
         #  ==== VISDOM PLOT ======
         if j % args.vis_interval == 0 and j > 0 and not args.no_vis:
@@ -133,7 +150,7 @@ def main():
             v, p, e = result.get_loss_mean()
             vis.line_update(Xdata=frame, Ydata=v,   name ='Value Loss')
             vis.line_update(Xdata=frame, Ydata=p,   name ='Policy Loss')
-            # vis.line_update(Xdata=frame, Ydata=std, name ='Action std')
+            vis.line_update(Xdata=frame, Ydata=pi.get_std(), name ='Action std')
             vis.line_update(Xdata=frame, Ydata=-e,  name ='Entropy')
 
         #  ==== Save model ======
@@ -144,8 +161,11 @@ def main():
             name = os.path.join(checkpoint_dir, fname)
             print(name)
             torch.save(pi.cpu().state_dict(), name)
+            name = os.path.join(args.save_dir, fname)
+            torch.save(pi, name)
+            print(name)
             pi.cuda()
-
+            input()
 
 if __name__ == '__main__':
     main()

@@ -91,6 +91,6 @@ def make_parallel_environments(Env, seed, num_processes):
             env.seed(seed + rank)
             return env
         return _thunk
-    return SubprocVecEnv([multiple_envs(Env,seed, i) for i in range(num_processes)])
+    return SubprocVecEnv([multiple_envs(Env,seed+i*1000, i) for i in range(num_processes)])
 
 

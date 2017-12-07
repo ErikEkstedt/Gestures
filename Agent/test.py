@@ -5,15 +5,11 @@ import roboschool
 import math
 
 import torch
-import torch.nn as nn
-from torch.autograd import Variable
-import torch.optim as optim
+from itertools import count
+from memory import StackedState
 
-from utils import args_to_list, print_args, log_print
-from arguments import FakeArgs, get_args
 from model import MLPPolicy
-from memory import RolloutStorage, StackedState, Results
-from training import Training, Exploration
+
 
 def get_args():
     parser = argparse.ArgumentParser(description='Test PPOAgent')
@@ -28,8 +24,8 @@ def get_args():
                         help='number of frames to stack (default: 1)')
     parser.add_argument('--hidden', type=int, default=128,
                         help='Number of hidden neurons in policy (default: 128)')
-    parser.add_argument('--num-test', type=int, default=10,
-                        help='Number of test episodes (default: 10)')
+    parser.add_argument('--num-test', type=int, default=100,
+                        help='Number of test episodes (default: 100)')
     parser.add_argument('--no-cuda', action='store_true', default=False,
                         help='disables CUDA training')
     parser.add_argument('--no-deterministic', action='store_false', default=True,
@@ -37,38 +33,82 @@ def get_args():
 
     args = parser.parse_args()
     args.cuda = not args.no_cuda and torch.cuda.is_available()
-
-
     return args
 
-
-def Load_and_Test():
+def Test():
     args = get_args()
-
     env = gym.make(args.env_id)
+    env.seed(args.seed)
     ob_shape = env.observation_space.shape[0]
     ac_shape = env.action_space.shape[0]
 
-    CurrentState = StackedState(1,
-                                args.num_stack,
-                                ob_shape)
+    print(args.load_file)
+    stored_state_dict = torch.load(args.load_file)
 
-    state_dict = torch.load(args.load_file)
+    pi = MLPPolicy(CurrentState.state_shape, ac_shape, hidden=args.hidden)
+    pi.load_state_dict(stored_state_dict)
 
-    pi = MLPPolicy(CurrentState.state_shape, ac_shape, hidden=64)
+    model = torch.load(args.load_file)
+
+    CurrentState = StackedState(1, args.num_stack, ob_shape)
 
     if args.cuda:
         CurrentState.cuda()
         pi.cuda()
 
+    # Test environments
+    env = gym.make(args.env_id)
+    total_reward, episode_reward = 0, 0
+    for i in range(args.num_test):
+        CurrentState.reset()
+        state = test_env.reset()
+        for j in count(1):
+            # Update current state
+            CurrentState.update(state)
 
+            # Sample actions
+            value, action, _, _ = pi.sample(CurrentState(), deterministic=True)
+            cpu_actions = action.data.cpu().numpy()[0]
+
+            # Observe reward and next state
+            state, reward, done, info = test_env.step(cpu_actions)
+
+            # If done then update final rewards and reset episode reward
+            total_reward += reward
+            episode_reward += reward
+            if done:
+                if verbose: print(episode_reward)
+                episode_reward = 0
+                done = False
+                break
+    return total_reward/args.num_test
+
+def Load_and_Test():
+    args = get_args()
+    env = gym.make(args.env_id)
+    env.seed(args.seed)
+    ob_shape = env.observation_space.shape[0]
+    ac_shape = env.action_space.shape[0]
+
+
+    CurrentState = StackedState(1, args.num_stack, ob_shape)
+    print(args.load_file)
+    stored_state_dict = torch.load(args.load_file)
+
+    pi = MLPPolicy(CurrentState.state_shape, ac_shape, hidden=args.hidden)
+    pi.load_state_dict(stored_state_dict)
+
+    if args.cuda:
+        CurrentState.cuda()
+        pi.cuda()
+
+    input('Start')
+    total_reward = 0
     for i in range(args.num_test):
         CurrentState.reset()
         s = env.reset()
         episode_reward = 0
-        # while not done:
         while True:
-            env.render()
             CurrentState.update(s)
             value, action, _, _ = pi.sample(CurrentState(),
                                             deterministic=args.no_deterministic)
@@ -80,15 +120,64 @@ def Load_and_Test():
             # If done then update final rewards and reset episode reward
             episode_reward += reward
             if done:
+                total_reward += episode_reward
                 print('Episode Reward:', episode_reward)
                 episode_reward = 0
                 done = False
-                state = env.reset()
+                break
 
-            CurrentState.update(state)
+    print('Total reward: ',total_reward/args.num_test)
+
+
+def Load_and_Test2():
+    args = get_args()
+    env = gym.make(args.env_id)
+    env.seed(args.seed)
+    ob_shape = env.observation_space.shape[0]
+    ac_shape = env.action_space.shape[0]
+
+
+    CurrentState = StackedState(1, args.num_stack, ob_shape)
+    print(args.load_file)
+    stored_state_dict = torch.load(args.load_file)
+
+    # pi = MLPPolicy(CurrentState.state_shape, ac_shape, hidden=args.hidden)
+    pi = torch.load(args.load_file)
+    # pi.load_state_dict(stored_state_dict)
+
+    if args.cuda:
+        CurrentState.cuda()
+        pi.cuda()
+
+    input('Start')
+    total_reward = 0
+    for i in range(args.num_test):
+        CurrentState.reset()
+        s = env.reset()
+        episode_reward = 0
+        while True:
+            CurrentState.update(s)
+            value, action, _, _ = pi.sample(CurrentState(),
+                                            deterministic=args.no_deterministic)
+            cpu_actions = action.data.cpu().numpy()[0]
+
+            # Observe reward and next state
+            state, reward, done, info = env.step(cpu_actions)
+
+            # If done then update final rewards and reset episode reward
+            episode_reward += reward
+            if done:
+                total_reward += episode_reward
+                print('Episode Reward:', episode_reward)
+                episode_reward = 0
+                done = False
+                break
+
+    print('Total reward: ',total_reward/args.num_test)
 
 
 if __name__ == '__main__':
     Load_and_Test()
+    # Load_and_Test2()
 
 

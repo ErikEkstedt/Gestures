@@ -36,8 +36,8 @@ def get_args():
                         help='number of frames to train (default: 1e6)')
     parser.add_argument('--num-steps', type=int, default=2048,
                         help='number of exploration steps in ppo (default: ?)')
-    parser.add_argument('--batch-size', type=int, default=64,
-                        help='ppo batch size (default: 64)')
+    parser.add_argument('--batch-size', type=int, default=256,
+                        help='ppo batch size (default: 256)')
     parser.add_argument('--max-episode-length', type=int, default=100000,
                         help='maximum steps in one episode (default: 10000)')
     parser.add_argument('--ppo-epoch', type=int, default=8,
@@ -48,25 +48,26 @@ def get_args():
                         help='Number of hidden neurons in policy (default: 128)')
     parser.add_argument('--fixed-std', action='store_true', default=False,
                         help='Use a fixed standard deviation for actions')
-    parser.add_argument('--std', type=float, default=0.5,
-                        help='Value for action standard  deviation (default: 0.5)')
+    parser.add_argument('--std-stop', type=float, default=-1.7,
+                        help='std stop')
+    parser.add_argument('--std-start', type=float, default=-0.6,
+                        help='std-start')
 
     # Test
     parser.add_argument('--no-test', action='store_true', default=False,
                         help='disables visdom visualization')
-    parser.add_argument('--test-interval', type=int,  default=100,
+    parser.add_argument('--test-interval', type=int,  default=50,
             help='how many upgrades/test (default: 100)')
-    parser.add_argument('--max-test-length', type=int, default=2000,
-                        help='maximum steps in a test episode (default: 2000)')
-    parser.add_argument('--num-test', type=int, default=5,
-            help='Number of test after training (default: 5)')
+    parser.add_argument('--max-test-length', type=int, default=20000,
+                        help='maximum steps in a test episode (default: 20000)')
+    parser.add_argument('--num-test', type=int, default=100,
+            help='Number of test after training (default: 100)')
 
     # Log
     parser.add_argument('--vis-interval', type=int, default=10,
                         help='vis interval, one log per n updates (default: 100)')
     parser.add_argument('--log-dir', default='/tmp/',
             help='directory to save agent logs (default: /tmp/)')
-
     parser.add_argument('--log-interval', type=int, default=1,
                         help='log interval, one log per n updates (default: 10)')
     parser.add_argument('--save-interval', type=int, default=10,

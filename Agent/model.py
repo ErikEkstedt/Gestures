@@ -1,7 +1,5 @@
 # This script is heavily inspired by
 # https://github.com/ikostrikov/pytorch-a2c-ppo-acktr
-
-
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
@@ -44,30 +42,50 @@ class AddBias(nn.Module):
             return self.__class__.__name__ + '(' + str(self.size) + ')'
 
 
+# class DiagonalGaussian(nn.Module):
+#     ''' Diagonal Gaussian used as the head of the policy networks
+#     '''
+#     def __init__(self, num_inputs, num_outputs, fixed_std=False, std=None):
+#         super(DiagonalGaussian, self).__init__()
+#         self.mean = nn.Linear(num_inputs, num_outputs)
+#         self.logstd = AddBias(num_outputs)
+#         weights_init_mlp(self)
+#         self.train()
+#
+#     def forward(self, x):
+#         action_mean = self.mean(x)
+#         zeros = Variable(torch.zeros(action_mean.size()), volatile=x.volatile)
+#         if x.is_cuda:
+#             zeros = zeros.cuda()
+#             action_mean = action_mean.cuda()
+#
+#         action_logstd = self.logstd(zeros)
+#         return action_mean, action_logstd
+#
+#     def cuda(self, *args):
+#         super(DiagonalGaussian).cuda()
+
 class DiagonalGaussian(nn.Module):
     ''' Diagonal Gaussian used as the head of the policy networks
     '''
-    def __init__(self, num_inputs, num_outputs, fixed_std=False, std=None):
+    def __init__(self, num_inputs, num_outputs):
         super(DiagonalGaussian, self).__init__()
         self.mean = nn.Linear(num_inputs, num_outputs)
-        self.logstd = AddBias(num_outputs)
-
         weights_init_mlp(self)
         self.train()
 
-    def forward(self, x):
+    def forward(self, x, std):
         action_mean = self.mean(x)
         zeros = Variable(torch.zeros(action_mean.size()), volatile=x.volatile)
         if x.is_cuda:
             zeros = zeros.cuda()
             action_mean = action_mean.cuda()
 
-        action_logstd = self.logstd(zeros)
+        action_logstd = zeros*std
         return action_mean, action_logstd
 
     def cuda(self, *args):
         super(DiagonalGaussian).cuda()
-
 
 class MLPPolicy(nn.Module):
     ''' Todo: should be dynamic in amounts of layers'''
@@ -75,31 +93,46 @@ class MLPPolicy(nn.Module):
                  input_size,
                  action_shape,
                  hidden=64,
-                 fixed_std=False,
-                 std=None):
+                 std_start=-0.6,
+                 std_stop=-1.7,
+                 total_frames=1e6):
         super(MLPPolicy, self).__init__()
         self.fc1 = nn.Linear(input_size, hidden)
         self.fc2 = nn.Linear(hidden, hidden)
 
         self.value = nn.Linear(hidden, 1)
-        self.diag_gauss = DiagonalGaussian(hidden,
-                                           action_shape,
-                                           fixed_std=fixed_std,
-                                           std=std)
+        self.action = nn.Linear(hidden, action_shape)
+        # self.diag_gauss = DiagonalGaussian(hidden, action_shape, std=std)
+        self.train()
+
+        self.n = 0
+        self.total_n = total_frames
+        self.std_start = std_start
+        self.std_stop = std_stop
+
+    def std(self, x):
+        ratio = self.n/self.total_n
+        self.log_std_value = self.std_start - (self.std_start - self.std_stop)*ratio
+        std = torch.FloatTensor([self.log_std_value])
+        ones = torch.ones(x.data.size())
+        if x.is_cuda:
+            std = std.cuda()
+            ones=ones.cuda()
+        std = std*ones
+        std = Variable(std)
+        return std
+
+    def get_std(self):
+        return math.exp(self.log_std_value)
 
     def forward(self, x):
         x = F.tanh(self.fc1(x))
         x = F.tanh(self.fc2(x))
         v = self.value(x)
-
-        ac_mean, ac_std = self.diag_gauss(x)
+        ac_mean = self.action(x)
+        ac_std = self.std(ac_mean)  #std annealing
+        # ac_mean, ac_std = self.diag_gauss(x, std)
         return v, ac_mean, ac_std
-
-    def _body(self, hidden, hidden_layers=2):
-        pass
-
-    def act(self, x):
-        pass
 
     def evaluate_actions(self, x, actions):
         v, action_mean, action_logstd = self(x)
@@ -118,6 +151,7 @@ class MLPPolicy(nn.Module):
         input = Variable(s_t, volatile=True)
         v, action_mean, action_logstd = self(input)
         action_std = action_logstd.exp()
+
         if deterministic:
             action = action_mean
         else:
@@ -126,9 +160,10 @@ class MLPPolicy(nn.Module):
             noise = Variable(torch.randn(action_std.size()))
             if action_mean.is_cuda:
                 noise = noise.cuda()
+                # action_std = action_std.cuda()
             # noise_scaler is for scaling the randomneww on the fly.
             # debugging exploration
-            action = action_mean + action_std * noise
+            action = action_mean +  action_std * noise
 
         # calculate `old_log_probs` directly in exploration.
         action_log_probs = -0.5 * ((action - action_mean) / action_std).pow(2)\
@@ -139,17 +174,20 @@ class MLPPolicy(nn.Module):
         dist_entropy = dist_entropy.sum(-1).mean()
         return v, action, action_log_probs, action_std
 
-    def reset_parameters(self):
-        """
-        tanh_gain = nn.init.calculate_gain('tanh')
-        self.a_fc1.weight.data.mul_(tanh_gain)
-        self.a_fc2.weight.data.mul_(tanh_gain)
-        self.v_fc1.weight.data.mul_(tanh_gain)
-        self.v_fc2.weight.data.mul_(tanh_gain)
-        """
-        self.apply(weights_init_mlp)
-        if self.head.__class__.__name__ == "DiagonalGaussian":
-            self.head.mean.weight.data.mul_(0.01)
+
+
+
+    # def reset_parameters(self):
+    #     """
+    #     tanh_gain = nn.init.calculate_gain('tanh')
+    #     self.a_fc1.weight.data.mul_(tanh_gain)
+    #     self.a_fc2.weight.data.mul_(tanh_gain)
+    #     self.v_fc1.weight.data.mul_(tanh_gain)
+    #     self.v_fc2.weight.data.mul_(tanh_gain)
+    #     """
+    #     self.apply(weights_init_mlp)
+    #     if self.head.__class__.__name__ == "DiagonalGaussian":
+    #         self.head.mean.weight.data.mul_(0.01)
 
 
 class Obs_stats(object):

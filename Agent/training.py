@@ -13,9 +13,11 @@ def Exploration(pi, CurrentState, rollouts, args, result,  env):
     '''
     stds = []
     for step in range(args.num_steps):
+        # add step count
+        pi.n += 1
+
         # Sample actions
         value, action, action_log_prob, a_std = pi.sample(CurrentState())
-        stds.append(a_std.data.mean())  # Averaging the std for all actions (really blunt info)
         cpu_actions = action.data.cpu().numpy()  # gym takes np.ndarrays
 
         # Observe reward and next state
@@ -45,7 +47,6 @@ def Exploration(pi, CurrentState, rollouts, args, result,  env):
                         value.data,
                         reward,
                         masks)
-
 
 def Training(pi, args, rollouts, optimizer_pi):
     value, _, _, _ = pi.sample(rollouts.get_last_state())
