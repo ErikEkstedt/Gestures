@@ -1,19 +1,19 @@
-from OpenGL import GLU # fix for opengl issues on desktop  / nvidia
-import roboschool
-import gym
+# from OpenGL import GLX, GLE, GL  # fix for opengl issues on desktop  / nvidia
+from OpenGL import GLE
+import gym, roboschool
 import numpy as np
-import argparse
+import time
 
-
-parser = argparse.ArgumentParser(description='Plain Roboschool')
-parser.add_argument('--env_id', type=str, default='RoboschoolReacher-v1',
-                    help='Roboschool Environment')
-
-args = parser.parse_args()
-env = gym.make(args.env_id)
+env = gym.make('RoboschoolHumanoid-v1')
 a = env.action_space.shape[0]
-s = env.reset()
+
+print('\n------------')
+env.reset()
 while True:
-    env.render()
+    obs = env.render("human")
     s, r, d, _ = env.step(np.random.rand(a)*2-1)
-    print(r)
+    if d:
+        break
+
+env.close()
+del env

@@ -1,7 +1,7 @@
 Project
 ==========
 
-todo 
+TODO 
 * [x] Train a roboschoolreacher with baselines and watch play.
 * [x ] Write train/enjoy for custom env.
 * [ ] train different versions of the half_humanoid.
@@ -9,9 +9,14 @@ todo
 	* [x] Fixed so gravity is passed as argument
 	* [ ] only move limbs in 2D plane
 	* [x] two targets.
-* [ ] Plot baseline results.
-* [ ] Look into PPO2 for gpu
+
+* [ ] Fix env.render/reset issue
+* REINSTALL ROBOSHCOOL
+* [ ] Get rgb from trainig and record video of run for debug
 * [ ] Add video observation and think how that might help.
+
+
+* [ ] Look into PPO2 for gpu
 * [ ] Try with different baseline algorithms.
 
 

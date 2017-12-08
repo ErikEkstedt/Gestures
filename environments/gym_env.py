@@ -30,6 +30,8 @@ class MyGymEnv(gym.Env):
             ''' First reset '''
             self.scene = self.initialize_scene()
             self.load_xml_get_robot()
+
+        self.get_join_dicts()
         self.robot_specific_reset()
 
         # Important Resets
@@ -78,19 +80,3 @@ class MyGymEnv(gym.Env):
         self.scene.cpp_world.test_window_actions(a.tolist())
         self.scene.cpp_world.test_window_rewards(self.rewards)
             #self.camera.test_window_score(s)  # will appear on video ("rgb_array"), but not on cameras istalled on the robot (because that would be different camera)
-
-def make_parallel_environments(Env, seed, num_processes):
-    ''' imports SubprocVecEnv from baselines.
-    :param seed                 int
-    :param num_processes        int, # env
-    '''
-    from baselines.common.vec_env.subproc_vec_env import SubprocVecEnv
-    def multiple_envs(Env, seed, rank):
-        def _thunk():
-            env = Env()
-            env.seed(seed + rank)
-            return env
-        return _thunk
-    return SubprocVecEnv([multiple_envs(Env,seed+i*1000, i) for i in range(num_processes)])
-
-

@@ -1,7 +1,6 @@
-from OpenGL import GLU # fix for opengl issues on desktop  / nvidia
 import argparse
 import gym
-import roboschool
+# import roboschool
 import math
 
 import torch

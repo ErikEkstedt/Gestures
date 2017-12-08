@@ -58,30 +58,36 @@ def test():
     import gym
     import roboschool
     import cv2
+
+    from OpenGL import GLU # fix for opengl issues on desktop  / nvidia
     # env.set_initial_orientation(task=1, yaw_center=0, yaw_random_spread=1)
 
     steps = 100
     turn = 3.14/500
 
-    env = gym.make('RoboschoolHumanoid-v1')
+    env = gym.make('RoboschoolReacher-v1')
     s = env.reset()
     env.unwrapped.initial_z = 8
     print(env.unwrapped.initial_z)
 
     cam = Camera(env)
 
-    for i in range(steps):
-        # env.render()
-        obs, depth, label = cam.observation()
-        cv2.imshow('depth', cv2.cvtColor(obs, cv2.COLOR_RGB2BGR))
-        # Press "q" to quit
-        if cv2.waitKey(25) & 0xFF == ord('q'):
-            cv2.destroyAllWindows()
-            break
+    for j in range(5):
+        env.reset()
+        for i in range(steps):
+            print('step:', i)
+            # env.render()
+            # obs, depth, label = cam.observation()
+            # cv2.imshow('depth', cv2.cvtColor(obs, cv2.COLOR_RGB2BGR))
 
-        cam.circle_target()
-        a = env.action_space.sample()
-        s, r, d, i = env.step(a)
+            env.render()
+            # Press "q" to quit
+            # if cv2.waitKey(25) & 0xFF == ord('q'):
+            #     cv2.destroyAllWindows()
+            #     break
+            cam.circle_target()
+            a = env.action_space.sample()
+            s, r, d, i = env.step(a)
 
 if __name__=="__main__":
     test()

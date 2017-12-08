@@ -1,6 +1,6 @@
 import numpy as np
 import gym
-import roboschool
+# import roboschool
 import os
 
 import torch
@@ -13,7 +13,28 @@ from arguments import FakeArgs, get_args
 from model import MLPPolicy
 from memory import RolloutStorage, StackedState, Results
 from training import Training, Exploration
-from testing import Test, Test_and_See
+from testing import Test, Test_and_Save_Video,Test_and_See_gym
+
+# from environments.custom import HalfHumanoid, make_parallel_environments
+# from environments.custom import CustomReacher2d_2arms
+
+
+def make_env(env_id, seed, num_processes):
+    ''' imports SubprocVecEnv from baselines.
+    :param seed                 int
+    :param num_processes        int, # env
+    '''
+    from baselines.common.vec_env.subproc_vec_env import SubprocVecEnv
+    import baselines.bench as bench
+    def make_envs(env_id, seed, rank, log_dir='/tmp/'):
+        def _thunk():
+            env = gym.make(env_id)
+            env.seed(seed + rank)
+            # env = bench.Monitor(env, os.path.join(log_dir, "{}.monitor.json".format(rank)))
+            return env
+        return _thunk
+    return SubprocVecEnv([make_envs(env_id, seed, i)
+                          for i in range(num_processes)])
 
 
 def make_gym(env_id, seed, num_processes):
@@ -28,7 +49,8 @@ def make_gym(env_id, seed, num_processes):
             env.seed(seed + rank)
             return env
         return _thunk
-    return SubprocVecEnv([multiple_envs(env_id, seed, i) for i in range(num_processes)])
+    return SubprocVecEnv([multiple_envs(env_id, seed, i)
+                          for i in range(num_processes)])
 
 class Optimizer(object):
     def __init__(self, lr, opt, total_len):
@@ -51,9 +73,22 @@ def main():
         vis = VisLogger(description_list=ds, log_dir=args.log_dir)
         _, checkpoint_dir = vis.get_logdir()
 
-    env = make_gym(args.env_id, args.seed, args.num_processes)
+    # env = make_gym(args.env_id, args.seed, args.num_processes)
+    env = make_env(args.env_id, args.seed, args.num_processes)
+    test_env = gym.make(args.env_id)
+
+    ob_shape = test_env.observation_space.shape[0]
+    ac_shape = test_env.action_space.shape[0]
+
+    # Env = HalfHumanoid
+    # Env = CustomReacher2d_2arms
+    # env = make_parallel_environments(Env, args.seed, args.num_processes)
+    # test_env = Env()
+
     ob_shape = env.observation_space.shape[0]
     ac_shape = env.action_space.shape[0]
+    print(ob_shape)
+    print(ac_shape)
 
     CurrentState = StackedState(args.num_processes,
                                 args.num_stack,
@@ -111,8 +146,9 @@ def main():
         if not args.no_test and j % args.test_interval == 0 and j>0:
             print('Testing {} episodes'.format(args.num_test))
             pi.eval()
-            # R = Test(pi, args, ob_shape, verbose=True)
-            R = Test_and_See(pi, args, ob_shape, verbose=True)
+            R = Test(pi, args, ob_shape, verbose=True)
+            # R = Test_and_See_gym(test_env, pi, args, ob_shape, verbose=True)
+            # R = Test_and_Save_Video(test_env, pi, args, ob_shape, verbose=False)
             pi.train()
             vis.line_update(Xdata=frame, Ydata=R, name='Test Score')
             print('Test Average:', R)
@@ -135,8 +171,7 @@ def main():
                 print('MAX:', MAX_REWARD)
                 print()
                 pi.train()
-                input()
-
+                # input('Enter to continue')
 
 
         #  ==== VISDOM PLOT ======
@@ -165,7 +200,7 @@ def main():
             torch.save(pi, name)
             print(name)
             pi.cuda()
-            input()
+            # input()
 
 if __name__ == '__main__':
     main()

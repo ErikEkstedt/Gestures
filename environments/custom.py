@@ -1,21 +1,65 @@
-from OpenGL import GLU # fix for opengl issues on desktop  / nvidia
 from roboschool.scene_abstract import Scene
 import os
 import numpy as np
+import gym
+from OpenGL import GLU # fix for opengl issues on desktop  / nvidia
 
 try:
-    from gym_env import MyGymEnv, make_parallel_environments
+    from environments.gym_env import MyGymEnv
 except:
-    from environments.gym_env import MyGymEnv, make_parallel_environments
+    from gym_env import MyGymEnv
+
+
+def makeEnv(args):
+    if 'Half_2d' in args.env_id:
+        return HalfHumanoid2D()
+    elif 'Half' in args.env_id:
+        return HalfHumanoid(gravity=args.gravity)
+    elif 'Reacher2d' in args.env_id:
+        return CustomReacher2d(gravity=args.gravity)
+    elif 'Reacher' in args.env_id:
+        return CustomReacher(gravity=args.gravity)
+    else:
+        raise NotImplementedError
+
+
+def getEnv(args):
+    if 'Half_2d' in args.env_id:
+        return HalfHumanoid2D
+    elif 'Half' in args.env_id:
+        return HalfHumanoid
+    elif 'Reacher2d' in args.env_id:
+        return CustomReacher2d
+    elif 'Reacher' in args.env_id:
+        return CustomReacher
+    else:
+        raise NotImplementedError
+
+
+def make_parallel_environments(Env, seed, num_processes):
+    ''' imports SubprocVecEnv from baselines.
+    :param seed                 int
+    :param num_processes        int, # env
+    '''
+    from baselines.common.vec_env.subproc_vec_env import SubprocVecEnv
+    def multiple_envs(Env, seed, rank):
+        def _thunk():
+            env = Env()
+            env.seed(seed + rank)
+            return env
+        return _thunk
+    return SubprocVecEnv([multiple_envs(Env,seed+i*1000, i) for i in range(num_processes)])
+
 
 PATH_TO_CUSTOM_XML = "/home/erik/com_sci/Master_code/Project/environments/xml_files"
 
+
 class BasePyBullet(MyGymEnv):
     def __init__(self, path=PATH_TO_CUSTOM_XML,
-                 robot_name='robot',
-                 target_name='target',
-                 model_xml='half_humanoid.xml',
-                 ac=6, obs=18, gravity=9.81):
+                    robot_name='robot',
+                    target_name='target',
+                    model_xml='half_humanoid.xml',
+                    ac=6, obs=18, gravity=9.81):
         MyGymEnv.__init__(self, action_dim=ac, obs_dim=obs)
         self.XML_PATH = path
         self.model_xml = model_xml
@@ -44,7 +88,7 @@ class BasePyBullet(MyGymEnv):
     def apply_action(self, a):
         assert( np.isfinite(a).all() )
         for i, m, power in zip(range(len(self.motors)), self.motors, self.motor_power):
-            m.set_motor_torque( float(power*self.power*np.clip(a[i], -1, +1)) )
+            m.set_motor_torque( 0.05*float(power*self.power*np.clip(a[i], -1, +1)) )
 
     def stop_condition(self):
         max_time = False
@@ -90,7 +134,6 @@ class BasePyBullet(MyGymEnv):
         self.rewards = [float(self.potential - potential_old), float(electricity_cost)]
         return sum(self.rewards)
 
-
     def calc_potential(self):
         return -self.potential_constant*np.linalg.norm(self.to_target_vec)
 
@@ -118,20 +161,25 @@ class BasePyBullet(MyGymEnv):
                     self.robot_body = part
 
             for j in r.joints:
-                if verbose: print("\tALL JOINTS '%s' limits = %+0.2f..%+0.2f effort=%0.3f speed=%0.3f" % ((j.name,) + j.limits()) )
+                if verbose: print("\tALL JOINTS '%s' \
+                                    limits = %+0.2f..%+0.2f \
+                                    effort=%0.3f speed=%0.3f" %
+                                    ((j.name,) + j.limits()) )
                 j.power_coef = 100.0
                 self.ordered_joints.append(j)
                 self.jdict[j.name] = j
 
+    def get_join_dicts(self, verbose=False):
         # sort out robot and targets.
         self.target_joints,  self.target_parts = self.get_joints_parts_by_name('target')
         self.robot_joints,  self.robot_parts = self.get_joints_parts_by_name('robot')
 
-        print(self.robot_joints)
-        print()
-        print(self.robot_parts)
-        print()
-        print(self.target_joints)
+        if verbose:
+            print(self.robot_joints)
+            print()
+            print(self.robot_parts)
+            print()
+            print(self.target_joints)
         assert(self.cpp_robot)
 
     def get_joints_parts_by_name(self, name):
@@ -144,20 +192,6 @@ class BasePyBullet(MyGymEnv):
                 parts[jname] = part
         return joints, parts
 
-    def robot_specific_reset(self):
-        # self.motor_names = ["robot_abd_x"]
-        # self.motor_power = [100] #, 75, 75]
-        # self.motors = [self.jdict[n] for n in self.motor_names]
-
-        self.motor_names = list(self.robot_joints.keys())
-        self.motor_power = [100 for _ in range(len(self.motor_names))]
-        self.motors = list(self.robot_joints.values())
-
-        # target and potential
-        self.target_reset()
-        self.calc_to_target_vec()
-        self.potential = self.calc_potential()
-
     def target_reset(self):
         ''' self.np_random for correct seed. '''
         for j in self.target_joints.values():
@@ -168,6 +202,10 @@ class BasePyBullet(MyGymEnv):
             else:
                 j.reset_current_position( self.np_random.uniform( low=0.1, high=0.3 ), 0)
 
+    def camera_adjust(self):
+        self.camera.move_and_look_at(0.5, 0.5, 0.5, 0, 0, 0)
+
+
 
 class CustomReacher(BasePyBullet):
     def __init__(self, gravity=9.81):
@@ -176,15 +214,24 @@ class CustomReacher(BasePyBullet):
                               target_name='target',
                               model_xml='custom_reacher.xml',
                               ac=2, obs=13, gravity=gravity)
+
     def robot_specific_reset(self):
         self.motor_names = ["robot_shoulder_joint", "robot_elbow_joint"] # , "right_shoulder2", "right_elbow"]
         self.motor_power = [75, 75] #, 75, 75]
         self.motors = [self.jdict[n] for n in self.motor_names]
 
         # target and potential
+        self.robot_reset()
         self.target_reset()
         self.calc_to_target_vec()
         self.potential = self.calc_potential()
+
+    def robot_reset(self):
+        ''' self.np_random for correct seed. '''
+        for j in self.robot_joints.values():
+            j.reset_current_position(
+                self.np_random.uniform( low=-0.01, high=0.01 ), 0)
+            j.set_motor_torque(0)
 
     def calc_to_target_vec(self):
         ''' gets hand position, target position and the vector in bewteen'''
@@ -240,7 +287,7 @@ class CustomReacher(BasePyBullet):
         return -self.potential_constant*np.linalg.norm(self.to_target_vec)
 
 
-class CustomReacher2d(BasePyBullet):
+class CustomReacher2d_2arms(BasePyBullet):
     def __init__(self, gravity=9.81):
         BasePyBullet.__init__(self, path=PATH_TO_CUSTOM_XML,
                               robot_name='robot',
@@ -333,36 +380,104 @@ class CustomReacher2d(BasePyBullet):
 class HalfHumanoid(BasePyBullet):
     def __init__(self, gravity=9.81):
         BasePyBullet.__init__(self, path=PATH_TO_CUSTOM_XML,
-                              robot_name='robot',
-                              target_name='target',
-                              model_xml='half_humanoid.xml',
-                              ac=6, obs=18, gravity=gravity)
+                                robot_name='robot',
+                                target_name='target',
+                                model_xml='half_humanoid.xml',
+                                ac=6, obs=18, gravity=gravity)
+
+    def robot_specific_reset(self):
+        # target and potential
+        self.robot_reset()
+        self.target_reset()
+
+        self.motor_names = list(self.robot_joints.keys())
+        self.motor_power = [100 for _ in range(len(self.motor_names))]
+        self.motors = list(self.robot_joints.values())
+
+        self.calc_to_target_vec()
+        self.potential = self.calc_potential()
+
+    def robot_reset(self):
+        ''' self.np_random for correct seed. '''
+        for j in self.robot_joints.values():
+            j.reset_current_position(
+                self.np_random.uniform( low=-0.03, high=0.03 ), 0)
+            j.set_motor_torque(0)
+
+    def target_reset(self):
+        ''' self.np_random for correct seed. '''
+        for j in self.target_joints.values():
+            if "z" in j.name:
+                '''Above ground'''
+                j.reset_current_position(
+                    self.np_random.uniform( low=0, high=0.2 ), 0)
+            else:
+                j.reset_current_position( self.np_random.uniform( low=0.1, high=0.3 ), 0)
+
+    def camera_adjust(self):
+        self.camera.move_and_look_at(0.5, 0.5, 0.5, 0, 0, 0)
 
 
-def makeEnv(args):
-    if 'Half_2d' in args.env_id:
-        return HalfHumanoid2D()
-    elif 'Half' in args.env_id:
-        return HalfHumanoid(gravity=args.gravity)
-    elif 'Reacher2d' in args.env_id:
-        return CustomReacher2d(gravity=args.gravity)
-    elif 'Reacher' in args.env_id:
-        return CustomReacher(gravity=args.gravity)
-    else:
-        raise NotImplementedError
+class TestKeyboardControl:
+    def __init__(self):
+        self.keys = {}
+        self.control = np.zeros(9)
+        self.human_pause = False
+        self.human_done = False
+    def key(self, event_type, key, modifiers):
+        self.keys[key] = +1 if event_type==6 else 0
+        #print ("event_type", event_type, "key", key, "modifiers", modifiers)
+        self.control[0] = self.keys.get(0x1000014, 0) - self.keys.get(0x1000012, 0)
+        self.control[1] = self.keys.get(0x1000013, 0) - self.keys.get(0x1000015, 0)
+        self.control[2] = self.keys.get(ord('A'), 0)  - self.keys.get(ord('Z'), 0)
+        self.control[3] = self.keys.get(ord('S'), 0)  - self.keys.get(ord('X'), 0)
+        self.control[4] = self.keys.get(ord('D'), 0)  - self.keys.get(ord('C'), 0)
+        self.control[5] = self.keys.get(ord('F'), 0)  - self.keys.get(ord('V'), 0)
+        self.control[6] = self.keys.get(ord('G'), 0)  - self.keys.get(ord('B'), 0)
+        self.control[7] = self.keys.get(ord('H'), 0)  - self.keys.get(ord('N'), 0)
+        self.control[8] = self.keys.get(ord('J'), 0)  - self.keys.get(ord('M'), 0)
+        if event_type==6 and key==32:         # press Space to pause
+            self.human_pause = 1 - self.human_pause
+        if event_type==6 and key==0x1000004:  # press Enter to restart
+            self.human_done = True
 
 
-def getEnv(args):
-    if 'Half_2d' in args.env_id:
-        return HalfHumanoid2D
-    elif 'Half' in args.env_id:
-        return HalfHumanoid
-    elif 'Reacher2d' in args.env_id:
-        return CustomReacher2d
-    elif 'Reacher' in args.env_id:
-        return CustomReacher
-    else:
-        raise NotImplementedError
+def keyboard_test():
+    env_id = "RoboschoolHumanoid-v1"
+    env = gym.make(env_id)
+    # env = HalfHumanoid()
+    ctrl = TestKeyboardControl()
+    env.reset()  # This creates default single player scene
+    env.unwrapped.scene.cpp_world.set_key_callback(ctrl.key)
+    if "camera" in env.unwrapped.__dict__:
+        env.unwrapped.camera.set_key_callback(ctrl.key)
+
+    a = np.zeros(env.action_space.shape)
+    copy_n = min(len(a), len(ctrl.control))
+    ctrl.human_pause = False
+
+    while 1:
+        ctrl.human_done  = False
+        sn = env.reset()
+        frame = 0
+        reward = 0.0
+        episode_over = False
+        while 1:
+            s = sn
+            a[:copy_n] = ctrl.control[:copy_n]
+            sn, rplus, done, info = env.step(a)
+            reward += rplus
+            #env.render("rgb_array")
+            episode_over |= done
+            still_visible = True
+            while still_visible:
+                still_visible = env.render("human")
+                #env.unwrapped.camera.test_window()
+                if not ctrl.human_pause: break
+            if ctrl.human_done: break
+            if not still_visible: break
+            frame += 1
+        if not still_visible: break
 
 
 def test():
@@ -382,8 +497,10 @@ def test():
             print(s.shape)
     else:
         ''' single '''
-        env = HalfHumanoid()
+        # env = HalfHumanoid()
         # env = CustomReacher()
+        env = CustomReacher2d_2arms()
+
         asize = env.action_space.shape[0]
         s = env.reset()
         print(s.shape)
@@ -399,4 +516,4 @@ def test():
 
 
 if __name__ == '__main__':
-    test()
+    test()    # keyboard_test()

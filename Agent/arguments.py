@@ -32,8 +32,8 @@ def get_args():
 
 
     # PPO Training
-    parser.add_argument('--num-frames', type=int, default=int(1e6),
-                        help='number of frames to train (default: 1e6)')
+    parser.add_argument('--num-frames', type=int, default=int(3e6),
+                        help='number of frames to train (default: 3e6)')
     parser.add_argument('--num-steps', type=int, default=2048,
                         help='number of exploration steps in ppo (default: ?)')
     parser.add_argument('--batch-size', type=int, default=256,

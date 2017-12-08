@@ -23,19 +23,20 @@
 				<joint armature="0.0068" axis="2 1 1" name="robot_right_shoulder1" pos="0 0 0" range="-85 60" stiffness="1" type="hinge"/>
 				<joint armature="0.0051" axis="0 -1 1" name="robot_right_shoulder2" pos="0 0 0" range="-85 60" stiffness="1" type="hinge"/>
 				<geom fromto="0 0 0 .16 -.16 -.16" name="robot_right_uarm1" size="0.04 0.16" type="capsule"/>
+
 				<body name="robot_right_lower_arm" pos=".18 -.18 -.18">
-					<joint armature="0.0028" axis="0 -1 1" name="robot_right_elbow" pos="0 0 0" range="-90 50" stiffness="0" type="hinge"/>
+					<joint armature="0.0028" axis="0 -1 1" name="robot_right_elbow" pos="0 0 0" range="-30 30" stiffness="0" type="hinge"/>
 					<geom fromto="0.01 0.01 0.01 .17 .17 .17" name="robot_right_larm" size="0.031" type="capsule"/>
 					<body name="robot_right_hand" pos=".17 .17 .17">
 						<geom name="robot_right_hand" pos=".0 .0 .0" size="0.04" type="sphere" rgba="1 0 1 1"/>
 					</body>
 				</body>
-				<body name="robot_left_upper_arm" pos="0 0.17 0.06">
+				<body name="robot_left_upper_arm" pos=".18 .18 .18">
 					<joint armature="0.0068" axis="2 -1 1" name="robot_left_shoulder1" pos="0 0 0" range="-60 85" stiffness="1" type="hinge"/>
 					<joint armature="0.0051" axis="0 1 1" name="robot_left_shoulder2" pos="0 0 0" range="-60 85" stiffness="1" type="hinge"/>
 					<geom fromto="0 0 0 .16 .16 -.16" name="robot_left_uarm1" size="0.04 0.16" type="capsule"/>
 					<body name="robot_left_lower_arm" pos=".18 .18 -.18">
-						<joint armature="0.0028" axis="0 -1 -1" name="robot_left_elbow" pos="0 0 0" range="-90 50" stiffness="0" type="hinge"/>
+						<joint armature="0.0028" axis="0 -1 -1" name="robot_left_elbow" pos="0 0 0" range="-30 30" stiffness="0" type="hinge"/>
 						<geom fromto="0.01 -0.01 0.01 .17 -.17 .17" name="robot_left_larm" size="0.031" type="capsule"/>
 						<body name="robot_left_hand" pos=".17 -.17 .17">
 							<geom name="robot_left_hand" pos=".0 .0 .0" size="0.04" type="sphere" rgba="1 0 0 1"/>
