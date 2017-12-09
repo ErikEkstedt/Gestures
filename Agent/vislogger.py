@@ -32,7 +32,9 @@ class VisLogger(object):
         :param name                 string, (optional) specific name for log subfolder
         '''
         self.viz = Visdom()
-        assert self.viz.check_connection(), "Server not found.\nMake sure to execute 'python -m visdom.server' (with the right python version) "
+        assert self.viz.check_connection(), "Server not found.\n \
+            Make sure to execute 'python -m visdom.server' \
+            (with the right python version) "
 
         self._mkdirs(log_dir, name)  # Creates: self.log_dir, self.checkpoint_dir
         self.best_score = None       # best score achieved.
@@ -44,7 +46,7 @@ class VisLogger(object):
         self.windows = {}
 
     def get_logdir(self):
-        return self.log_dir, self.checkpoint_dir
+        return self.log_dir, self.video_dir, self.checkpoint_dir
 
     def _mkdirs(self, log_dir, name):
         if not os.path.exists(log_dir):
@@ -64,6 +66,7 @@ class VisLogger(object):
             run += 1
 
         self.log_dir = "%s/run-%d" % (log_dir, run)
+        self.video_dir = "%s/video" % (self.log_dir)
         self.checkpoint_dir = "%s/checkpoints" % (self.log_dir)
         os.mkdir(self.log_dir)
         os.mkdir(self.checkpoint_dir)
@@ -99,24 +102,6 @@ class VisLogger(object):
         else:
             self.windows[name] = self.viz.bar(X=X,
                     opts=dict(showlegend=True, title=name,),)
-
-    def save_checkpoint(self, model, optimizer, frame, score, fname='checkpoint.pth.tar'):
-        filename = os.path.join(self.checkpoint_dir, fname)
-        if self.best_score is None:
-            self.best_score = score
-
-        if model.cuda:
-            save_model = deepcopy(model.cpu())
-
-        is_best = score > self.best_score
-        best = max(score, self.best_score)
-        state = {'frame': epoch,
-                 'score': best,
-                 'state_dict': save_model.state_dict(),
-                 'optimizer': optimizer.state_dict()}
-        torch.save(state, filename)
-        if is_best:
-            shutil.copyfile(filename, os.path.join(self.checkpoint_dir, 'model_best.pth.tar'))
 
     def save(self):
         print('Saving the visdom server content (~/.visdom)')

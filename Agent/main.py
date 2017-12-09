@@ -1,6 +1,6 @@
 import numpy as np
 import gym
-# import roboschool
+from copy import deepcopy
 import os
 
 import torch
@@ -56,7 +56,7 @@ def main():
     if args.vis:
         from vislogger import VisLogger
         vis = VisLogger(description_list=ds, log_dir=args.log_dir)
-        _, checkpoint_dir = vis.get_logdir()
+        args.log_dir, args.video_dir, args.checkpoint_dir = vis.get_logdir()
 
     if args.num_processes > 1:
         # env = make_parallel_environments_RGB(CustomReacher,
@@ -68,8 +68,8 @@ def main():
                                          args.num_processes)
         result = Results(max_n=200, max_u=10)
     else:
-        # env = CustomReacher()
-        env = CustomReacherRGB()
+        env = CustomReacher()
+        # env = CustomReacherRGB()
         result = Results_single(max_n=200, max_u=10)
 
 
@@ -84,7 +84,6 @@ def main():
                                 CurrentState.size()[1],
                                 ac_shape)
 
-
     pi = MLPPolicy(CurrentState.state_shape,
                    ac_shape,
                    hidden=args.hidden,
@@ -93,8 +92,8 @@ def main():
     pi.train()
     optimizer_pi = optim.Adam(pi.parameters(), lr=args.pi_lr)
 
-    s, rgb = env.reset()
-    # s = env.reset()
+    # s, rgb = env.reset()
+    s = env.reset()
     CurrentState.update(s)
     rollouts.states[0].copy_(CurrentState())
 
@@ -110,8 +109,8 @@ def main():
     MAX_REWARD = -999999
     rgb_list = []
     for j in range(num_updates):
-        rgb_list, MAX_REWARD = Exploration_single_RGB(pi, CurrentState, rollouts, args, result, env, rgb_list, MAX_REWARD)
-        # Exploration_single(pi, CurrentState, rollouts, args, result, env)
+        # rgb_list, MAX_REWARD = Exploration_single_RGB(pi, CurrentState, rollouts, args, result, env, rgb_list, MAX_REWARD)
+        Exploration_single(pi, CurrentState, rollouts, args, result, env)
         # Exploration(pi, CurrentState, rollouts, args, result, env)
         # Exploration_RGB(pi, CurrentState, rollouts, args, result, env)
         vloss, ploss, ent = Training(pi, args, rollouts, optimizer_pi)
@@ -178,11 +177,18 @@ def main():
         #  ==== Save model ======
         if j % args.save_interval == 0 and j > 0:
             R = result.get_last_reward()
-            print('Interval Saving')
-            fname = 'model%d_%.2f.pt'%(j+1, R)
-            name = os.path.join(checkpoint_dir, fname)
+            print('Interval Saving (last score: ', R)
+            fname = 'state_dict%d_%.2f.pt'%(j+1, R)
+            name = os.path.join(args.checkpoint_dir, fname)
             print(name)
-            torch.save(pi.cpu().state_dict(), name)
+
+            sd = pi.cpu().state_dict()
+            # sd_cpu = {}
+            # for key, val in sd.items():
+            #     val = val.cpu()
+            #     sd_cpu[key] = val
+            # print(sd_cpu.items())
+            torch.save(sd, name)
             pi.cuda()
 
 if __name__ == '__main__':

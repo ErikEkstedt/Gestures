@@ -72,7 +72,6 @@ def Exploration_single(pi, CurrentState, rollouts, args, result,  env):
 
         # If done then update final rewards and reset episode reward
         if done:
-            print(result.episode_rewards)
             idx = (1-masks)
             result.update_list(idx)
             state = env.reset()
@@ -167,9 +166,10 @@ def Exploration_single_RGB(pi, CurrentState, rollouts, args, result,  env, rgb_l
         if done:
             print(result.episode_rewards[0])
             if result.episode_rewards[0] > MAX_REWARD:
-                print('Saving Video!')
-                torch.save(rgb_list, '/tmp/video/best.pt')
                 MAX_REWARD = result.episode_rewards[0]
+                print('Saving Video!')
+                name = args.log_dir + '/best_'+pi.n+'_'+str(MAX_REWARD)+'.pt'
+                torch.save(rgb_list, name)
 
             rgb_list = []
             idx = (1-masks)

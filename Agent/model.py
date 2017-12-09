@@ -87,22 +87,20 @@ class DiagonalGaussian(nn.Module):
     def cuda(self, *args):
         super(DiagonalGaussian).cuda()
 
+
 class MLPPolicy(nn.Module):
-    ''' Todo: should be dynamic in amounts of layers'''
-    def __init__(self,
-                 input_size,
-                 action_shape,
-                 hidden=64,
+    def __init__(self, input_size, action_shape,
+                 hidden=128,
                  std_start=-0.6,
                  std_stop=-1.7,
                  total_frames=1e6):
+
         super(MLPPolicy, self).__init__()
         self.fc1 = nn.Linear(input_size, hidden)
         self.fc2 = nn.Linear(hidden, hidden)
 
         self.value = nn.Linear(hidden, 1)
         self.action = nn.Linear(hidden, action_shape)
-        # self.diag_gauss = DiagonalGaussian(hidden, action_shape, std=std)
         self.train()
 
         self.n = 0

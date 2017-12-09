@@ -1,19 +1,20 @@
 # from OpenGL import GLX, GLE, GL  # fix for opengl issues on desktop  / nvidia
-from OpenGL import GLE
+from OpenGL import GL
 import gym, roboschool
 import numpy as np
 import time
 
 env = gym.make('RoboschoolHumanoid-v1')
-a = env.action_space.shape[0]
 
-print('\n------------')
-env.reset()
 while True:
-    obs = env.render("human")
-    s, r, d, _ = env.step(np.random.rand(a)*2-1)
-    if d:
-        break
+    print('\n------------')
+    env.reset()
+    while True:
+        s, r, d, _ = env.step(env.action_space.sample())
+        # obs = env.render("rgb_array")
+        obs = env.render("human")
+        if d:
+            break
 
 env.close()
 del env
