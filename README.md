@@ -58,8 +58,3 @@ Directory for the xml files.
 * half_humanoid
 * humanoid
 * fixed torso
-
-
-
-# Old
-all old code implementations not used...
