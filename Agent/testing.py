@@ -96,7 +96,6 @@ def Test_and_See_gym(test_env, pi, args, ob_shape, verbose=False):
     print('Saved Video')
     return total_reward/args.num_test
 
-
 def Test_and_Save_Video(test_env, pi, args, ob_shape, verbose=False):
     '''Test
     :param pi - The policy playing
@@ -144,7 +143,6 @@ def Test_and_Save_Video(test_env, pi, args, ob_shape, verbose=False):
     make_video(BestVideo, vid_name)
     print('Saved Video: ', vid_name)
     return total_reward/args.num_test
-
 
 class VideoPlayer(object):
     def __init__(self, Video, fps):

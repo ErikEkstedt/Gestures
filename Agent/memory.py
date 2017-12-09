@@ -2,6 +2,48 @@ import torch
 import numpy as np
 from torch.utils.data.sampler import BatchSampler, SubsetRandomSampler
 
+class Results_single(object):
+    def __init__(self, max_n=200, max_u=200):
+        self.episode_rewards = 0
+        self.final_reward_list = []
+        self.n = 0
+        self.max_n = max_n
+
+        self.vloss = []
+        self.ploss = []
+        self.ent = []
+        self.updates = 0
+        self.max_u = max_u
+
+    def update_list(self, idx):
+        self.final_reward_list.insert(0, self.episode_rewards)
+        self.episode_rewards = 0
+        self.n += 1
+        if self.n > self.max_n:
+            self.final_reward_list.pop()
+
+    def update_loss(self, v, p, e):
+        self.vloss.insert(0, v)
+        self.ploss.insert(0, p)
+        self.ent.insert(0, e)
+        self.updates += 1
+        if self.updates > self.max_u:
+            self.vloss.pop()
+            self.ploss.pop()
+            self.ent.pop()
+
+    def get_reward_mean(self):
+        return torch.stack(self.final_reward_list).mean()
+
+    def get_last_reward(self):
+        return self.final_reward_list[0]
+
+    def get_loss_mean(self):
+        v = torch.stack(self.vloss).mean()
+        p = torch.stack(self.ploss).mean()
+        e = torch.stack(self.ent).mean()
+        return v, p, e
+
 
 class Results(object):
     def __init__(self, max_n=200, max_u=200):
@@ -37,6 +79,9 @@ class Results(object):
 
     def get_reward_mean(self):
         return torch.stack(self.final_reward_list).mean()
+
+    def get_last_reward(self):
+        return self.final_reward_list[0]
 
     def get_loss_mean(self):
         v = torch.stack(self.vloss).mean()
@@ -101,7 +146,7 @@ class StackedState(object):
     def reset(self):
         self.current_state = torch.zeros(self.current_state.size())
         if self.use_cuda:
-            self.current_state = self.current_state.cuda()
+            self.cuda()
 
     def reset_to(self):
         self.current_state.copy_(state)

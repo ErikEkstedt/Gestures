@@ -8,7 +8,7 @@ from itertools import count
 from memory import StackedState
 
 from model import MLPPolicy
-
+from environments.custom import CustomReacher, make_parallel_environments
 
 def get_args():
     parser = argparse.ArgumentParser(description='Test PPOAgent')
@@ -84,15 +84,15 @@ def Test():
 
 def Load_and_Test():
     args = get_args()
-    env = gym.make(args.env_id)
-    env.seed(args.seed)
+
+    env = CustomReacher()
     ob_shape = env.observation_space.shape[0]
     ac_shape = env.action_space.shape[0]
-
-
+    print('num_stack:', args.num_stack)
     CurrentState = StackedState(1, args.num_stack, ob_shape)
     print(args.load_file)
     stored_state_dict = torch.load(args.load_file)
+    print(stored_state_dict)
 
     pi = MLPPolicy(CurrentState.state_shape, ac_shape, hidden=args.hidden)
     pi.load_state_dict(stored_state_dict)
@@ -105,23 +105,25 @@ def Load_and_Test():
     total_reward = 0
     for i in range(args.num_test):
         CurrentState.reset()
+        print('reset')
         s = env.reset()
         episode_reward = 0
         while True:
             CurrentState.update(s)
-            value, action, _, _ = pi.sample(CurrentState(),
-                                            deterministic=args.no_deterministic)
+            value, action, _, _ = pi.sample(CurrentState(), deterministic=args.no_deterministic)
             cpu_actions = action.data.cpu().numpy()[0]
 
             # Observe reward and next state
             state, reward, done, info = env.step(cpu_actions)
+            masks = torch.Tensor([not done]).cuda()
+            # env.render()
 
             # If done then update final rewards and reset episode reward
             episode_reward += reward
             if done:
-                total_reward += episode_reward
+                CurrentState.check_and_reset(masks)
                 print('Episode Reward:', episode_reward)
-                episode_reward = 0
+                total_reward += episode_reward
                 done = False
                 break
 

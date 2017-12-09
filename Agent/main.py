@@ -11,13 +11,14 @@ import torch.optim as optim
 from utils import args_to_list, print_args, log_print
 from arguments import FakeArgs, get_args
 from model import MLPPolicy
-from memory import RolloutStorage, StackedState, Results
-from training import Training, Exploration
+from memory import RolloutStorage, StackedState, Results, Results_single
+from train import Training, Exploration
+from train import Exploration_RGB, Exploration_single, Exploration_single_RGB
+
 from testing import Test, Test_and_Save_Video,Test_and_See_gym
 
-# from environments.custom import HalfHumanoid, make_parallel_environments
-# from environments.custom import CustomReacher2d_2arms
-
+# from environments.custom import CustomReacherRGB, make_parallel_environments_RGB
+from environments.custom import CustomReacher, CustomReacherRGB, make_parallel_environments
 
 def make_env(env_id, seed, num_processes):
     ''' imports SubprocVecEnv from baselines.
@@ -34,22 +35,6 @@ def make_env(env_id, seed, num_processes):
             return env
         return _thunk
     return SubprocVecEnv([make_envs(env_id, seed, i)
-                          for i in range(num_processes)])
-
-
-def make_gym(env_id, seed, num_processes):
-    ''' imports SubprocVecEnv from baselines.
-    :param seed                 int
-    :param num_processes        int, # env
-    '''
-    from baselines.common.vec_env.subproc_vec_env import SubprocVecEnv
-    def multiple_envs(env_id, seed, rank):
-        def _thunk():
-            env = gym.make(env_id)
-            env.seed(seed + rank)
-            return env
-        return _thunk
-    return SubprocVecEnv([multiple_envs(env_id, seed, i)
                           for i in range(num_processes)])
 
 class Optimizer(object):
@@ -73,33 +58,32 @@ def main():
         vis = VisLogger(description_list=ds, log_dir=args.log_dir)
         _, checkpoint_dir = vis.get_logdir()
 
-    # env = make_gym(args.env_id, args.seed, args.num_processes)
-    env = make_env(args.env_id, args.seed, args.num_processes)
-    test_env = gym.make(args.env_id)
+    if args.num_processes > 1:
+        # env = make_parallel_environments_RGB(CustomReacher,
+        #                                      args.seed,
+        #                                      args.num_processes)
+        # rgb_shape= env.observation_space.shape
+        env = make_parallel_environments(CustomReacher,
+                                         args.seed,
+                                         args.num_processes)
+        result = Results(max_n=200, max_u=10)
+    else:
+        # env = CustomReacher()
+        env = CustomReacherRGB()
+        result = Results_single(max_n=200, max_u=10)
 
-    ob_shape = test_env.observation_space.shape[0]
-    ac_shape = test_env.action_space.shape[0]
-
-    # Env = HalfHumanoid
-    # Env = CustomReacher2d_2arms
-    # env = make_parallel_environments(Env, args.seed, args.num_processes)
-    # test_env = Env()
 
     ob_shape = env.observation_space.shape[0]
     ac_shape = env.action_space.shape[0]
-    print(ob_shape)
-    print(ac_shape)
-
     CurrentState = StackedState(args.num_processes,
                                 args.num_stack,
                                 ob_shape)
 
     rollouts = RolloutStorage(args.num_steps,
-                              args.num_processes,
-                              CurrentState.size()[1],
-                              ac_shape)
+                                args.num_processes,
+                                CurrentState.size()[1],
+                                ac_shape)
 
-    result = Results(max_n=200, max_u=10)
 
     pi = MLPPolicy(CurrentState.state_shape,
                    ac_shape,
@@ -107,10 +91,10 @@ def main():
                    total_frames=args.num_frames)
 
     pi.train()
-
     optimizer_pi = optim.Adam(pi.parameters(), lr=args.pi_lr)
 
-    s = env.reset()
+    s, rgb = env.reset()
+    # s = env.reset()
     CurrentState.update(s)
     rollouts.states[0].copy_(CurrentState())
 
@@ -124,8 +108,12 @@ def main():
     print('Updates: ', num_updates)
 
     MAX_REWARD = -999999
+    rgb_list = []
     for j in range(num_updates):
-        Exploration(pi, CurrentState, rollouts, args, result, env)
+        rgb_list, MAX_REWARD = Exploration_single_RGB(pi, CurrentState, rollouts, args, result, env, rgb_list, MAX_REWARD)
+        # Exploration_single(pi, CurrentState, rollouts, args, result, env)
+        # Exploration(pi, CurrentState, rollouts, args, result, env)
+        # Exploration_RGB(pi, CurrentState, rollouts, args, result, env)
         vloss, ploss, ent = Training(pi, args, rollouts, optimizer_pi)
         rollouts.last_to_first() #updates rollout memory and puts the last state first.
 
@@ -173,7 +161,6 @@ def main():
                 pi.train()
                 # input('Enter to continue')
 
-
         #  ==== VISDOM PLOT ======
         if j % args.vis_interval == 0 and j > 0 and not args.no_vis:
             R = result.get_reward_mean()
@@ -190,17 +177,13 @@ def main():
 
         #  ==== Save model ======
         if j % args.save_interval == 0 and j > 0:
-            R = result.get_reward_mean()
+            R = result.get_last_reward()
             print('Interval Saving')
             fname = 'model%d_%.2f.pt'%(j+1, R)
             name = os.path.join(checkpoint_dir, fname)
             print(name)
             torch.save(pi.cpu().state_dict(), name)
-            name = os.path.join(args.save_dir, fname)
-            torch.save(pi, name)
-            print(name)
             pi.cuda()
-            # input()
 
 if __name__ == '__main__':
     main()
