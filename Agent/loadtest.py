@@ -1,6 +1,5 @@
 import argparse
 import gym
-# import roboschool
 import math
 
 import torch
@@ -8,8 +7,7 @@ from itertools import count
 from memory import StackedState
 
 from model import MLPPolicy
-from environments.custom import CustomReacher, make_parallel_environments
-from environments.custom import CustomReacherRGB
+from environments.custom import CustomReacher
 
 def get_args():
     parser = argparse.ArgumentParser(description='Test PPOAgent')
@@ -35,10 +33,7 @@ def get_args():
     args.cuda = not args.no_cuda and torch.cuda.is_available()
     return args
 
-
 def Load_and_Test():
-    import matplotlib.pyplot as plt
-
     args = get_args()
     env = CustomReacher()
     ob_shape = env.observation_space.shape[0]
@@ -66,18 +61,15 @@ def Load_and_Test():
 
             # Observe reward and next state
             state, reward, done, info = env.step(cpu_actions)
-            masks = torch.Tensor([not done])
             env.render()
 
             # If done then update final rewards and reset episode reward
             episode_reward += reward
             if done:
-                CurrentState.check_and_reset(masks)
                 print('Episode Reward:', episode_reward)
                 total_reward += episode_reward
                 done = False
                 break
-
     print('Total reward: ',total_reward/args.num_test)
 
 

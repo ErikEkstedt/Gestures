@@ -1,31 +1,42 @@
 Project
 ==========
 
-TODO 
-
-F*ckin Roboshcool
------------------
-* [ ] Fix env.render/reset issue
-* REINSTALL ROBOSHCOOL
-* [ ] Get rgb from trainig and record video of run for debug
-* [ ] Add video observation and think how that might help.
+Roboschool is broken on my setup.
+After calling env.reset(), if there has been some type of rendering, the robot and target disappears and all numbers are *nan*.
 
 
--------------------
-* [x] Train a roboschoolreacher with baselines and watch play.
-* [x ] Write train/enjoy for custom env.
-* [ ] train different versions of the half_humanoid.
-	* [x] Reacher2d two arms
-	* [x] Fixed so gravity is passed as argument
-	* [ ] only move limbs in 2D plane
-	* [x] two targets.
+However, my own CustomReacher environment is now working correctly and using a single process convergence is easily reached.
+There still seems to be something wrong with the multiple process setup.
 
-* [ ] Look into PPO2 for gpu
-* [ ] Try with different baseline algorithms.
+TODO
+1. Must have rigid baseline
+	* [ ] Clean code.
+	* [ ] Make multiprocess work
+		* [ ] Result class
+		* [ ] Stacked_State
+		* [ ] Rollouts
+		* [ ] Subproc vec
+		* [ ] MP like a3c
+
+2. Make environment more complex
+	* [ ] Make CustomReacher more complex
+		* [ ] Reach several targets
+	* [ ] HalfHumanoid
+
+3. Train with RGB
+	* [ ] Back to social movements.
 
 
 # [Agent](Agent/)
 Pytorch training
+
+## Results
+A training on my CustomReacher environment.
+
+![Training rewards](Agent/Result/training_score.png)
+![Value loss](Agent/Result/value_loss.png)
+![Action std](Agent/Result/action_std.png)
+
 
 # [Baselines](Baselines/)
 OpenAI baselines training
