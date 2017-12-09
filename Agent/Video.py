@@ -4,7 +4,7 @@ from itertools import count
 from memory import StackedState
 
 import matplotlib
-matplotlib.use("Agg")
+# matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 import matplotlib.animation as animation
 
@@ -16,14 +16,16 @@ class VideoPlayer(object):
         self.fps = fps
         self.wait = 1/fps
 
-    def __call__(self, cv2=False):
+    def __call__(self, use_cv2=False):
         print('Playing video')
-        if cv2:
+        import cv2
+        if use_cv2:
             for i, frame in enumerate(self.video):
+                # print(frame)
                 # Display the resulting frame
-                plt.imshow(str(i), frame)
+                cv2.imshow(str(i), frame)
                 # Press Q on keyboard to  exit
-                if plt.waitKey(self.wait) & 0xFF == ord('q'):
+                if cv2.waitKey(self.wait) & 0xFF == ord('q'):
                     break
         else:
             for i, frame in enumerate(self.video):
@@ -32,7 +34,7 @@ class VideoPlayer(object):
                 # print(frame.dtype)
                 plt.imshow(frame)
                 # plt.pause(self.wait)
-                plt.pause(0.01)
+                plt.pause(0.11)
 
 def make_video(vid, name):
     fig = plt.figure()
@@ -46,7 +48,7 @@ def make_video(vid, name):
 
 def watch_video():
     import sys
-    print(sys.argv[0])
+    print(sys.argv[1])
     vid = torch.load(sys.argv[1])
     vp = VideoPlayer(vid, 25)
     vp()
