@@ -33,9 +33,9 @@ Pytorch training
 ## Results
 A training on my CustomReacher environment.
 
-![Training rewards](Agent/Result/training_score.png)
-![Value loss](Agent/Result/value_loss.png)
-![Action std](Agent/Result/action_std.png)
+![Training rewards](Agent/Result/Dec9/training_score.png)
+![Value loss](Agent/Result/Dec9/value_loss.png)
+![Action std](Agent/Result/Dec9/action_std.png)
 
 
 # [Baselines](Baselines/)
