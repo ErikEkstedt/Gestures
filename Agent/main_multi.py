@@ -34,6 +34,8 @@ def multiprocess():
 
 def main():
     args = get_args()  # Real argparser
+    num_updates = int(args.num_frames) // args.num_steps // args.num_processes
+    args.num_updates = num_updates
     ds = print_args(args)
 
     if args.vis:
@@ -41,9 +43,6 @@ def main():
         vis = VisLogger(description_list=ds, log_dir=args.log_dir)
         args.log_dir, args.video_dir, args.checkpoint_dir = vis.get_logdir()
 
-    if args.num_processes == 1:
-        print('Not made for single processes')
-        args.num_processes = 4
 
     env = make_parallel_environments(CustomReacher, args.seed, args.num_processes)
     result = Results(max_n=200, max_u=10)
@@ -74,7 +73,7 @@ def main():
     print('CurrentState().size(): ', CurrentState().size())
     print('CurrentState.size() ', CurrentState.size())
     print()
-    print(pi)
+    print('Rollouts.state[0]', rollouts.states[0])
     # print('pi.sample(CurrentState())', pi.sample(CurrentState()))
     input()
 
@@ -86,7 +85,6 @@ def main():
         pi.cuda()
 
     # ==== Training ====
-    num_updates = int(args.num_frames) // args.num_steps // args.num_processes
     print('Updates: ', num_updates)
 
     MAX_REWARD = -999999

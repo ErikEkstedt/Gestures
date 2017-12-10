@@ -1,19 +1,9 @@
-Project
-==========
-
 TODAY
-* [ ] make Result class do plotting for less clutter.
+* [ ] Make Result class do plotting for less clutter.
 	* Combine vislogger and results. LOGGER
 
 * [ ] Continue training. Save checkpoint
 	* [checkpoint](https://discuss.pytorch.org/t/saving-and-loading-a-model-in-pytorch/2610/3)
-
-
-Roboschool is broken on my setup.
-After calling env.reset(), if there has been some type of rendering, the robot and target disappears and all numbers are *nan*.
-
-However, my own CustomReacher environment is now working correctly and using a single process convergence is easily reached.
-There still seems to be something wrong with the multiple process setup.
 
 TODO
 1. Must have rigid baseline
@@ -24,6 +14,8 @@ TODO
 		* [ ] Rollouts
 		* [ ] Subproc vec
 		* [ ] MP like a3c
+	* Saved state_dict should always show the expected result.
+		* Not way of at least.
 
 2. Make environment more complex
 	* [ ] Make CustomReacher more complex
@@ -32,6 +24,16 @@ TODO
 
 3. Train with RGB
 	* [ ] Back to social movements.
+
+
+Project
+==========
+
+Roboschool is broken on my setup.
+After calling env.reset(), if there has been some type of rendering, the robot and target disappears and all numbers are *nan*.
+
+However, my own CustomReacher environment is now working correctly and using a single process convergence is easily reached.
+There still seems to be something wrong with the multiple process setup.
 
 
 # [Agent](Agent/)

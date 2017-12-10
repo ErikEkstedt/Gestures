@@ -32,8 +32,8 @@ def get_args():
 
 
     # PPO Training
-    parser.add_argument('--num-frames', type=int, default=int(3e6),
-                        help='number of frames to train (default: 3e6)')
+    parser.add_argument('--num-frames', type=int, default=int(10e6),
+                        help='number of frames to train (default: 10e6)')
     parser.add_argument('--num-steps', type=int, default=2048,
                         help='number of exploration steps in ppo (default: ?)')
     parser.add_argument('--batch-size', type=int, default=256,
@@ -65,7 +65,7 @@ def get_args():
     parser.add_argument('--log-dir', default='/tmp/',
                         help='directory to save agent logs (default: /tmp/)')
     parser.add_argument('--log-interval', type=int, default=1,
-                        help='log interval in console, one log per n updates (default: 10)')
+                        help='log interval in console, one log per n updates (default: 1)')
 
     # Boolean
     parser.add_argument('--no-cuda', action='store_true', default=False,

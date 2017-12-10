@@ -20,6 +20,7 @@ from environments.custom_reacher import CustomReacher
 
 def main():
     args = get_args()  # Real argparser
+    args.num_processes = 1  # only here temporary
     num_updates = int(args.num_frames) // args.num_steps // args.num_processes
     args.updates = num_updates
     ds = print_args(args)
@@ -28,10 +29,6 @@ def main():
         from vislogger import VisLogger
         vis = VisLogger(description_list=ds, log_dir=args.log_dir)
         args.log_dir, args.video_dir, args.checkpoint_dir = vis.get_logdir()
-
-    if args.num_processes > 1:
-        print('Not made for multiple processes')
-        args.num_processes = 1
 
     torch.manual_seed(args.seed)
     env = CustomReacher()
@@ -75,7 +72,7 @@ def main():
 
         rollouts.last_to_first()
         result.update_loss(vloss.data, ploss.data, ent.data)
-        frame = (j + 1) * args.num_steps * args.num_processes
+        frame = pi.n
 
         #  ==== SHELL LOG ======
         if j % args.log_interval == 0 and j > 0:
@@ -106,12 +103,19 @@ def main():
             print('Test Average: {}\n'.format(test_reward))
 
             #  ==== Save best model ======
+            print('--'*45)
+            name = os.path.join(args.checkpoint_dir,
+                                'dict_test_'+str(frame)+'_'+str(test_reward))
+            print('Saving after test ({})\nAt location: {}'.format(test_reward, name))
+            torch.save(sd, name + '.pt')
+
+            #  ==== Save best model ======
             if test_reward > MAX_REWARD:
                 print('--'*45)
                 print('New High Score!')
                 name = os.path.join(args.checkpoint_dir,
                                     'dict_test_'+str(test_reward))
-                print('Saving after test ({})\nAt location: {}'.format(test_reward, name))
+                print('Saving Max Score test ({})\nAt location: {}'.format(test_reward, name))
                 torch.save(sd, name + '.pt')
                 MAX_REWARD = test_reward
                 print('New Max: {}\n'.format(MAX_REWARD))

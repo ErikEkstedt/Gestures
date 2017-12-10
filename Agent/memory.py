@@ -47,12 +47,14 @@ class Results_single(object):
     def plot_console(self, frame):
         v, p, e = self.get_loss_mean()
         r = self.get_reward_mean()
-        print('Steps: ', frame)
-        print('Average Rewards: ', r)
-        print('Value Loss: ', v)
-        print('Policy Loss: ', p)
-        print('Entropy: ', e)
-        print()
+        # print('Steps: ', frame)
+        # print('Average Rewards: ', r)
+        # print('Value Loss: ', v)
+        # print('Policy Loss: ', p)
+        # print('Entropy: ', e)
+        # print()
+        print('Steps: {}, Avg.Rew: {}, VLoss: {}, \
+              PLoss: {},  Ent: {}'.format(frame, r, v, p, e))
 
     def vis_plot(self, vis, frame, std):
         training_reward_mean = self.get_reward_mean()
