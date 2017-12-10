@@ -20,7 +20,6 @@ def weights_init_mlp(m):
         if m.bias is not None:
             m.bias.data.fill_(0)
 
-
 def total_params(p):
     n = 1
     for i in p:
@@ -28,72 +27,12 @@ def total_params(p):
     return n
 
 
-# class AddBias(nn.Module):
-#         ''' Custom "layer" that adds a bias. Trainable nn.Parameter '''
-#         def __init__(self, size):
-#             super(AddBias, self).__init__()
-#             self.size = size
-#             self.std = nn.Parameter(torch.zeros(size).unsqueeze(1))
-#
-#         def forward(self, x):
-#             return x + self.std.t().view(1, -1)
-#
-#         def __repr__(self):
-#             return self.__class__.__name__ + '(' + str(self.size) + ')'
-#
-
-# class DiagonalGaussian(nn.Module):
-#     ''' Diagonal Gaussian used as the head of the policy networks
-#     '''
-#     def __init__(self, num_inputs, num_outputs, fixed_std=False, std=None):
-#         super(DiagonalGaussian, self).__init__()
-#         self.mean = nn.Linear(num_inputs, num_outputs)
-#         self.logstd = AddBias(num_outputs)
-#         weights_init_mlp(self)
-#         self.train()
-#
-#     def forward(self, x):
-#         action_mean = self.mean(x)
-#         zeros = Variable(torch.zeros(action_mean.size()), volatile=x.volatile)
-#         if x.is_cuda:
-#             zeros = zeros.cuda()
-#             action_mean = action_mean.cuda()
-#
-#         action_logstd = self.logstd(zeros)
-#         return action_mean, action_logstd
-#
-#     def cuda(self, *args):
-#         super(DiagonalGaussian).cuda()
-
-# class DiagonalGaussian(nn.Module):
-#     ''' Diagonal Gaussian used as the head of the policy networks
-#     '''
-#     def __init__(self, num_inputs, num_outputs):
-#         super(DiagonalGaussian, self).__init__()
-#         self.mean = nn.Linear(num_inputs, num_outputs)
-#         weights_init_mlp(self)
-#         self.train()
-#
-#     def forward(self, x, std):
-#         action_mean = self.mean(x)
-#         zeros = Variable(torch.zeros(action_mean.size()), volatile=x.volatile)
-#         if x.is_cuda:
-#             zeros = zeros.cuda()
-#             action_mean = action_mean.cuda()
-#
-#         action_logstd = zeros*std
-#         return action_mean, action_logstd
-#
-#     def cuda(self, *args):
-#         super(DiagonalGaussian).cuda()
-#
-
 class MLPPolicy(nn.Module):
     def __init__(self, input_size, action_shape,
-                 hidden=128,
-                 std_start=-0.6,
-                 std_stop=-1.7,
-                 total_frames=1e6):
+                    hidden=128,
+                    std_start=-0.6,
+                    std_stop=-1.7,
+                    total_frames=1e6):
 
         super(MLPPolicy, self).__init__()
         self.fc1 = nn.Linear(input_size, hidden)
@@ -172,18 +111,6 @@ class MLPPolicy(nn.Module):
         dist_entropy = dist_entropy.sum(-1).mean()
         return v, action, action_log_probs, action_std
 
-
-    # def reset_parameters(self):
-    #     """
-    #     tanh_gain = nn.init.calculate_gain('tanh')
-    #     self.a_fc1.weight.data.mul_(tanh_gain)
-    #     self.a_fc2.weight.data.mul_(tanh_gain)
-    #     self.v_fc1.weight.data.mul_(tanh_gain)
-    #     self.v_fc2.weight.data.mul_(tanh_gain)
-    #     """
-    #     self.apply(weights_init_mlp)
-    #     if self.head.__class__.__name__ == "DiagonalGaussian":
-    #         self.head.mean.weight.data.mul_(0.01)
 
 class Obs_stats(object):
     ''' Not very good to do on tasks requiring data about target
