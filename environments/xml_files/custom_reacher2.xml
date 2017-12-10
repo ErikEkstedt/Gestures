@@ -44,7 +44,11 @@
 		</body>
 	</worldbody>
 	<actuator>
-		<motor ctrllimited="true" ctrlrange="-1.0 1.0" gear="200.0" joint="shoulder_joint"/>
-		<motor ctrllimited="true" ctrlrange="-1.0 1.0" gear="200.0" joint="elbow_joint"/>
+		<motor ctrllimited="true" ctrlrange="-1.0 1.0" gear="200.0" joint="shoulder_joint_x"/>
+		<motor ctrllimited="true" ctrlrange="-1.0 1.0" gear="200.0" joint="shoulder_joint_y"/>
+		<motor ctrllimited="true" ctrlrange="-1.0 1.0" gear="200.0" joint="shoulder_joint_z"/>
+		<motor ctrllimited="true" ctrlrange="-1.0 1.0" gear="200.0" joint="elbow_joint_x"/>
+		<motor ctrllimited="true" ctrlrange="-1.0 1.0" gear="200.0" joint="elbow_joint_y"/>
+		<motor ctrllimited="true" ctrlrange="-1.0 1.0" gear="200.0" joint="elbow_joint_z"/>
 	</actuator>
 </mujoco>

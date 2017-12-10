@@ -197,6 +197,32 @@ class CustomReacher(Base):
         return rendered_rgb
 
 
+class CustomReacher2(Base):
+    def __init__(self, gravity=9.81, RGB=False):
+        Base.__init__(self, path=PATH_TO_CUSTOM_XML,
+                        robot_name='robot_arm',
+                        target_name='target',
+                        model_xml='custom_reacher2.xml',
+                        ac=2, obs=13, gravity=gravity, RGB=RGB)
+
+    def robot_specific_reset(self):
+        self.motor_names = ["robot_shoulder_joint", "robot_elbow_joint"] # , "right_shoulder2", "right_elbow"]
+        self.motor_power = [75, 75] #, 75, 75]
+        self.motors = [self.jdict[n] for n in self.motor_names]
+
+        # target and potential
+        self.robot_reset()
+        self.target_reset()
+        self.calc_to_target_vec()
+        self.potential = self.calc_potential()
+
+    def robot_reset(self):
+        ''' self.np_random for correct seed. '''
+        for j in self.robot_joints.values():
+            j.reset_current_position(
+                self.np_random.uniform( low=-0.01, high=0.01 ), 0)
+            j.set_motor_torque(0)
+
 def test():
     env = CustomReacher()
     s = env.reset()
