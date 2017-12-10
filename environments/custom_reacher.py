@@ -13,10 +13,10 @@ PATH_TO_CUSTOM_XML = "/home/erik/com_sci/Master_code/Project/environments/xml_fi
 
 class Base(MyGymEnv):
     def __init__(self, path=PATH_TO_CUSTOM_XML,
-                    robot_name='robot',
-                    target_name='target',
-                    model_xml='half_humanoid.xml',
-                    ac=6, obs=18, gravity=9.81, RGB=False):
+                 robot_name='robot',
+                 target_name='target',
+                 model_xml='half_humanoid.xml',
+                 ac=6, obs=18, gravity=9.81, RGB=False):
         MyGymEnv.__init__(self, action_dim=ac, obs_dim=obs, RGB=RGB)
         self.XML_PATH = path
         self.model_xml = model_xml
@@ -201,7 +201,7 @@ class CustomReacher2(Base):
     def __init__(self, gravity=9.81):
         Base.__init__(self, path=PATH_TO_CUSTOM_XML,
                               robot_name='robot_arm',
-                              target_name='target',
+                              target_name='target_arm',
                               model_xml='custom_reacher2.xml',
                               ac=6, obs=21, gravity=gravity)
 
@@ -209,9 +209,9 @@ class CustomReacher2(Base):
         self.motor_names = ["robot_shoulder_joint_x", "robot_elbow_joint_x"] # , "right_shoulder2", "right_elbow"]
         self.motor_names += ["robot_shoulder_joint_y", "robot_elbow_joint_y"] # , "right_shoulder2", "right_elbow"]
         self.motor_names += ["robot_shoulder_joint_z", "robot_elbow_joint_z"] # , "right_shoulder2", "right_elbow"]
-        self.motor_power = [75, 75] #, 75, 75]
-        self.motor_power += [75, 75] #, 75, 75]
-        self.motor_power += [75, 75] #, 75, 75]
+        self.motor_power = [25, 50] #, 75, 75]
+        self.motor_power += [25, 50] #, 75, 75]
+        self.motor_power += [25, 50] #, 75, 75]
         self.motors = [self.jdict[n] for n in self.motor_names]
 
         # target and potential
@@ -281,12 +281,105 @@ class CustomReacher2(Base):
         return -self.potential_constant*np.linalg.norm(self.to_target_vec)
 
 
+class CustomReacher3(Base):
+    def __init__(self, gravity=9.81):
+        Base.__init__(self, path=PATH_TO_CUSTOM_XML,
+                      robot_name='robot_arm',
+                      target_name='target_arm',
+                      model_xml='custom_reacher3.xml',
+                      ac=2, obs=13, gravity=gravity)
+
+    def robot_specific_reset(self):
+        self.motor_names = ["robot_shoulder_joint", "robot_elbow_joint"]
+        self.motor_power = [75, 75] #, 75, 75]
+        self.motors = [self.jdict[n] for n in self.motor_names]
+
+        # target and potential
+        self.robot_reset()
+        self.target_reset()
+        self.calc_to_target_vec()
+        self.potential = self.calc_potential()
+
+    def robot_reset(self):
+        ''' self.np_random for correct seed. '''
+        for j in self.robot_joints.values():
+            j.reset_current_position(
+                self.np_random.uniform( low=-0.01, high=0.01 ), 0)
+            j.set_motor_torque(0)
+
+    def target_reset(self):
+        ''' same as for the robot '''
+        for j in self.target_joints.values():
+            print(j.name)
+            j.reset_current_position(
+                self.np_random.uniform( low=-3.14, high=3.14 ), 0)
+            j.set_motor_torque(0)
+
+    def calc_to_target_vec(self):
+        ''' gets hand position, target position and the vector in bewteen'''
+        # Hands
+        self.target_position = np.array(self.target_parts['target_hand'].pose().xyz())
+        self.hand_position = np.array(self.parts['robot_hand'].pose().xyz())
+        self.to_target_vec = self.hand_position - self.target_position
+
+        # Elbow
+        self.target_position = np.array(self.target_parts['target_hand'].pose().xyz())
+        self.hand_position = np.array(self.parts['robot_hand'].pose().xyz())
+        self.to_target_vec = self.hand_position - self.target_position
+
+    def calc_state(self):
+        j = np.array([j.current_relative_position()
+                    for j in self.robot_joints.values()],
+                    dtype=np.float32).flatten()
+
+        self.joint_positions = j[0::2]
+        self.joint_speeds = j[1::2]
+
+        self.joints_at_limit = np.count_nonzero(np.abs(j[0::2]) > 0.99)
+        self.calc_to_target_vec()
+
+        a = np.concatenate((self.target_position, self.joint_positions, self.joint_speeds), )
+
+        reacher = np.array([self.target_position[0],
+                            self.target_position[1],
+                            self.target_position[2],
+                            self.to_target_vec[0],
+                            self.to_target_vec[1],
+                            self.to_target_vec[2]])
+
+        reacher = np.concatenate((reacher,
+                                  self.hand_position,
+                                  self.joint_positions,
+                                  self.joint_speeds) )
+        return reacher
+
+    def calc_reward(self, a):
+        potential_old = self.potential
+        self.potential = self.calc_potential()
+
+        # cost
+        electricity_cost  = self.electricity_cost  *\
+            float(np.abs(a*self.joint_speeds).mean())
+        electricity_cost += self.stall_torque_cost *\
+            float(np.square(a).mean())
+        joints_at_limit_cost = float(self.joints_at_limit_cost *\
+            self.joints_at_limit)
+
+        # Save rewards ?
+        self.rewards = [float(self.potential - potential_old),
+                        float(electricity_cost)]
+        return sum(self.rewards)
+
+    def calc_potential(self):
+        return -self.potential_constant*np.linalg.norm(self.to_target_vec)
+
+
 def test():
     # env = CustomReacher()
-    env = CustomReacher2()
+    # env = CustomReacher2()
+    env = CustomReacher3()
     s = env.reset()
     print(s.shape)
-
     input()
     while True:
         s, r, d, _ = env.step(env.action_space.sample())
