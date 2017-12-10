@@ -36,6 +36,7 @@ def get_args():
 
 def Load_and_Test():
     args = get_args()
+
     torch.manual_seed(args.seed)
     env = CustomReacher()
     env.seed(args.seed)
@@ -73,7 +74,8 @@ def Load_and_Test():
                 total_reward += episode_reward
                 done = False
                 break
-    print('Total reward: ',total_reward/args.num_test)
+
+    print('Total reward: ', total_reward/args.num_test)
 
 
 if __name__ == '__main__':

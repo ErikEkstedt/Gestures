@@ -44,7 +44,7 @@ def get_args():
                         help='number of ppo epochs, K in paper (default: 8)')
     parser.add_argument('--num-stack', type=int, default=1,
                         help='number of frames to stack (default: 1)')
-    parser.add_argument('--hidden', type=int, default=128,
+    parser.add_argument('--hidden', type=int, default=256,
                         help='Number of hidden neurons in policy (default: 128)')
     parser.add_argument('--std-start', type=float, default=-0.6,
                         help='std-start (Hyperparams for Roboschool in paper)')
@@ -56,8 +56,8 @@ def get_args():
                         help='disables visdom visualization')
     parser.add_argument('--test-interval', type=int,  default=50,
                         help='how many updates/test (default: 50)')
-    parser.add_argument('--num-test', type=int, default=10,
-                        help='Number of test after training (default: 100)')
+    parser.add_argument('--num-test', type=int, default=20,
+                        help='Number of test after training (default: 20)')
 
     # Log
     parser.add_argument('--vis-interval', type=int, default=1,
