@@ -12,24 +12,10 @@ from utils import args_to_list, print_args, log_print, make_parallel_environment
 from arguments import FakeArgs, get_args
 from model import MLPPolicy
 from memory import RolloutStorage, StackedState, Results
-from train import Training
-from train import Exploration_single as Exploration
+from train import Training, Exploration
+from test import test
 
 from environments.custom_reacher import CustomReacher
-
-def multiprocess():
-    p = mp.Process(target=test, args=(params.num_processes, params, shared_model, shared_obs_stats, test_n))
-    p.start()
-    processes.append(p)
-    p = mp.Process(target=chief, args=(params.num_processes, params, traffic_light, counter, shared_model, shared_grad_buffers, optimizer))
-    p.start()
-    processes.append(p)
-    for rank in range(0, params.num_processes):
-        p = mp.Process(target=train, args=(rank, params, traffic_light, counter, shared_model, shared_grad_buffers, shared_obs_stats, test_n))
-        p.start()
-        processes.append(p)
-    for p in processes:
-        p.join()
 
 
 def main():
@@ -42,7 +28,6 @@ def main():
         from vislogger import VisLogger
         vis = VisLogger(description_list=ds, log_dir=args.log_dir)
         args.log_dir, args.video_dir, args.checkpoint_dir = vis.get_logdir()
-
 
     env = make_parallel_environments(CustomReacher, args.seed, args.num_processes)
     result = Results(max_n=200, max_u=10)
@@ -65,103 +50,74 @@ def main():
     pi.train()
     optimizer_pi = optim.Adam(pi.parameters(), lr=args.pi_lr)
 
+    # ==== Training ====
+    print('Updates: ', num_updates)
+
     s = env.reset()
     CurrentState.update(s)
     rollouts.states[0].copy_(CurrentState())
-
-    print('CurrentState(): ', CurrentState())
-    print('CurrentState().size(): ', CurrentState().size())
-    print('CurrentState.size() ', CurrentState.size())
-    print()
-    print('Rollouts.state[0]', rollouts.states[0])
-    # print('pi.sample(CurrentState())', pi.sample(CurrentState()))
-    input()
-
-
 
     if args.cuda:
         CurrentState.cuda()
         rollouts.cuda()
         pi.cuda()
 
-    # ==== Training ====
-    print('Updates: ', num_updates)
-
     MAX_REWARD = -999999
-    rgb_list = []
     for j in range(num_updates):
         Exploration(pi, CurrentState, rollouts, args, result, env)
         vloss, ploss, ent = Training(pi, args, rollouts, optimizer_pi)
 
         rollouts.last_to_first()
         result.update_loss(vloss.data, ploss.data, ent.data)
-        frame = (j + 1) * args.num_steps * args.num_processes
+        frame = pi.n * args.num_processes
 
         #  ==== SHELL LOG ======
         if j % args.log_interval == 0 and j > 0:
-            v, p, e = result.get_loss_mean()
-            print('Steps: ', frame)
-            print('Rewards: ', result.get_reward_mean())
-            print('Value loss: ', v)
-            print('Policy loss: ', p)
-            print('Entropy: ', e)
-            print()
-
-        #  ==== TEST ======
-        if not args.no_test and j % args.test_interval == 0 and j > 0:
-            print('Testing {} episodes'.format(args.num_test))
-            pi.eval()
-            R = Test(pi, args, ob_shape, verbose=True)
-            # R = Test_and_See_gym(test_env, pi, args, ob_shape, verbose=True)
-            # R = Test_and_Save_Video(test_env, pi, args, ob_shape, verbose=False)
-            pi.train()
-            vis.line_update(Xdata=frame, Ydata=R, name='Test Score')
-            print('Test Average:', R)
-
-            #  ==== Save best model ======
-            # if test_reward > MAX_REWARD:
-            if True:
-                print('--'*45)
-                print('Saving after test')
-                print('Reward: ', R)
-                name = os.path.join(checkpoint_dir, 'model_best'+str(R))
-                print(name)
-                torch.save(pi, name + '.pt')
-                torch.save(pi.state_dict(), name+'dict_cuda.pt')
-                pi.cpu()
-                torch.save(pi, name+'cpu.pt')
-                torch.save(pi.state_dict(), name+'dict_cuda.pt')
-                pi.cuda()
-                MAX_REWARD = R
-                print('MAX:', MAX_REWARD)
-                print()
-                pi.train()
-                # input('Enter to continue')
+            result.plot_console(frame)
 
         #  ==== VISDOM PLOT ======
         if j % args.vis_interval == 0 and j > 0 and not args.no_vis:
-            R = result.get_reward_mean()
-            vis.line_update(Xdata=frame,
-                            Ydata=R,
-                            name='Training Score')
+            result.vis_plot(vis, frame, pi.get_std())
 
-            # Draw plots
-            v, p, e = result.get_loss_mean()
-            vis.line_update(Xdata=frame, Ydata=v,   name ='Value Loss')
-            vis.line_update(Xdata=frame, Ydata=p,   name ='Policy Loss')
-            vis.line_update(Xdata=frame, Ydata=pi.get_std(), name ='Action std')
-            vis.line_update(Xdata=frame, Ydata=-e,  name ='Entropy')
-
-        #  ==== Save model ======
-        if j % args.save_interval == 0 and j > 0:
-            R = result.get_last_reward()
-            print('Interval Saving (last score: ', R)
-            fname = 'state_dict%d_%.2f.pt'%(j+1, R)
-            name = os.path.join(args.checkpoint_dir, fname)
-            print(name)
+        #  ==== TEST ======
+        if not args.no_test and j % args.test_interval < 5 and j > 0:
+            ''' `j % args.test_interval < 5` is there because:
+            If tests are not performed during some interval bad luck might make
+            it that although the model becomes better the test occured
+            during a bad policy update. The policy adjust for this in the next
+            update but we might miss good policies if we test too seldom.
+            Thus we test in an interval of 5 every args.test_interval.
+            (default: args.num_test = 50) -> test updates [50,54], [100,104], ...
+            '''
+            print('-'*45)
+            print('Testing {} episodes'.format(args.num_test))
             sd = pi.cpu().state_dict()
-            torch.save(sd, name)
-            pi.cuda()
+            test_reward = test(CustomReacher, MLPPolicy, sd, args)
+            if args.cuda:
+                pi.cuda()
+
+            # Plot result
+            vis.line_update(Xdata=frame, Ydata=test_reward, name='Test Score')
+            print('Test Average: {}\n'.format(test_reward))
+
+            #  ==== Save best model ======
+            print('--'*45)
+            name = os.path.join(args.checkpoint_dir,
+                                'dict_test_'+str(frame)+'_'+str(test_reward))
+            print('Saving after test ({})\nAt location: {}'.format(test_reward, name))
+            torch.save(sd, name + '.pt')
+
+            #  ==== Save best model ======
+            if test_reward > MAX_REWARD:
+                print('--'*45)
+                print('New High Score!')
+                name = os.path.join(args.checkpoint_dir,
+                                    'dict_test_'+str(test_reward))
+                print('Saving Max Score test ({})\nAt location: {}'.format(test_reward, name))
+                torch.save(sd, name + '.pt')
+                MAX_REWARD = test_reward
+                print('New Max: {}\n'.format(MAX_REWARD))
+
 
 if __name__ == '__main__':
     main()

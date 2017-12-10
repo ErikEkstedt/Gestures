@@ -18,20 +18,22 @@ def Exploration(pi, CurrentState, rollouts, args, result,  env):
 
         # Sample actions
         value, action, action_log_prob, a_std = pi.sample(CurrentState())
-        cpu_actions = action.data.cpu().numpy()  # gym takes np.ndarrays
+        # cpu_actions = action.data.cpu().numpy()  # gym takes np.ndarrays
+        cpu_actions = action.data.squeeze(1).cpu().numpy()
 
         # Observe reward and next state
-        state, reward, done, info = env.step(list(cpu_actions))
+        state, reward, done, info = env.step(cpu_actions)
         reward = torch.from_numpy(reward).view(args.num_processes, -1).float()
         masks = torch.FloatTensor([[0.0] if done_ else [1.0] for done_ in done])
-
-        # If done then update final rewards and reset episode reward
         result.episode_rewards += reward
-        if sum(done) > 0:
-            idx = (1-masks)
-            result.update_list(idx)
 
-        result.episode_rewards *= masks                                # reset episode reward
+        if sum(done) > 0:
+            # If done then clean episode reward and update final rewards
+            result.tmp_final_rewards *= masks
+            result.tmp_final_rewards += (1 - masks) * result.episode_rewards
+            result.episode_rewards *= masks
+            result.update_list()
+
         if args.cuda:
             masks = masks.cuda()
 
@@ -47,6 +49,7 @@ def Exploration(pi, CurrentState, rollouts, args, result,  env):
                         value.data,
                         reward,
                         masks)
+
 
 def Exploration_single(pi, CurrentState, rollouts, args, result,  env):
     ''' Exploration part of PPO training:
@@ -92,6 +95,8 @@ def Exploration_single(pi, CurrentState, rollouts, args, result,  env):
                         value.data,
                         reward,
                         masks)
+
+
 
 
 def Exploration_RGB(pi, CurrentState, rollouts, args, result,  env):

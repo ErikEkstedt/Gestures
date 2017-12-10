@@ -72,6 +72,7 @@ class Results_single(object):
 class Results(object):
     def __init__(self, max_n=200, max_u=200):
         self.episode_rewards = 0
+        self.tmp_final_rewards = 0
         self.final_reward_list = []
         self.n = 0
         self.max_n = max_n
@@ -82,14 +83,11 @@ class Results(object):
         self.updates = 0
         self.max_u = max_u
 
-    def update_list(self, idx):
-        # The worlds ugliest score tracker. not all process might be done
-        for i in range(len(idx)):
-            if idx[i][0]:
-                self.final_reward_list.insert(0, self.episode_rewards[i])
-                self.n += 1
-                if self.n > self.max_n:
-                    self.final_reward_list.pop()
+    def update_list(self):
+        self.final_reward_list.insert(0, self.tmp_final_rewards.mean())
+        self.n += 1
+        if self.n > self.max_n:
+            self.final_reward_list.pop()
 
     def update_loss(self, v, p, e):
         self.vloss.insert(0, v)
@@ -102,7 +100,7 @@ class Results(object):
             self.ent.pop()
 
     def get_reward_mean(self):
-        return torch.stack(self.final_reward_list).mean()
+        return torch.Tensor(self.final_reward_list).mean()
 
     def get_last_reward(self):
         return self.final_reward_list[0]
@@ -112,6 +110,24 @@ class Results(object):
         p = torch.stack(self.ploss).mean()
         e = torch.stack(self.ent).mean()
         return v, p, e
+
+    def plot_console(self, frame):
+        v, p, e = self.get_loss_mean()
+        v, p, e = round(v, 2), round(p,2), round(e,2),
+        r       = round(self.get_reward_mean(), 2)
+        print('Steps: {}, Avg.Rew: {}, VLoss: {}, PLoss: {},  Ent: {}'.format(
+            frame, r, v, p, e))
+
+    def vis_plot(self, vis, frame, std):
+        tr_rew_mean = self.get_reward_mean()
+        v, p, e = self.get_loss_mean()
+
+        # Draw plots
+        vis.line_update(Xdata=frame, Ydata=tr_rew_mean, name='Training Score')
+        vis.line_update(Xdata=frame, Ydata=v, name='Value Loss')
+        vis.line_update(Xdata=frame, Ydata=p, name='Policy Loss')
+        vis.line_update(Xdata=frame, Ydata=std, name='Action std')
+        vis.line_update(Xdata=frame, Ydata=-e, name='Entropy')
 
 
 class StackedState(object):
