@@ -33,3 +33,18 @@ def make_gym_env(env_id, seed, rank, log_dir):
         return env
     return _thunk
 
+def make_parallel_environments(Env, seed, num_processes):
+    ''' imports SubprocVecEnv from baselines.
+    :param seed                 int
+    :param num_processes        int, # env
+    '''
+    from baselines.common.vec_env.subproc_vec_env import SubprocVecEnv
+    def multiple_envs(Env, seed, rank):
+        def _thunk():
+            env = Env()
+            env.seed(seed+rank*1000)
+            return env
+        return _thunk
+    return SubprocVecEnv([multiple_envs(Env,seed, i) for i in range(num_processes)])
+
+

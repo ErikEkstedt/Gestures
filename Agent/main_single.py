@@ -14,12 +14,14 @@ from model import MLPPolicy
 from memory import RolloutStorage, StackedState, Results_single
 from train import Training
 from train import Exploration_single as Exploration
-
-from environments.custom import CustomReacher
+from test import test
+from environments.custom_reacher import CustomReacher
 
 
 def main():
     args = get_args()  # Real argparser
+    num_updates = int(args.num_frames) // args.num_steps // args.num_processes
+    args.updates = num_updates
     ds = print_args(args)
 
     if args.vis:
@@ -30,10 +32,12 @@ def main():
     if args.num_processes > 1:
         print('Not made for multiple processes')
         args.num_processes = 1
-    else:
-        env = CustomReacher()
-        result = Results_single(max_n=200, max_u=10)
 
+    torch.manual_seed(args.seed)
+    env = CustomReacher()
+    env.seed(args.seed)
+
+    result = Results_single(max_n=200, max_u=10)
     ob_shape = env.observation_space.shape[0]
     ac_shape = env.action_space.shape[0]
     CurrentState = StackedState(args.num_processes,
@@ -53,6 +57,8 @@ def main():
     pi.train()
     optimizer_pi = optim.Adam(pi.parameters(), lr=args.pi_lr)
 
+    # ==== Training ====
+
     s = env.reset()
     CurrentState.update(s)
     rollouts.states[0].copy_(CurrentState())
@@ -62,12 +68,7 @@ def main():
         rollouts.cuda()
         pi.cuda()
 
-    # ==== Training ====
-    num_updates = int(args.num_frames) // args.num_steps // args.num_processes
-    print('Updates: ', num_updates)
-
     MAX_REWARD = -999999
-    rgb_list = []
     for j in range(num_updates):
         Exploration(pi, CurrentState, rollouts, args, result, env)
         vloss, ploss, ent = Training(pi, args, rollouts, optimizer_pi)
@@ -78,69 +79,43 @@ def main():
 
         #  ==== SHELL LOG ======
         if j % args.log_interval == 0 and j > 0:
-            v, p, e = result.get_loss_mean()
-            print('Steps: ', frame)
-            print('Rewards: ', result.get_reward_mean())
-            print('Value loss: ', v)
-            print('Policy loss: ', p)
-            print('Entropy: ', e)
-            print()
-
-        #  ==== TEST ======
-        if not args.no_test and j % args.test_interval == 0 and j > 0:
-            print('Testing {} episodes'.format(args.num_test))
-            pi.eval()
-            R = Test(pi, args, ob_shape, verbose=True)
-            # R = Test_and_See_gym(test_env, pi, args, ob_shape, verbose=True)
-            # R = Test_and_Save_Video(test_env, pi, args, ob_shape, verbose=False)
-            pi.train()
-            vis.line_update(Xdata=frame, Ydata=R, name='Test Score')
-            print('Test Average:', R)
-
-            #  ==== Save best model ======
-            # if test_reward > MAX_REWARD:
-            if True:
-                print('--'*45)
-                print('Saving after test')
-                print('Reward: ', R)
-                name = os.path.join(checkpoint_dir, 'model_best'+str(R))
-                print(name)
-                torch.save(pi, name + '.pt')
-                torch.save(pi.state_dict(), name+'dict_cuda.pt')
-                pi.cpu()
-                torch.save(pi, name+'cpu.pt')
-                torch.save(pi.state_dict(), name+'dict_cuda.pt')
-                pi.cuda()
-                MAX_REWARD = R
-                print('MAX:', MAX_REWARD)
-                print()
-                pi.train()
-                # input('Enter to continue')
+            result.plot_console(frame)
 
         #  ==== VISDOM PLOT ======
         if j % args.vis_interval == 0 and j > 0 and not args.no_vis:
-            R = result.get_reward_mean()
-            vis.line_update(Xdata=frame,
-                            Ydata=R,
-                            name='Training Score')
+            result.vis_plot(vis, frame, pi.get_std())
 
-            # Draw plots
-            v, p, e = result.get_loss_mean()
-            vis.line_update(Xdata=frame, Ydata=v,   name ='Value Loss')
-            vis.line_update(Xdata=frame, Ydata=p,   name ='Policy Loss')
-            vis.line_update(Xdata=frame, Ydata=pi.get_std(), name ='Action std')
-            vis.line_update(Xdata=frame, Ydata=-e,  name ='Entropy')
-
-        #  ==== Save model ======
-        if j % args.save_interval == 0 and j > 0:
-            R = result.get_last_reward()
-            print('Interval Saving (last score: ', R)
-            fname = 'state_dict%d_%.2f.pt'%(j+1, R)
-            name = os.path.join(args.checkpoint_dir, fname)
-            print(name)
+        #  ==== TEST ======
+        if not args.no_test and j % args.test_interval < 5 and j > 0:
+            ''' `j % args.test_interval < 5` is there because:
+            If tests are not performed during some interval bad luck might make
+            it that although the model becomes better the test occured
+            during a bad policy update. The policy adjust for this in the next
+            update but we might miss good policies if we test too seldom.
+            Thus we test in an interval of 5 every args.test_interval.
+            (default: args.num_test = 50) -> test updates [50,54], [100,104], ...
+            '''
+            print('-'*45)
+            print('Testing {} episodes'.format(args.num_test))
             sd = pi.cpu().state_dict()
-            torch.save(sd, name)
+            test_reward = test(CustomReacher, MLPPolicy, sd, args)
             pi.cuda()
+
+            # Plot result
+            vis.line_update(Xdata=frame, Ydata=test_reward, name='Test Score')
+            print('Test Average: {}\n'.format(test_reward))
+
+            #  ==== Save best model ======
+            if test_reward > MAX_REWARD:
+                print('--'*45)
+                print('New High Score!')
+                name = os.path.join(args.checkpoint_dir,
+                                    'dict_test_'+str(test_reward))
+                print('Saving after test ({})\nAt location: {}'.format(test_reward, name))
+                torch.save(sd, name + '.pt')
+                MAX_REWARD = test_reward
+                print('New Max: {}\n'.format(MAX_REWARD))
+
 
 if __name__ == '__main__':
     main()

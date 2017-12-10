@@ -44,6 +44,28 @@ class Results_single(object):
         e = torch.stack(self.ent).mean()
         return v, p, e
 
+    def plot_console(self, frame):
+        v, p, e = self.get_loss_mean()
+        r = self.get_reward_mean()
+        print('Steps: ', frame)
+        print('Average Rewards: ', r)
+        print('Value Loss: ', v)
+        print('Policy Loss: ', p)
+        print('Entropy: ', e)
+        print()
+
+    def vis_plot(self, vis, frame, std):
+        training_reward_mean = self.get_reward_mean()
+        v, p, e = self.get_loss_mean()
+
+        # Draw plots
+        vis.line_update(Xdata=frame, Ydata=training_reward_mean,
+                        name='Training Score')
+        vis.line_update(Xdata=frame, Ydata=v, name='Value Loss')
+        vis.line_update(Xdata=frame, Ydata=p, name='Policy Loss')
+        vis.line_update(Xdata=frame, Ydata=std, name='Action std')
+        vis.line_update(Xdata=frame, Ydata=-e, name='Entropy')
+
 
 class Results(object):
     def __init__(self, max_n=200, max_u=200):

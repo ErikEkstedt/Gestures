@@ -28,19 +28,19 @@ def total_params(p):
     return n
 
 
-class AddBias(nn.Module):
-        ''' Custom "layer" that adds a bias. Trainable nn.Parameter '''
-        def __init__(self, size):
-            super(AddBias, self).__init__()
-            self.size = size
-            self.std = nn.Parameter(torch.zeros(size).unsqueeze(1))
-
-        def forward(self, x):
-            return x + self.std.t().view(1, -1)
-
-        def __repr__(self):
-            return self.__class__.__name__ + '(' + str(self.size) + ')'
-
+# class AddBias(nn.Module):
+#         ''' Custom "layer" that adds a bias. Trainable nn.Parameter '''
+#         def __init__(self, size):
+#             super(AddBias, self).__init__()
+#             self.size = size
+#             self.std = nn.Parameter(torch.zeros(size).unsqueeze(1))
+#
+#         def forward(self, x):
+#             return x + self.std.t().view(1, -1)
+#
+#         def __repr__(self):
+#             return self.__class__.__name__ + '(' + str(self.size) + ')'
+#
 
 # class DiagonalGaussian(nn.Module):
 #     ''' Diagonal Gaussian used as the head of the policy networks
@@ -65,28 +65,28 @@ class AddBias(nn.Module):
 #     def cuda(self, *args):
 #         super(DiagonalGaussian).cuda()
 
-class DiagonalGaussian(nn.Module):
-    ''' Diagonal Gaussian used as the head of the policy networks
-    '''
-    def __init__(self, num_inputs, num_outputs):
-        super(DiagonalGaussian, self).__init__()
-        self.mean = nn.Linear(num_inputs, num_outputs)
-        weights_init_mlp(self)
-        self.train()
-
-    def forward(self, x, std):
-        action_mean = self.mean(x)
-        zeros = Variable(torch.zeros(action_mean.size()), volatile=x.volatile)
-        if x.is_cuda:
-            zeros = zeros.cuda()
-            action_mean = action_mean.cuda()
-
-        action_logstd = zeros*std
-        return action_mean, action_logstd
-
-    def cuda(self, *args):
-        super(DiagonalGaussian).cuda()
-
+# class DiagonalGaussian(nn.Module):
+#     ''' Diagonal Gaussian used as the head of the policy networks
+#     '''
+#     def __init__(self, num_inputs, num_outputs):
+#         super(DiagonalGaussian, self).__init__()
+#         self.mean = nn.Linear(num_inputs, num_outputs)
+#         weights_init_mlp(self)
+#         self.train()
+#
+#     def forward(self, x, std):
+#         action_mean = self.mean(x)
+#         zeros = Variable(torch.zeros(action_mean.size()), volatile=x.volatile)
+#         if x.is_cuda:
+#             zeros = zeros.cuda()
+#             action_mean = action_mean.cuda()
+#
+#         action_logstd = zeros*std
+#         return action_mean, action_logstd
+#
+#     def cuda(self, *args):
+#         super(DiagonalGaussian).cuda()
+#
 
 class MLPPolicy(nn.Module):
     def __init__(self, input_size, action_shape,
@@ -173,8 +173,6 @@ class MLPPolicy(nn.Module):
         return v, action, action_log_probs, action_std
 
 
-
-
     # def reset_parameters(self):
     #     """
     #     tanh_gain = nn.init.calculate_gain('tanh')
@@ -186,7 +184,6 @@ class MLPPolicy(nn.Module):
     #     self.apply(weights_init_mlp)
     #     if self.head.__class__.__name__ == "DiagonalGaussian":
     #         self.head.mean.weight.data.mul_(0.01)
-
 
 class Obs_stats(object):
     ''' Not very good to do on tasks requiring data about target

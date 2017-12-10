@@ -3,8 +3,11 @@ import os
 import numpy as np
 import gym
 from OpenGL import GL # fix for opengl issues on desktop  / nvidia
-from gym_env import MyGymEnv, MyGymEnv_RGB
 
+try:
+    from environments.gym_env import MyGymEnv
+except:
+    from gym_env import MyGymEnv
 
 PATH_TO_CUSTOM_XML = "/home/erik/com_sci/Master_code/Project/environments/xml_files"
 
@@ -13,8 +16,8 @@ class Base(MyGymEnv):
                     robot_name='robot',
                     target_name='target',
                     model_xml='half_humanoid.xml',
-                    ac=6, obs=18, gravity=9.81):
-        MyGymEnv.__init__(self, action_dim=ac, obs_dim=obs)
+                    ac=6, obs=18, gravity=9.81, RGB=False):
+        MyGymEnv.__init__(self, action_dim=ac, obs_dim=obs, RGB=RGB)
         self.XML_PATH = path
         self.model_xml = model_xml
         self.robot_name = robot_name
@@ -51,7 +54,6 @@ class Base(MyGymEnv):
         return max_time
 
     def load_xml_get_robot(self, verbose=False):
-        print(os.path.join(self.XML_PATH, self.model_xml))
         self.mjcf = self.scene.cpp_world.load_mjcf( os.path.join(self.XML_PATH, self.model_xml))
         self.ordered_joints = []
         self.jdict = {}
@@ -60,7 +62,10 @@ class Base(MyGymEnv):
         self.done = 0
         self.reward = 0
         for r in self.mjcf:
-            if verbose: print("ROBOT '%s'" % r.root_part.name)
+            if verbose:
+                print('Load XML Model')
+                print('Path:',os.path.join(self.XML_PATH, self.model_xml))
+                print("ROBOT '%s'" % r.root_part.name)
             # store important parts
             if r.root_part.name==self.robot_name:
                 self.cpp_robot = r
@@ -74,19 +79,17 @@ class Base(MyGymEnv):
                     self.robot_body = part
 
             for j in r.joints:
-                if verbose: print("\tALL JOINTS '%s' \
-                                    limits = %+0.2f..%+0.2f \
-                                    effort=%0.3f speed=%0.3f" %
-                                    ((j.name,) + j.limits()) )
+                if verbose:
+                    print("\tALL JOINTS '%s' limits = %+0.2f..%+0.2f \
+                          effort=%0.3f speed=%0.3f" % ((j.name,) + j.limits()))
                 j.power_coef = 100.0
                 self.ordered_joints.append(j)
                 self.jdict[j.name] = j
 
     def get_join_dicts(self, verbose=False):
-        # sort out robot and targets.
-        self.target_joints,  self.target_parts = self.get_joints_parts_by_name('target')
-        self.robot_joints,  self.robot_parts = self.get_joints_parts_by_name('robot')
-
+        ''' This function separates all parts/joints by containing `robot` or `target`.'''
+        self.target_joints, self.target_parts = self.get_joints_parts_by_name('target')
+        self.robot_joints, self.robot_parts = self.get_joints_parts_by_name('robot')
         if verbose:
             print(self.robot_joints)
             print()
@@ -110,12 +113,12 @@ class Base(MyGymEnv):
 
 
 class CustomReacher(Base):
-    def __init__(self, gravity=9.81):
+    def __init__(self, gravity=9.81, RGB=False):
         Base.__init__(self, path=PATH_TO_CUSTOM_XML,
-                              robot_name='robot_arm',
-                              target_name='target',
-                              model_xml='custom_reacher.xml',
-                              ac=2, obs=13, gravity=gravity)
+                        robot_name='robot_arm',
+                        target_name='target',
+                        model_xml='custom_reacher.xml',
+                        ac=2, obs=13, gravity=gravity, RGB=RGB)
 
     def robot_specific_reset(self):
         self.motor_names = ["robot_shoulder_joint", "robot_elbow_joint"] # , "right_shoulder2", "right_elbow"]
@@ -141,9 +144,9 @@ class CustomReacher(Base):
             if "z" in j.name:
                 '''Above ground'''
                 j.reset_current_position(
-                    self.np_random.uniform( low=0, high=0.2 ), 0)
+                    self.np_random.uniform( low=0.2, high=0.6 ), 0)
             else:
-                j.reset_current_position( self.np_random.uniform( low=0.1, high=0.3 ), 0)
+                j.reset_current_position( self.np_random.uniform( low=-0.3, high=0.3 ), 0)
 
     def calc_to_target_vec(self):
         ''' gets hand position, target position and the vector in bewteen'''
@@ -179,7 +182,7 @@ class CustomReacher(Base):
         # cost
         electricity_cost  = self.electricity_cost  * float(np.abs(a*self.joint_speeds).mean())  # let's assume we have DC motor with controller, and reverse current braking
         electricity_cost += self.stall_torque_cost * float(np.square(a).mean())
-        # joints_at_limit_cost = float(self.joints_at_limit_cost * self.joints_at_limit)
+        joints_at_limit_cost = float(self.joints_at_limit_cost * self.joints_at_limit)
 
         # Save rewards ?
         self.rewards = [float(self.potential - potential_old), float(electricity_cost)]
@@ -187,6 +190,11 @@ class CustomReacher(Base):
 
     def calc_potential(self):
         return -self.potential_constant*np.linalg.norm(self.to_target_vec)
+
+    def get_rgb(self):
+        rgb, _, _, _, _ = self.camera.render(False, False, False) # render_depth, render_labeling, print_timing)
+        rendered_rgb = np.fromstring(rgb, dtype=np.uint8).reshape( (self.VIDEO_H,self.VIDEO_W,3) )
+        return rendered_rgb
 
 
 def test():

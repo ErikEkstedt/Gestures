@@ -107,6 +107,7 @@ class VisLogger(object):
         print('Saving the visdom server content (~/.visdom)')
         self.viz.save([self.viz.env])
 
+
 def test():
     import torch
     import time

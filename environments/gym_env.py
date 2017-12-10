@@ -3,7 +3,7 @@ import numpy as np
 
 PATH_TO_CUSTOM_XML = "/home/erik/com_sci/Master_code/Project/environments/xml_files"
 
-class MyGymEnv_RGB(gym.Env):
+class MyGymEnv(gym.Env):
     metadata = {
         'render.modes': ['human', 'rgb_array'],
         'video.frames_per_second': 60
@@ -12,14 +12,18 @@ class MyGymEnv_RGB(gym.Env):
     VIDEO_W = 600  # for video showing the robot, not for camera ON the robot
     VIDEO_H = 400
 
-    def __init__(self, action_dim=2, obs_dim=7,):
+    def __init__(self, action_dim=2, obs_dim=7, RGB=False):
         self.scene = None
+        self.RGB = RGB
+
         high = np.ones([action_dim])
         self.action_space = gym.spaces.Box(-high, high)
 
         high = np.inf*np.ones([obs_dim])
         self.observation_space = gym.spaces.Box(-high, high)
-        self.rgb_space = gym.spaces.Box(low=0, high=255, shape=(400, 600, 3))
+
+        if self.RGB:
+            self.rgb_space = gym.spaces.Box(low=0, high=255, shape=(400, 600, 3))
         self._seed()
 
     def _seed(self, seed=None):
@@ -38,6 +42,7 @@ class MyGymEnv_RGB(gym.Env):
         # Important Resets
         self.done = False
         self.frame = 0
+        self.reward = 0
 
         for r in self.mjcf:
             r.query_position()
@@ -45,9 +50,14 @@ class MyGymEnv_RGB(gym.Env):
         self.camera = self.scene.cpp_world.new_camera_free_float(self.VIDEO_W, self.VIDEO_H, "video_camera")
         s = self.calc_state()
         self.potential = self.calc_potential()
-        self.camera_adjust()
-        rgb = self.get_rgb()
-        return s, rgb
+
+        if self.RGB:
+            self.camera_adjust()
+            print('camera adjust')
+            rgb = self.get_rgb()
+            return (s, rgb)
+        else:
+            return s
 
     def _render(self, mode, close):
         if close:
@@ -69,13 +79,14 @@ class MyGymEnv_RGB(gym.Env):
         self.frame  += 1
 
         state = self.calc_state()  # also calculates self.joints_at_limit
-        rgb = self.get_rgb()
         reward = self.calc_reward(a)
         done = self.stop_condition() # max frame reached?
-
         self.done = done
-        # self.HUD(state, a, done)
-        return state, rgb, reward, bool(done), {}
+        if self.RGB:
+            rgb = self.get_rgb()
+            return (state, rgb), reward, bool(done), {}
+        else:
+            return state, reward, bool(done), {}
 
     def HUD(self, s, a, done):
         # active = self.scene.actor_is_active(self)
@@ -85,7 +96,7 @@ class MyGymEnv_RGB(gym.Env):
         self.scene.cpp_world.test_window_rewards(self.rewards)
             #self.camera.test_window_score(s)  # will appear on video ("rgb_array"), but not on cameras istalled on the robot (because that would be different camera)
 
-class MyGymEnv(gym.Env):
+class MyGymEnv_withoutrgb(gym.Env):
     metadata = {
         'render.modes': ['human', 'rgb_array'],
         'video.frames_per_second': 60
@@ -119,6 +130,7 @@ class MyGymEnv(gym.Env):
         # Important Resets
         self.done = False
         self.frame = 0
+        self.reward = 0
 
         for r in self.mjcf:
             r.query_position()

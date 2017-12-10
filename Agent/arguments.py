@@ -9,14 +9,14 @@ def get_args():
     # gym
     parser.add_argument('--num-processes', type=int, default=4,
                        help='Number of processors used (default: 4)')
-    parser.add_argument('--env-id', default='RoboschoolReacher-v1',
-                       help='Environment used (default: RoboschoolReacher-v1)')
+    parser.add_argument('--env-id', default='CustomReacher',
+                       help='Environment used (default: CustomReacher)')
 
     # PPO Loss
     parser.add_argument('--pi-lr', type=float, default=3e-4,
                         help='policy learning rate (default: 4e-4)')
-    parser.add_argument('--eps', type=float, default=1e-7,
-                        help='epsilon value(default: 1e-5)')
+    parser.add_argument('--eps', type=float, default=1e-8,
+                        help='epsilon value(default: 1e-8)')
     parser.add_argument('--no-gae', action='store_true', default=False,
                         help='use generalized advantage estimation')
     parser.add_argument('--gamma', type=float, default=0.99,
@@ -41,47 +41,37 @@ def get_args():
     parser.add_argument('--max-episode-length', type=int, default=100000,
                         help='maximum steps in one episode (default: 10000)')
     parser.add_argument('--ppo-epoch', type=int, default=8,
-                        help='number of ppo epochs (default: 8)')
+                        help='number of ppo epochs, K in paper (default: 8)')
     parser.add_argument('--num-stack', type=int, default=1,
                         help='number of frames to stack (default: 1)')
     parser.add_argument('--hidden', type=int, default=128,
                         help='Number of hidden neurons in policy (default: 128)')
-    parser.add_argument('--fixed-std', action='store_true', default=False,
-                        help='Use a fixed standard deviation for actions')
-    parser.add_argument('--std-stop', type=float, default=-1.7,
-                        help='std stop')
     parser.add_argument('--std-start', type=float, default=-0.6,
-                        help='std-start')
+                        help='std-start (Hyperparams for Roboschool in paper)')
+    parser.add_argument('--std-stop', type=float, default=-1.7,
+                        help='std stop (Hyperparams for Roboschool in paper)')
 
     # Test
     parser.add_argument('--no-test', action='store_true', default=False,
                         help='disables visdom visualization')
     parser.add_argument('--test-interval', type=int,  default=50,
-            help='how many upgrades/test (default: 100)')
-    parser.add_argument('--max-test-length', type=int, default=20000,
-                        help='maximum steps in a test episode (default: 20000)')
-    parser.add_argument('--num-test', type=int, default=100,
-            help='Number of test after training (default: 100)')
+                        help='how many updates/test (default: 50)')
+    parser.add_argument('--num-test', type=int, default=10,
+                        help='Number of test after training (default: 100)')
 
     # Log
-    parser.add_argument('--vis-interval', type=int, default=10,
-                        help='vis interval, one log per n updates (default: 100)')
+    parser.add_argument('--vis-interval', type=int, default=1,
+                        help='vis interval, one log per n updates (default: 1)')
     parser.add_argument('--log-dir', default='/tmp/',
-            help='directory to save agent logs (default: /tmp/)')
+                        help='directory to save agent logs (default: /tmp/)')
     parser.add_argument('--log-interval', type=int, default=1,
-                        help='log interval, one log per n updates (default: 10)')
-    parser.add_argument('--save-interval', type=int, default=10,
-                        help='save interval, one save per n updates (default: 10)')
-    parser.add_argument('--save-dir', default='./trained_models/',
-                        help='directory to save agent logs (default: ./trained_models/)')
+                        help='log interval in console, one log per n updates (default: 10)')
 
     # Boolean
     parser.add_argument('--no-cuda', action='store_true', default=False,
                         help='disables CUDA training')
     parser.add_argument('--no-vis', action='store_true', default=False,
                         help='disables visdom visualization')
-    parser.add_argument('--test-render', action='store_true', default=False,
-            help='Render during test')
 
     args = parser.parse_args()
     args.cuda = not args.no_cuda and torch.cuda.is_available()

@@ -8,16 +8,29 @@ import torch.nn as nn
 from torch.autograd import Variable
 import torch.optim as optim
 
-from utils import args_to_list, print_args, log_print
+from utils import args_to_list, print_args, log_print, make_parallel_environments
 from arguments import FakeArgs, get_args
 from model import MLPPolicy
-from memory import RolloutStorage, StackedState, Results, Results_single
-from train import Training, Exploration
-from train import Exploration_RGB, Exploration_single, Exploration_single_RGB
-
-from testing import Test, Test_and_Save_Video,Test_and_See_gym
+from memory import RolloutStorage, StackedState, Results
+from train import Training
+from train import Exploration_single as Exploration
 
 from environments.custom_reacher import CustomReacher
+
+def multiprocess():
+    p = mp.Process(target=test, args=(params.num_processes, params, shared_model, shared_obs_stats, test_n))
+    p.start()
+    processes.append(p)
+    p = mp.Process(target=chief, args=(params.num_processes, params, traffic_light, counter, shared_model, shared_grad_buffers, optimizer))
+    p.start()
+    processes.append(p)
+    for rank in range(0, params.num_processes):
+        p = mp.Process(target=train, args=(rank, params, traffic_light, counter, shared_model, shared_grad_buffers, shared_obs_stats, test_n))
+        p.start()
+        processes.append(p)
+    for p in processes:
+        p.join()
+
 
 def main():
     args = get_args()  # Real argparser
@@ -28,19 +41,12 @@ def main():
         vis = VisLogger(description_list=ds, log_dir=args.log_dir)
         args.log_dir, args.video_dir, args.checkpoint_dir = vis.get_logdir()
 
-    if args.num_processes > 1:
-        # env = make_parallel_environments_RGB(CustomReacher,
-        #                                      args.seed,
-        #                                      args.num_processes)
-        # rgb_shape= env.observation_space.shape
-        env = make_parallel_environments(CustomReacher,
-                                         args.seed,
-                                         args.num_processes)
-        result = Results(max_n=200, max_u=10)
-    else:
-        env = CustomReacher()
-        result = Results_single(max_n=200, max_u=10)
+    if args.num_processes == 1:
+        print('Not made for single processes')
+        args.num_processes = 4
 
+    env = make_parallel_environments(CustomReacher, args.seed, args.num_processes)
+    result = Results(max_n=200, max_u=10)
 
     ob_shape = env.observation_space.shape[0]
     ac_shape = env.action_space.shape[0]
@@ -49,21 +55,30 @@ def main():
                                 ob_shape)
 
     rollouts = RolloutStorage(args.num_steps,
-                                args.num_processes,
-                                CurrentState.size()[1],
-                                ac_shape)
+                              args.num_processes,
+                              CurrentState.size()[1],
+                              ac_shape)
 
     pi = MLPPolicy(CurrentState.state_shape,
                    ac_shape,
                    hidden=args.hidden,
                    total_frames=args.num_frames)
-
     pi.train()
     optimizer_pi = optim.Adam(pi.parameters(), lr=args.pi_lr)
 
     s = env.reset()
     CurrentState.update(s)
     rollouts.states[0].copy_(CurrentState())
+
+    print('CurrentState(): ', CurrentState())
+    print('CurrentState().size(): ', CurrentState().size())
+    print('CurrentState.size() ', CurrentState.size())
+    print()
+    print(pi)
+    # print('pi.sample(CurrentState())', pi.sample(CurrentState()))
+    input()
+
+
 
     if args.cuda:
         CurrentState.cuda()
@@ -79,13 +94,13 @@ def main():
     for j in range(num_updates):
         Exploration(pi, CurrentState, rollouts, args, result, env)
         vloss, ploss, ent = Training(pi, args, rollouts, optimizer_pi)
-        rollouts.last_to_first() #updates rollout memory and puts the last state first.
 
+        rollouts.last_to_first()
         result.update_loss(vloss.data, ploss.data, ent.data)
-        frame = (j +1) * args.num_steps * args.num_processes
+        frame = (j + 1) * args.num_steps * args.num_processes
 
         #  ==== SHELL LOG ======
-        if j % args.log_interval == 0 and j > 0 :
+        if j % args.log_interval == 0 and j > 0:
             v, p, e = result.get_loss_mean()
             print('Steps: ', frame)
             print('Rewards: ', result.get_reward_mean())
@@ -95,7 +110,7 @@ def main():
             print()
 
         #  ==== TEST ======
-        if not args.no_test and j % args.test_interval == 0 and j>0:
+        if not args.no_test and j % args.test_interval == 0 and j > 0:
             print('Testing {} episodes'.format(args.num_test))
             pi.eval()
             R = Test(pi, args, ob_shape, verbose=True)
@@ -146,13 +161,7 @@ def main():
             fname = 'state_dict%d_%.2f.pt'%(j+1, R)
             name = os.path.join(args.checkpoint_dir, fname)
             print(name)
-
             sd = pi.cpu().state_dict()
-            # sd_cpu = {}
-            # for key, val in sd.items():
-            #     val = val.cpu()
-            #     sd_cpu[key] = val
-            # print(sd_cpu.items())
             torch.save(sd, name)
             pi.cuda()
 
