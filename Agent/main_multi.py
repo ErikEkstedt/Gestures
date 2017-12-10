@@ -15,7 +15,9 @@ from memory import RolloutStorage, StackedState, Results
 from train import Training, Exploration
 from test import test
 
-from environments.custom_reacher import CustomReacher
+# from environments.custom_reacher import CustomReacher, CustomReacher2
+from environments.custom_reacher import CustomReacher2 as CustomReacher
+# from environments.custom_reacher import CustomReacher3 as CustomReacher
 
 
 def main():
