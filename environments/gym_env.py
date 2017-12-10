@@ -152,7 +152,6 @@ class MyGymEnv(gym.Env):
         done = self.stop_condition() # max frame reached?
 
         self.done = done
-        # self.HUD(state, a, done)
         return state, reward, bool(done), {}
 
     def HUD(self, s, a, done):
