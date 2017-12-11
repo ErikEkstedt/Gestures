@@ -8,7 +8,7 @@ import torch.nn as nn
 from torch.autograd import Variable
 import torch.optim as optim
 
-from utils import args_to_list, print_args, log_print
+from utils import log_print
 from arguments import FakeArgs, get_args
 from model import MLPPolicy
 from memory import RolloutStorage, StackedState, Results
@@ -20,21 +20,54 @@ from environments.custom_reacher import make_parallel_environments
 from environments.custom_reacher import CustomReacher3DoF as CustomReacher
 # from environments.custom_reacher import CustomReacher6DoF as CustomReacher
 
+def make_log_dirs(args):
+    ''' ../root/day/DoF/run/ '''
+    def get_today():
+        t = datetime.date.today().ctime().split()[1:3]
+        s = "".join(t)
+        return s
+
+    rootpath = args.log_dir
+    if not os.path.exists(rootpath):
+        os.mkdir(rootpath)
+
+    day = get_today()
+    rootpath = os.path.join(rootpath, day)
+    if not os.path.exists(rootpath):
+        os.mkdir(rootpath)
+
+    dof = 'DoF' + str(2)
+    rootpath = os.path.join(rootpath, dof)
+    if not os.path.exists(rootpath):
+        os.mkdir(rootpath)
+
+    run = 0
+    while os.path.exists("{}/run-{}".format(rootpath, run)):
+        run += 1
+
+    rootpath = "{}/run-{}".format(rootpath, run)
+    result_dir = "{}/results".format(rootpath)
+    checkpoint_dir = "{}/checkpoints".format(rootpath)
+    os.mkdir(rootpath)
+    os.mkdir(checkpoint_dir)
+    os.mkdir(result_dir)
+
+    args.log_dir = rootpath
+    args.result_dir = result_dir
+    args.checkpoint_dir = checkpoint_dir
+    return args
 
 def main():
     args = get_args()  # Real argparser
+    make_log_dirs(args)
+
     num_updates = int(args.num_frames) // args.num_steps // args.num_processes
     args.num_updates = num_updates
-    ds = print_args(args)
 
-
+    # Logger
     if args.vis:
         from vislogger import VisLogger
-        vis = VisLogger(description_list=ds, log_dir=args.log_dir)
-        args.log_dir, args.video_dir, args.checkpoint_dir = vis.get_logdir()
-    else:
-        args.log_dir, args.video_dir, args.checkpoint_dir = '/tmp', '/tmp', '/tmp'
-
+        vis = VisLogger(args)
 
     # === Environment ===
     env = make_parallel_environments(CustomReacher,
@@ -83,7 +116,6 @@ def main():
 
     MAX_REWARD = -999999
     for j in range(num_updates):
-
         Exploration(pi, CurrentState, rollouts, args, result, env)
         vloss, ploss, ent = Training(pi, args, rollouts, optimizer_pi)
 
@@ -100,7 +132,8 @@ def main():
             result.vis_plot(vis, frame, pi.get_std())
 
         #  ==== TEST ======
-        if not args.no_test and j % args.test_interval < 5 and j > 0:
+        nt = 5
+        if not args.no_test and j % args.test_interval < nt and j > nt:
             ''' `j % args.test_interval < 5` is there because:
             If tests are not performed during some interval bad luck might make
             it that although the model becomes better the test occured
@@ -115,25 +148,26 @@ def main():
 
             sd = pi.cpu().state_dict()
             test_reward = test(CustomReacher, MLPPolicy, sd, args)
-            if args.cuda:
-                pi.cuda()
 
             # Plot result
-            print('Average Test Reward: ', round(test_reward))
+            print('Average Test Reward: {}\n '.format(round(test_reward)))
             if args.vis:
                 vis.line_update(Xdata=frame, Ydata=test_reward, name='Test Score')
-            name = os.path.join(args.checkpoint_dir, 'dict_{}_TEST_{}.pt'.format(frame, round(test_reward,3)))
+
             #  ==== Save best model ======
+            name = os.path.join(args.checkpoint_dir, 'dict_{}_TEST_{}.pt'.format(frame, round(test_reward,3)))
             torch.save(sd, name)
 
             #  ==== Save best model ======
             if test_reward > MAX_REWARD:
                 print('--'*45)
-                print('New High Score!')
-                name = os.path.join(args.checkpoint_dir, 'dict_{}_BEST_{}.pt'.format(frame, round(test_reward,3)))
+                print('New High Score!\n')
+                name = os.path.join(args.checkpoint_dir, 'BEST{}_{}.pt'.format(frame, round(test_reward,3)))
                 torch.save(sd, name)
                 MAX_REWARD = test_reward
 
+            if args.cuda:
+                pi.cuda()
 
 if __name__ == '__main__':
     main()

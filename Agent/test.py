@@ -17,18 +17,19 @@ def test(Env, Model, state_dict, args, verbose=False):
     pi = Model(CurrentState.state_shape,
                ac_shape,
                hidden=args.hidden)
+
     pi.load_state_dict(state_dict)
 
     # Testing
     total_reward, episode_reward = 0, 0
     for i in range(args.num_test):
-        CurrentState.reset()
         state = env.reset()
         for j in count(1):
             CurrentState.update(state)
 
             value, action, _, _ = pi.sample(CurrentState(), deterministic=True)
             cpu_actions = action.data.cpu().numpy()[0]
+            # cpu_actions = action.data.squeeze(1).cpu().numpy()
             state, reward, done, info = env.step(cpu_actions)
             total_reward += reward
             episode_reward += reward

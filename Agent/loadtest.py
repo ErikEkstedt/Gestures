@@ -1,20 +1,16 @@
 import argparse
 import gym
 import math
-
 import torch
 from itertools import count
+
 from memory import StackedState
-
 from model import MLPPolicy
-
-from environments.custom_reacher import CustomReacher
-from environments.custom_reacher import CustomReacher2
 
 def get_args():
     parser = argparse.ArgumentParser(description='Test PPOAgent')
-    parser.add_argument('--env-id', default='RoboschoolReacher-v1',
-                        help='Environment used (default: RoboschoolReacher-v1)')
+    parser.add_argument('--dof', type=int, default=2,
+                        help='Degrees of Freedom(default: 2)')
     parser.add_argument('--seed', type=int, default=10,
                         help='random seed (default: 10)')
     parser.add_argument('--load-file',
@@ -35,15 +31,27 @@ def get_args():
     args.cuda = not args.no_cuda and torch.cuda.is_available()
     return args
 
-def Load_and_Test():
+def main():
     args = get_args()
+    if args.dof == 2:
+        from environments.custom_reacher import CustomReacher2DoF
+        env = CustomReacher2DoF()
+        print('CustomReacher2DoF2')
+    elif args.dof == 3:
+        from environments.custom_reacher import CustomReacher3DoF
+        env = CustomReacher3DoF()
+        print('CustomReacher3DoF')
+    elif args.dof == 6:
+        from environments.custom_reacher import CustomReacher6DoF
+        env = CustomReacher6DoF()
+        print('CustomReacher6DoF')
+
 
     torch.manual_seed(args.seed)
-    # env = CustomReacher()
-    env = CustomReacher2()
     env.seed(args.seed)
     ob_shape = env.observation_space.shape[0]
     ac_shape = env.action_space.shape[0]
+
 
     print('num_stack:', args.num_stack)
     CurrentState = StackedState(1, args.num_stack, ob_shape)
@@ -56,7 +64,6 @@ def Load_and_Test():
     total_reward = 0
     for i in range(args.num_test):
         CurrentState.reset()
-        input('Reset')
         state = env.reset()
         episode_reward = 0
         while True:
@@ -81,4 +88,4 @@ def Load_and_Test():
 
 
 if __name__ == '__main__':
-    Load_and_Test()
+    main()

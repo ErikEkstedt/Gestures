@@ -13,13 +13,13 @@ PATH_TO_CUSTOM_XML = "/home/erik/com_sci/Master_code/Project/environments/xml_fi
 
 
 class Base(MyGymEnv):
-    def __init__(self, path=PATH_TO_CUSTOM_XML,
+    def __init__(self, XML_PATH =PATH_TO_CUSTOM_XML,
                  robot_name='robot',
                  target_name='target',
-                 model_xml='half_humanoid.xml',
-                 ac=6, obs=18, gravity=9.81, RGB=False):
+                 model_xml='NOT/A/FILE.xml',
+                 ac=6, obs=18, gravity=9.81, RGB=False, episode_time=300):
         MyGymEnv.__init__(self, action_dim=ac, obs_dim=obs, RGB=RGB)
-        self.XML_PATH = path
+        self.XML_PATH = XML_PATH
         self.model_xml = model_xml
         self.robot_name = robot_name
         self.target_name = target_name
@@ -38,7 +38,12 @@ class Base(MyGymEnv):
         self.stall_torque_cost = -0.01
         self.joints_at_limit_cost = -0.01
 
-        self.MAX_TIME = 300
+        self.MAX_TIME = episode_time
+
+    def print_relevant_information(self):
+        print('Robot name: {}, Target name={}'.format(self.robot_name, self.target_name))
+        print('XML fileme: {}, Path={}'.format(self.model_xml, self.XML_PATH))
+
 
     def initialize_scene(self):
         return Scene(self.gravity, self.timestep, self.frame_skip)
@@ -92,11 +97,9 @@ class Base(MyGymEnv):
         self.target_joints, self.target_parts = self.get_joints_parts_by_name('target')
         self.robot_joints, self.robot_parts = self.get_joints_parts_by_name('robot')
         if verbose:
-            print(self.robot_joints)
-            print()
-            print(self.robot_parts)
-            print()
-            print(self.target_joints)
+            print('{}\n'.format(self.robot_joints))
+            print('{}\n'.format(self.robot_parts))
+            print('{}\n'.format(self.target_joints))
         assert(self.cpp_robot)
 
     def get_joints_parts_by_name(self, name):
@@ -124,11 +127,12 @@ class CustomReacher2DoF(Base):
                  stall_torque_cost=-0.01,
                  joints_at_limit_cost=-0.01,
                  gravity=9.81, RGB=False):
-        Base.__init__(self, path=PATH_TO_CUSTOM_XML,
+        Base.__init__(self, XML_PATH=PATH_TO_CUSTOM_XML,
                         robot_name='robot_arm',
                         target_name='target',
                         model_xml='custom_reacher2DoF.xml',
                         ac=2, obs=13, gravity=gravity, RGB=RGB)
+
 
     def robot_specific_reset(self):
         self.motor_names = ["robot_shoulder_joint", "robot_elbow_joint"] # , "right_shoulder2", "right_elbow"]
@@ -163,8 +167,6 @@ class CustomReacher2DoF(Base):
         self.target_position = np.array(self.target_parts['target'].pose().xyz())
         self.hand_position = np.array(self.parts['robot_hand'].pose().xyz())
         self.to_target_vec = self.hand_position - self.target_position
-        print(self.target_parts)
-        input()
 
     def calc_state(self):
         j = np.array([j.current_relative_position()
@@ -211,7 +213,7 @@ class CustomReacher3DoF(Base):
                  stall_torque_cost=-0.01,
                  joints_at_limit_cost=-0.01,
                  gravity=9.81, RGB=False):
-        Base.__init__(self, path=PATH_TO_CUSTOM_XML,
+        Base.__init__(self,XML_PATH=PATH_TO_CUSTOM_XML,
                         robot_name='robot_arm',
                         target_name='target',
                         model_xml='custom_reacher3DoF.xml',
@@ -219,7 +221,7 @@ class CustomReacher3DoF(Base):
 
     def robot_specific_reset(self):
         self.motor_names = ["robot_shoulder_joint", "robot_elbow_joint_x", "robot_elbow_joint_y", ]
-        self.motor_power = [75, 75] #, 75, 75]
+        self.motor_power = [75, 75, 75] #, 75, 75]
         self.motors = [self.jdict[n] for n in self.motor_names]
 
         # target and potential
@@ -263,7 +265,11 @@ class CustomReacher3DoF(Base):
                                self.to_target_vec,
                                self.joint_positions,
                                self.joint_speeds),)
+
     def calc_reward(self, a):
+        ''' Calcutates reward
+        :param a      np.ndarray action
+        '''
         potential_old = self.potential
         self.potential = self.calc_potential()
 
@@ -278,7 +284,6 @@ class CustomReacher3DoF(Base):
 
     def calc_potential(self):
         return -self.potential_constant*np.linalg.norm(self.to_target_vec)
-
 
     def get_rgb(self):
         rgb, _, _, _, _ = self.camera.render(False, False, False) # render_depth, render_labeling, print_timing)
@@ -297,7 +302,7 @@ class CustomReacher2DoF_2Target(Base):
                  stall_torque_cost=-0.01,
                  joints_at_limit_cost=-0.01,
                  gravity=9.81, RGB=False):
-        Base.__init__(self, path=PATH_TO_CUSTOM_XML,
+        Base.__init__(self,XML_PATH=PATH_TO_CUSTOM_XML,
                         robot_name='robot_arm',
                         target_name='target_elbow',
                         model_xml='custom_modeling.xml',
@@ -416,11 +421,9 @@ class CustomReacher2DoF_2Target(Base):
 
 class CustomReacher6DoF(Base):
     ''' 6DoF Reacher
-
     No joint limits
     3 DoF each joint
     target random in reachable 3D space
-
     '''
     def __init__(self,
                  potential_constant=100,
@@ -429,7 +432,7 @@ class CustomReacher6DoF(Base):
                  joints_at_limit_cost=-0.01,
                  episode_time=300,
                  gravity=9.81):
-        Base.__init__(self, path=PATH_TO_CUSTOM_XML,
+        Base.__init__(self,XML_PATH=PATH_TO_CUSTOM_XML,
                               robot_name='robot_arm',
                               target_name='target_arm',
                               model_xml='custom_reacher6DoF.xml',
@@ -441,9 +444,6 @@ class CustomReacher6DoF(Base):
         self.joints_at_limit_cost = joints_at_limit_cost
 
         self.MAX_TIME = episode_time
-        # bonus
-        self.BONUS_thresh = 2  # Bonus threshold, vector norm from target.
-        self.BONUS = 1  #Bonus additive reward for being on target.
 
     def robot_specific_reset(self):
         self.motor_names = ["robot_shoulder_joint_x", "robot_elbow_joint_x"] # , "right_shoulder2", "right_elbow"]
@@ -510,8 +510,6 @@ class CustomReacher6DoF(Base):
         self.rewards = [float(self.potential - potential_old), float(electricity_cost)]
         reward = sum(self.rewards)
 
-        if abs(self.potential) < self.BONUS_thresh:
-            reward+=self.BONUS
         return reward
 
     def calc_potential(self):
