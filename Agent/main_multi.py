@@ -109,6 +109,7 @@ def main():
                 pi.cuda()
 
             # Plot result
+            print('Average Test Reward: ', round(test_reward))
             vis.line_update(Xdata=frame, Ydata=test_reward, name='Test Score')
             name = os.path.join(args.checkpoint_dir, 'dict_{}_TEST_{}.pt'.format(frame, round(test_reward,3)))
             #  ==== Save best model ======
