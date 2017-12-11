@@ -198,12 +198,24 @@ class CustomReacher(Base):
 
 
 class CustomReacher2(Base):
-    def __init__(self, gravity=9.81):
+    def __init__(self,
+                 gravity=9.81,
+                 potential_constant=100,
+                 electricity_cost=-0.1,
+                 stall_torque_cost=-0.01,
+                 joints_at_limit_cost=-0.01)
         Base.__init__(self, path=PATH_TO_CUSTOM_XML,
                               robot_name='robot_arm',
                               target_name='target_arm',
                               model_xml='custom_reacher2.xml',
                               ac=6, obs=21, gravity=gravity)
+
+        # penalties/values used for calculating reward
+        self.potential_constant = potential_constant
+        self.electricity_cost = electricity_cost
+        self.stall_torque_cost = stall_torque_cost
+        self.joints_at_limit_cost = joints_at_limit_cost
+
 
     def robot_specific_reset(self):
         self.motor_names = ["robot_shoulder_joint_x", "robot_elbow_joint_x"] # , "right_shoulder2", "right_elbow"]
