@@ -16,9 +16,10 @@ from train import Training, Exploration
 from test import test
 
 from environments.custom_reacher import make_parallel_environments
-# from environments.custom_reacher import CustomReacher
-from environments.custom_reacher import CustomReacher2 as CustomReacher
-# from environments.custom_reacher import CustomReacher3 as CustomReacher
+# from environments.custom_reacher import CustomReacher2DoF as CustomReacher
+from environments.custom_reacher import CustomReacher3DoF as CustomReacher
+# from environments.custom_reacher import CustomReacher6DoF as CustomReacher
+
 
 def main():
     args = get_args()  # Real argparser
@@ -26,11 +27,16 @@ def main():
     args.num_updates = num_updates
     ds = print_args(args)
 
+
     if args.vis:
         from vislogger import VisLogger
         vis = VisLogger(description_list=ds, log_dir=args.log_dir)
         args.log_dir, args.video_dir, args.checkpoint_dir = vis.get_logdir()
+    else:
+        args.log_dir, args.video_dir, args.checkpoint_dir = '/tmp', '/tmp', '/tmp'
 
+
+    # === Environment ===
     env = make_parallel_environments(CustomReacher,
                                      args.seed,
                                      args.num_processes,
@@ -40,10 +46,11 @@ def main():
                                      args.joints_at_limit_cost,
                                      args.episode_time)
 
-    result = Results(max_n=200, max_u=10)
-
     ob_shape = env.observation_space.shape[0]
     ac_shape = env.action_space.shape[0]
+
+    # === Memory ===
+    result = Results(max_n=200, max_u=10)
     CurrentState = StackedState(args.num_processes,
                                 args.num_stack,
                                 ob_shape)
@@ -53,6 +60,8 @@ def main():
                               CurrentState.size()[1],
                               ac_shape)
 
+
+    # === Model ===
     pi = MLPPolicy(CurrentState.state_shape,
                    ac_shape,
                    hidden=args.hidden,
@@ -61,7 +70,7 @@ def main():
     optimizer_pi = optim.Adam(pi.parameters(), lr=args.pi_lr)
 
     # ==== Training ====
-    print('Updates: ', num_updates)
+    print('\nTraining for %d Updates' % num_updates)
 
     s = env.reset()
     CurrentState.update(s)
@@ -74,6 +83,7 @@ def main():
 
     MAX_REWARD = -999999
     for j in range(num_updates):
+
         Exploration(pi, CurrentState, rollouts, args, result, env)
         vloss, ploss, ent = Training(pi, args, rollouts, optimizer_pi)
 
@@ -110,7 +120,8 @@ def main():
 
             # Plot result
             print('Average Test Reward: ', round(test_reward))
-            vis.line_update(Xdata=frame, Ydata=test_reward, name='Test Score')
+            if args.vis:
+                vis.line_update(Xdata=frame, Ydata=test_reward, name='Test Score')
             name = os.path.join(args.checkpoint_dir, 'dict_{}_TEST_{}.pt'.format(frame, round(test_reward,3)))
             #  ==== Save best model ======
             torch.save(sd, name)

@@ -1,4 +1,4 @@
-<mujoco model="Arm">
+<mujoco model="3DoF">
 	<compiler angle="radian" inertiafromgeom="true"/>
 	<default>
 		<joint armature="1" damping="1" limited="true"/>
@@ -22,7 +22,8 @@
 
 			<!-- Lower Arm -->
 			<body name="robot_arm1" pos="0.21 0 0">
-				<joint axis="0 1 0" limited="false" name="robot_elbow_joint" pos="0 0 0" type="hinge"/>
+				<joint axis="0 1 0" limited="false" name="robot_elbow_joint_x" pos="0 0 0" type="hinge"/>
+				<joint axis="0 0 1" limited="false" name="robot_elbow_joint_y" pos="0 0 0" type="hinge"/>
 				<geom fromto="0 0 0 0.2 0 0" name="robot_arm1" rgba="0.0 0.4 0.8 0.9" size=".01" type="capsule"/>
 
 				<!-- Hand -->
@@ -41,7 +42,8 @@
 		</body>
 	</worldbody>
 	<actuator>
-		<motor ctrllimited="true" ctrlrange="-1.0 1.0" gear="200.0" joint="shoulder_joint"/>
-		<motor ctrllimited="true" ctrlrange="-1.0 1.0" gear="200.0" joint="elbow_joint"/>
+		<motor ctrllimited="true" ctrlrange="-1.0 1.0" gear="200.0" joint="robot_shoulder_joint"/>
+		<motor ctrllimited="true" ctrlrange="-1.0 1.0" gear="200.0" joint="robot_elbow_joint_x"/>
+		<motor ctrllimited="true" ctrlrange="-1.0 1.0" gear="200.0" joint="robot_elbow_joint_y"/>
 	</actuator>
 </mujoco>

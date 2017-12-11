@@ -36,7 +36,7 @@ class MyGymEnv(gym.Env):
             self.scene = self.initialize_scene()
             self.load_xml_get_robot()
 
-        self.get_join_dicts()
+        self.get_joint_dicts()
         self.robot_specific_reset()
 
         # Important Resets
@@ -50,7 +50,6 @@ class MyGymEnv(gym.Env):
         self.camera = self.scene.cpp_world.new_camera_free_float(self.VIDEO_W, self.VIDEO_H, "video_camera")
         s = self.calc_state()
         self.potential = self.calc_potential()
-
         if self.RGB:
             self.camera_adjust()
             print('camera adjust')
@@ -124,7 +123,7 @@ class MyGymEnv_withoutrgb(gym.Env):
             self.scene = self.initialize_scene()
             self.load_xml_get_robot()
 
-        self.get_join_dicts()
+        self.get_joint_dicts()
         self.robot_specific_reset()
 
         # Important Resets
