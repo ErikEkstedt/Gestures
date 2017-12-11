@@ -17,7 +17,7 @@ def get_args():
                         help='Constant multiplied when \
                         calculating potential in reward(default: 100)')
     parser.add_argument('--electricity-cost', type=float, default=-0.1)
-    parser.add_argument('--stall_torque-cost', type=float, default=-0.01)
+    parser.add_argument('--stall-torque-cost', type=float, default=-0.01)
     parser.add_argument('--joints-at-limit-cost', type=float, default=-0.01)
 
     # PPO Loss
