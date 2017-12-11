@@ -216,14 +216,14 @@ class CustomReacher2(Base):
                               ac=6, obs=21, gravity=gravity)
 
         # penalties/values used for calculating reward
-        print('#####################')
-        print('Potential: {}\n electricity_cost: {}\n,\
-              stall_torque_cost: {}\n\
-              joints_at_limit_cost: {})) '.format(potential_constant,
-                                                  electricity_cost,
-                                                  stall_torque_cost,
-                                                  joints_at_limit_cost))
-
+        # print('#####################')
+        # print('Potential: {}\n electricity_cost: {}\n,\
+        #       stall_torque_cost: {}\n\
+        #       joints_at_limit_cost: {})) '.format(potential_constant,
+        #                                           electricity_cost,
+        #                                           stall_torque_cost,
+        #                                           joints_at_limit_cost))
+        #
         self.potential_constant = potential_constant
         self.electricity_cost = electricity_cost
         self.stall_torque_cost = stall_torque_cost
