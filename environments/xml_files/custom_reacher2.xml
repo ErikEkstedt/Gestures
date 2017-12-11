@@ -2,7 +2,7 @@
 	<compiler angle="radian" inertiafromgeom="true"/>
 	<default>
 		<joint armature="1" damping="1" limited="true"/>
-		<geom contype="0" friction="1 0.1 0.1" rgba="0.7 0.7 0 1"/>
+		<geom contype="0" conaffinity="0" friction="1 0.1 0.1" rgba="0.7 0.7 0 1"/>
 	</default>
 
 	<option integrator="RK4" iterations="50" solver="PGS" timestep="0.003">
@@ -31,7 +31,7 @@
 
 				<!-- Hand -->
 				<body name="robot_hand" pos="0.2 0 0">
-					<geom contype="0" pos="0 0 0" name="robot_hand" rgba="0.9 0.1 0.2 0.9" size=".025" type="sphere"/>
+					<geom contype="0" conaffinity="0" pos="0 0 0" name="robot_hand" rgba="0.9 0.1 0.2 0.9" size=".025" type="sphere"/>
 				</body>
 			</body>
 		</body>

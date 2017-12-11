@@ -230,6 +230,9 @@ class CustomReacher2(Base):
         self.joints_at_limit_cost = joints_at_limit_cost
 
         self.MAX_TIME = episode_time
+        # bonus
+        self.BONUS_thresh = 2  # Bonus threshold, vector norm from target.
+        self.BONUS = 1  #Bonus additive reward for being on target.
 
 
     def robot_specific_reset(self):
@@ -246,6 +249,8 @@ class CustomReacher2(Base):
         self.target_reset()
         self.calc_to_target_vec()
         self.potential = self.calc_potential()
+
+
 
     def robot_reset(self):
         ''' self.np_random for correct seed. '''
@@ -275,26 +280,19 @@ class CustomReacher2(Base):
                     for j in self.robot_joints.values()],
                     dtype=np.float32).flatten()
 
+        self.joints_at_limit = np.count_nonzero(np.abs(j[0::2]) > 0.99)
         self.joint_positions = j[0::2]
         self.joint_speeds = j[1::2]
-
-        self.joints_at_limit = np.count_nonzero(np.abs(j[0::2]) > 0.99)
         self.calc_to_target_vec()
-
-        a = np.concatenate((self.target_position, self.joint_positions, self.joint_speeds), )
-
-        target_x, _ = self.jdict["target_x"].current_position()
-        target_y, _ = self.jdict["target_y"].current_position()
-        target_z, _ = self.jdict["target_z"].current_position()
-
-        reacher = np.array([ target_x, target_y, target_z, self.to_target_vec[0], self.to_target_vec[1], self.to_target_vec[2]])
-        reacher = np.concatenate((reacher, self.hand_position, self.joint_positions, self.joint_speeds) )
-        return reacher
+        return np.concatenate((self.target_position,
+                               self.hand_position,
+                               self.to_target_vec,
+                               self.joint_positions,
+                               self.joint_speeds),)
 
     def calc_reward(self, a):
         potential_old = self.potential
         self.potential = self.calc_potential()
-
         # cost
         electricity_cost  = self.electricity_cost  * float(np.abs(a*self.joint_speeds).mean())  # let's assume we have DC motor with controller, and reverse current braking
         electricity_cost += self.stall_torque_cost * float(np.square(a).mean())
@@ -302,7 +300,14 @@ class CustomReacher2(Base):
 
         # Save rewards ?
         self.rewards = [float(self.potential - potential_old), float(electricity_cost)]
-        return sum(self.rewards)
+        reward = sum(self.rewards)
+
+        if abs(self.potential) < self.BONUS_thresh:
+            reward+=self.BONUS
+            print('potential', self.potential)
+            input()
+
+        return reward
 
     def calc_potential(self):
         return -self.potential_constant*np.linalg.norm(self.to_target_vec)

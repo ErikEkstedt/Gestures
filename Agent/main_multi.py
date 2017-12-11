@@ -20,7 +20,6 @@ from environments.custom_reacher import make_parallel_environments
 from environments.custom_reacher import CustomReacher2 as CustomReacher
 # from environments.custom_reacher import CustomReacher3 as CustomReacher
 
-
 def main():
     args = get_args()  # Real argparser
     num_updates = int(args.num_frames) // args.num_steps // args.num_processes
@@ -100,8 +99,10 @@ def main():
             Thus we test in an interval of 5 every args.test_interval.
             (default: args.num_test = 50) -> test updates [50,54], [100,104], ...
             '''
-            print('-'*45)
-            print('Testing {} episodes'.format(args.num_test))
+            if j % args.test_interval == 0:
+                print('-'*45)
+                print('Testing {} episodes'.format(args.num_test))
+
             sd = pi.cpu().state_dict()
             test_reward = test(CustomReacher, MLPPolicy, sd, args)
             if args.cuda:
@@ -109,25 +110,17 @@ def main():
 
             # Plot result
             vis.line_update(Xdata=frame, Ydata=test_reward, name='Test Score')
-            print('Test Average: {}\n'.format(test_reward))
-
+            name = os.path.join(args.checkpoint_dir, 'dict_{}_TEST_{}.pt'+str(frame, round(test_reward,3)))
             #  ==== Save best model ======
-            print('--'*45)
-            name = os.path.join(args.checkpoint_dir,
-                                'dict_test_'+str(frame)+'_'+str(test_reward))
-            print('Saving after test ({})\nAt location: {}'.format(test_reward, name))
-            torch.save(sd, name + '.pt')
+            torch.save(sd, name)
 
             #  ==== Save best model ======
             if test_reward > MAX_REWARD:
                 print('--'*45)
                 print('New High Score!')
-                name = os.path.join(args.checkpoint_dir,
-                                    'dict_test_'+str(test_reward))
-                print('Saving Max Score test ({})\nAt location: {}'.format(test_reward, name))
-                torch.save(sd, name + '.pt')
+                name = os.path.join(args.checkpoint_dir, 'dict_{}_BEST_{}.pt'+str(frame, round(test_reward,3)))
+                torch.save(sd, name)
                 MAX_REWARD = test_reward
-                print('New Max: {}\n'.format(MAX_REWARD))
 
 
 if __name__ == '__main__':
