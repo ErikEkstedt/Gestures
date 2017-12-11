@@ -31,6 +31,7 @@
 				</body>
 			</body>
 		</body>
+
 		<!-- Target -->
 		<body name="target" pos="0 0 .01">
 			<joint armature="0" axis="1 0 0" damping="0" limited="true" name="target_x" pos="0 0 0" range="-.27 .27" stiffness="0" type="slide"/>

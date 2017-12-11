@@ -9,6 +9,7 @@ from memory import StackedState
 from model import MLPPolicy
 
 from environments.custom_reacher import CustomReacher
+from environments.custom_reacher import CustomReacher2
 
 def get_args():
     parser = argparse.ArgumentParser(description='Test PPOAgent')
@@ -38,7 +39,8 @@ def Load_and_Test():
     args = get_args()
 
     torch.manual_seed(args.seed)
-    env = CustomReacher()
+    # env = CustomReacher()
+    env = CustomReacher2()
     env.seed(args.seed)
     ob_shape = env.observation_space.shape[0]
     ac_shape = env.action_space.shape[0]

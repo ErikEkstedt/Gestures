@@ -8,37 +8,18 @@ import torch.nn as nn
 from torch.autograd import Variable
 import torch.optim as optim
 
-from utils import args_to_list, print_args, log_print #, make_parallel_environments
+from utils import args_to_list, print_args, log_print
 from arguments import FakeArgs, get_args
 from model import MLPPolicy
 from memory import RolloutStorage, StackedState, Results
 from train import Training, Exploration
 from test import test
 
-# from environments.custom_reacher import CustomReacher, CustomReacher2
+from environments.custom_reacher import make_parallel_environments
+# from environments.custom_reacher import CustomReacher
 from environments.custom_reacher import CustomReacher2 as CustomReacher
 # from environments.custom_reacher import CustomReacher3 as CustomReacher
 
-def make_parallel_environments(Env, seed, num_processes,
-                               potential_constant=100,
-                               electricity_cost=-0.1,
-                               stall_torque_cost=-0.01,
-                               joints_at_limit_cost=-0.01):
-    ''' imports SubprocVecEnv from baselines.
-    :param seed                 int
-    :param num_processes        int, # env
-    '''
-    from baselines.common.vec_env.subproc_vec_env import SubprocVecEnv
-    def multiple_envs(Env, seed, rank):
-        def _thunk():
-            env = Env(potential_constant,
-                      electricity_cost,
-                      stall_torque_cost,
-                      joints_at_limit_cost)
-            env.seed(seed+rank*1000)
-            return env
-        return _thunk
-    return SubprocVecEnv([multiple_envs(Env,seed, i) for i in range(num_processes)])
 
 def main():
     args = get_args()  # Real argparser
@@ -57,7 +38,8 @@ def main():
                                      args.potential_constant,
                                      args.electricity_cost,
                                      args.stall_torque_cost,
-                                     args.joints_at_limit_cost)
+                                     args.joints_at_limit_cost,
+                                     args.episode_time)
 
     result = Results(max_n=200, max_u=10)
 

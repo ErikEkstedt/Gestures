@@ -43,7 +43,7 @@
 
 			<!-- Lower Arm -->
 			<body name="target_arm1" pos="0.21 0 0">
-				<joint stiffness="1" axis="0 1 0" limited="false" name="target_elbow_joint" pos="0 0 0" type="hinge"/>
+				<joint stiffness="1" springref="1" axis="0 1 0" limited="false" name="target_elbow_joint" pos="0 0 0" type="hinge"/>
 				<geom fromto="0 0 0 0.2 0 0" name="target_arm1" rgba="0.9 0.2 0.9 0.3" size=".01" type="capsule"/>
 				<geom contype="0" pos="0 0 0" name="target_elbow" rgba="0.0 0.0 0.0 0.9" size=".02" type="sphere"/>
 				<!-- Hand -->

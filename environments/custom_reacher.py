@@ -113,7 +113,11 @@ class Base(MyGymEnv):
 
 
 class CustomReacher(Base):
-    def __init__(self, gravity=9.81, RGB=False):
+    def __init__(self, potential_constant=100,
+                 electricity_cost=-0.1,
+                 stall_torque_cost=-0.01,
+                 joints_at_limit_cost=-0.01,
+                 gravity=9.81, RGB=False):
         Base.__init__(self, path=PATH_TO_CUSTOM_XML,
                         robot_name='robot_arm',
                         target_name='target',
@@ -203,6 +207,7 @@ class CustomReacher2(Base):
                  electricity_cost=-0.1,
                  stall_torque_cost=-0.01,
                  joints_at_limit_cost=-0.01,
+                 episode_time=300,
                  gravity=9.81):
         Base.__init__(self, path=PATH_TO_CUSTOM_XML,
                               robot_name='robot_arm',
@@ -212,15 +217,19 @@ class CustomReacher2(Base):
 
         # penalties/values used for calculating reward
         print('#####################')
-        print(potential_constant,
-              electricity_cost,
-              stall_torque_cost,
-              joints_at_limit_cost)
+        print('Potential: {}\n electricity_cost: {}\n,\
+              stall_torque_cost: {}\n\
+              joints_at_limit_cost: {})) '.format(potential_constant,
+                                                  electricity_cost,
+                                                  stall_torque_cost,
+                                                  joints_at_limit_cost))
 
         self.potential_constant = potential_constant
         self.electricity_cost = electricity_cost
         self.stall_torque_cost = stall_torque_cost
         self.joints_at_limit_cost = joints_at_limit_cost
+
+        self.MAX_TIME = episode_time
 
 
     def robot_specific_reset(self):
@@ -242,18 +251,18 @@ class CustomReacher2(Base):
         ''' self.np_random for correct seed. '''
         for j in self.robot_joints.values():
             j.reset_current_position(
-                self.np_random.uniform( low=-0.01, high=0.01 ), 0)
+                self.np_random.uniform( low=-0.03, high=0.03 ), 0)
             j.set_motor_torque(0)
 
     def target_reset(self):
-        ''' self.np_random for correct seed. '''
+        ''' self.np_random for correczt seed. '''
         for j in self.target_joints.values():
             if "z" in j.name:
                 '''Above ground'''
                 j.reset_current_position(
-                    self.np_random.uniform( low=0, high=0.2 ), 0)
+                    self.np_random.uniform( low=0.2, high=0.6 ), 0)
             else:
-                j.reset_current_position( self.np_random.uniform( low=0.1, high=0.3 ), 0)
+                j.reset_current_position( self.np_random.uniform( low=-0.3, high=0.3 ), 0)
 
     def calc_to_target_vec(self):
         ''' gets hand position, target position and the vector in bewteen'''
@@ -289,7 +298,7 @@ class CustomReacher2(Base):
         # cost
         electricity_cost  = self.electricity_cost  * float(np.abs(a*self.joint_speeds).mean())  # let's assume we have DC motor with controller, and reverse current braking
         electricity_cost += self.stall_torque_cost * float(np.square(a).mean())
-        # joints_at_limit_cost = float(self.joints_at_limit_cost * self.joints_at_limit)
+        joints_at_limit_cost = float(self.joints_at_limit_cost * self.joints_at_limit)
 
         # Save rewards ?
         self.rewards = [float(self.potential - potential_old), float(electricity_cost)]
@@ -392,22 +401,61 @@ class CustomReacher3(Base):
         return -self.potential_constant*np.linalg.norm(self.to_target_vec)
 
 
+def make_parallel_environments(Env, seed, num_processes,
+                               potential_constant=100,
+                               electricity_cost=-0.1,
+                               stall_torque_cost=-0.01,
+                               joints_at_limit_cost=-0.01,
+                               episode_time=300):
+    ''' imports SubprocVecEnv from baselines.
+    :param seed                 int
+    :param num_processes        int, # env
+    '''
+    from baselines.common.vec_env.subproc_vec_env import SubprocVecEnv
+    def multiple_envs(Env, seed, rank):
+        def _thunk():
+            env = Env(potential_constant,
+                      electricity_cost,
+                      stall_torque_cost,
+                      joints_at_limit_cost,
+                      episode_time)
+            env.seed(seed+rank*1000)
+            return env
+        return _thunk
+    return SubprocVecEnv([multiple_envs(Env,seed, i) for i in range(num_processes)])
+
 def test():
-    # env = CustomReacher()
-    # env = CustomReacher2()
-    # env = CustomReacher3()
-    env = make_parallel_environments(CustomReacher2, 10,4, 200, -10, -1, -1)
+    import sys
 
-    s = env.reset()
-    print(s.shape)
-    input()
-    while True:
-        s, r, d, _ = env.step([env.action_space.sample()]*4)
-        # env.render()
-        if sum(d)>0:
-            input('Done')
-            s=env.reset()
+    version = int(sys.argv[1])
+    if version > 2:
+        env = CustomReacher3()
+        print('CustomReacher3')
+    elif version > 1:
+        env = CustomReacher2(episode_time=100)
+        print('CustomReacher2')
+    elif version > 0:
+        env = CustomReacher()
+        print('CustomReacher')
+    else:
+        nproc=4
+        env = make_parallel_environments(CustomReacher2, 10, nproc, 200, -10, -1, -1, 200)
+        print('Parallel CustomReacher')
 
+    if version > 0:
+        s = env.reset()
+        while True:
+            s, r, d, _ = env.step(env.action_space.sample())
+            env.render()
+            if d:
+                s=env.reset()
+                print(env.target_position)
+    else:
+        s = env.reset()
+        while True:
+            s, r, d, _ = env.step([env.action_space.sample()] * nproc)
+            if sum(d) > 0:
+                print(env.reset())
 
 if __name__ == '__main__':
     test()
