@@ -304,8 +304,6 @@ class CustomReacher2(Base):
 
         if abs(self.potential) < self.BONUS_thresh:
             reward+=self.BONUS
-            print('potential', self.potential)
-            input()
 
         return reward
 
