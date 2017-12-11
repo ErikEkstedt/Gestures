@@ -12,6 +12,14 @@ def get_args():
     parser.add_argument('--env-id', default='CustomReacher',
                        help='Environment used (default: CustomReacher)')
 
+    # Custom_reacher Reward penalties
+    parser.add_argument('--potential-constant', type=float, default=100,
+                        help='Constant multiplied when \
+                        calculating potential in reward(default: 100)')
+    parser.add_argument('--electricity-cost', type=float, default=-0.1)
+    parser.add_argument('--stall_torque-cost', type=float, default=-0.01)
+    parser.add_argument('--joints-at-limit-cost', type=float, default=-0.01)
+
     # PPO Loss
     parser.add_argument('--pi-lr', type=float, default=3e-4,
                         help='policy learning rate (default: 4e-4)')

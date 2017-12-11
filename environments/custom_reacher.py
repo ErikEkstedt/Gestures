@@ -199,11 +199,11 @@ class CustomReacher(Base):
 
 class CustomReacher2(Base):
     def __init__(self,
-                 gravity=9.81,
                  potential_constant=100,
                  electricity_cost=-0.1,
                  stall_torque_cost=-0.01,
-                 joints_at_limit_cost=-0.01)
+                 joints_at_limit_cost=-0.01,
+                 gravity=9.81):
         Base.__init__(self, path=PATH_TO_CUSTOM_XML,
                               robot_name='robot_arm',
                               target_name='target_arm',
@@ -211,6 +211,12 @@ class CustomReacher2(Base):
                               ac=6, obs=21, gravity=gravity)
 
         # penalties/values used for calculating reward
+        print('#####################')
+        print(potential_constant,
+              electricity_cost,
+              stall_torque_cost,
+              joints_at_limit_cost)
+
         self.potential_constant = potential_constant
         self.electricity_cost = electricity_cost
         self.stall_torque_cost = stall_torque_cost
@@ -389,14 +395,16 @@ class CustomReacher3(Base):
 def test():
     # env = CustomReacher()
     # env = CustomReacher2()
-    env = CustomReacher3()
+    # env = CustomReacher3()
+    env = make_parallel_environments(CustomReacher2, 10,4, 200, -10, -1, -1)
+
     s = env.reset()
     print(s.shape)
     input()
     while True:
-        s, r, d, _ = env.step(env.action_space.sample())
-        env.render()
-        if d:
+        s, r, d, _ = env.step([env.action_space.sample()]*4)
+        # env.render()
+        if sum(d)>0:
             input('Done')
             s=env.reset()
 
