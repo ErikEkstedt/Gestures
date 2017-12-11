@@ -110,7 +110,7 @@ def main():
 
             # Plot result
             vis.line_update(Xdata=frame, Ydata=test_reward, name='Test Score')
-            name = os.path.join(args.checkpoint_dir, 'dict_{}_TEST_{}.pt'+str(frame, round(test_reward,3)))
+            name = os.path.join(args.checkpoint_dir, 'dict_{}_TEST_{}.pt'format(frame, round(test_reward,3)))
             #  ==== Save best model ======
             torch.save(sd, name)
 
@@ -118,7 +118,7 @@ def main():
             if test_reward > MAX_REWARD:
                 print('--'*45)
                 print('New High Score!')
-                name = os.path.join(args.checkpoint_dir, 'dict_{}_BEST_{}.pt'+str(frame, round(test_reward,3)))
+                name = os.path.join(args.checkpoint_dir, 'dict_{}_BEST_{}.pt'format(frame, round(test_reward,3)))
                 torch.save(sd, name)
                 MAX_REWARD = test_reward
 
