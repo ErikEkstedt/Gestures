@@ -46,11 +46,6 @@ def main():
         from vislogger import VisLogger
         vis = VisLogger(args)
 
-    print(args.env_id)
-    input()
-
-
-
     if args.num_processes > 1:
         from train import exploration
         env = make_parallel_environments(CustomReacher,
@@ -78,9 +73,7 @@ def main():
 
     ob_shape = env.observation_space.shape[0]
     ac_shape = env.action_space.shape[0]
-    print('Action size:', ac_shape)
-
-    # === Memory ===
+        # === Memory ===
     result = Results(max_n=200, max_u=10)
     CurrentState = StackedState(args.num_processes,
                                 args.num_stack,
@@ -102,8 +95,8 @@ def main():
     optimizer_pi = optim.Adam(pi.parameters(), lr=args.pi_lr)
 
     # ==== Training ====
+    print('Learning {}(ac: {})'.format( args.env_id, ac_shape))
     print('\nTraining for %d Updates' % num_updates)
-
     s = env.reset()
     CurrentState.update(s)
     rollouts.states[0].copy_(CurrentState())
@@ -161,6 +154,7 @@ def main():
                 args.checkpoint_dir,
                 'dict_{}_TEST_{}.pt'.format(frame, round(test_reward, 3)))
             torch.save(sd, name)
+            torch.save(pi, 'Model-'+name)
 
             #  ==== Save best model ======
             if test_reward > MAX_REWARD:
@@ -170,6 +164,7 @@ def main():
                     args.checkpoint_dir,
                     'BEST{}_{}.pt'.format(frame, round(test_reward, 3)))
                 torch.save(sd, name)
+                torch.save(pi, 'Model-'+name)
                 MAX_REWARD = test_reward
 
             if args.cuda:
