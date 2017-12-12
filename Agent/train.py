@@ -3,6 +3,14 @@ import numpy as np
 from torch.autograd import Variable
 import torch.nn as nn
 
+from torchvision.utils import make_grid
+import matplotlib.pyplot as plt
+
+def show_state(ob):
+    img = make_grid(ob, nrow=2)
+    npimg = img.numpy()
+    plt.imshow(np.transpose(npimg, (1,2,0)), interpolation='nearest')
+    plt.show()
 
 def exploration(pi, CurrentState, rollouts, args, result,  env):
     ''' Exploration part of PPO training:
@@ -94,7 +102,7 @@ def train(pi, args, rollouts, optimizer_pi):
     return vloss, ploss, ent
 
 
-def Exploration_single(pi, CurrentState, rollouts, args, result,  env):
+def exploration_single(pi, CurrentState, rollouts, args, result,  env):
     ''' Exploration part of PPO training:
     1. Sample actions and gather rewards trajectory for num_steps.
     2. Reset states and rewards if some environments are done.
@@ -142,10 +150,7 @@ def Exploration_single(pi, CurrentState, rollouts, args, result,  env):
                         masks)
 
 
-
-
-# -----------------
-def Exploration_RGB(pi, CurrentState, rollouts, args, result,  env):
+def exploration_rgb(pi, CurrentState, rollouts, args, result,  env):
     ''' Exploration part of PPO training:
     1. Sample actions and gather rewards trajectory for num_steps.
     2. Reset states and rewards if some environments are done.
@@ -162,7 +167,14 @@ def Exploration_RGB(pi, CurrentState, rollouts, args, result,  env):
         cpu_actions = action.data.cpu().numpy()  # gym takes np.ndarrays
 
         # Observe reward and next state
-        state, rgb, reward, done, info = env.step(list(cpu_actions))
+        state, obs, reward, done, info = env.step(list(cpu_actions))
+
+        # ob = torch.Tensor(obs)
+        # ob = ob.permute(0,3,1,2)
+        # if pi.n % 50 ==0:
+        #     print('obs.shape', ob.shape)
+        #     show_state(ob)
+
         reward = torch.from_numpy(reward).view(args.num_processes, -1).float()
         masks = torch.FloatTensor([[0.0] if done_ else [1.0] for done_ in done])
 
@@ -189,6 +201,8 @@ def Exploration_RGB(pi, CurrentState, rollouts, args, result,  env):
                         reward,
                         masks)
 
+
+# ------------
 def Exploration_single_RGB(pi, CurrentState, rollouts, args, result,  env, rgb_list, MAX_REWARD):
     ''' Exploration part of PPO training:
     1. Sample actions and gather rewards trajectory for num_steps.

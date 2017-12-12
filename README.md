@@ -1,31 +1,16 @@
-Not so important fixes
-* [ ] Make Result class do plotting for less clutter.
-	* Combine vislogger and results. LOGGER
-
-
 More important fixes
 * [ ] Continue training. Save checkpoint
 	* [checkpoint](https://discuss.pytorch.org/t/saving-and-loading-a-model-in-pytorch/2610/3)
 
-TODO
-1. Must have rigid baseline
-	* [ ] Clean code.
-	* [x] Make multiprocess work
-		* [x] Result class
-		* [x] Stacked_State
-		* [x] Rollouts
-		* [x] Subproc vec
-		* [ ] MP like a3c  - [x] not worth diving in here
-	* [x] Saved state_dict should always show the expected result.
-		* Test score in name
 
-2. Make environment more complex
-	* [ ] Make CustomReacher more complex
-		* [ ] Reach several targets
-	* [ ] HalfHumanoid
+Plan
+* Train and get stable models reliably
+	* [ ] Dof2
+	* [ ] Dof3
 
-3. Train with RGB
-	* [ ] Back to social movements.
+* Get rgb arrays from training
+	* [ ] Dof2
+	* [ ] Dof3
 
 
 Project

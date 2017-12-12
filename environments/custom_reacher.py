@@ -2,12 +2,14 @@ from roboschool.scene_abstract import Scene
 import os
 import numpy as np
 import gym
-from OpenGL import GL # fix for opengl issues on desktop  / nvidia
+# from OpenGL import GL # fix for opengl issues on desktop  / nvidia
+from OpenGL import GLE # fix for opengl issues on desktop  / nvidia
 
 try:
     from environments.gym_env import MyGymEnv
 except:
     from gym_env import MyGymEnv
+
 
 PATH_TO_CUSTOM_XML = "/home/erik/com_sci/Master_code/Project/environments/xml_files"
 
@@ -17,7 +19,7 @@ class Base(MyGymEnv):
                  robot_name='robot',
                  target_name='target',
                  model_xml='NOT/A/FILE.xml',
-                 ac=6, obs=18, gravity=9.81, RGB=False, episode_time=300):
+                 ac=6, obs=18, gravity=9.81, RGB=False, ep_len=300):
         MyGymEnv.__init__(self, action_dim=ac, obs_dim=obs, RGB=RGB)
         self.XML_PATH = XML_PATH
         self.model_xml = model_xml
@@ -38,7 +40,7 @@ class Base(MyGymEnv):
         self.stall_torque_cost = -0.01
         self.joints_at_limit_cost = -0.01
 
-        self.MAX_TIME = episode_time
+        self.MAX_TIME = ep_len
 
     def print_relevant_information(self):
         print('Robot name: {}, Target name={}'.format(self.robot_name, self.target_name))
@@ -112,7 +114,7 @@ class Base(MyGymEnv):
         return joints, parts
 
     def camera_adjust(self):
-        self.camera.move_and_look_at(0.5, 0.5, 0.5, 0, 0, 0)
+        self.camera.move_and_look_at(1.0, 0.5, 0.5, 0, 0, 0)
 
 
 class Reacher_plane(Base):
@@ -125,13 +127,14 @@ class Reacher_plane(Base):
                  electricity_cost=-0.1,
                  stall_torque_cost=-0.01,
                  joints_at_limit_cost=-0.01,
-                 gravity=9.81, RGB=False):
+                 ep_len=300,
+                 gravity=9.81,
+                 RGB=False):
         Base.__init__(self, XML_PATH=PATH_TO_CUSTOM_XML,
                         robot_name='robot_arm',
                         target_name='target',
                         model_xml='reacher_plane.xml',
-                        ac=2, obs=13, gravity=gravity, RGB=RGB)
-
+                        ac=2, obs=13, gravity=gravity, RGB=RGB, ep_len=ep_len)
 
     def robot_specific_reset(self):
         self.motor_names = ["robot_shoulder_joint", "robot_elbow_joint"] # , "right_shoulder2", "right_elbow"]
@@ -196,7 +199,6 @@ class Reacher_plane(Base):
         rendered_rgb = np.fromstring(rgb, dtype=np.uint8).reshape( (self.VIDEO_H,self.VIDEO_W,3) )
         return rendered_rgb
 
-
 class CustomReacher2DoF(Base):
     ''' 2DoF Reacher
     No joint limits
@@ -207,12 +209,14 @@ class CustomReacher2DoF(Base):
                  electricity_cost=-0.1,
                  stall_torque_cost=-0.01,
                  joints_at_limit_cost=-0.01,
-                 gravity=9.81, RGB=False):
+                 ep_len=300,
+                 gravity=9.81,
+                 RGB=False):
         Base.__init__(self, XML_PATH=PATH_TO_CUSTOM_XML,
-                        robot_name='robot_arm',
-                        target_name='target',
-                        model_xml='custom_reacher2DoF.xml',
-                        ac=2, obs=13, gravity=gravity, RGB=RGB)
+                      robot_name='robot_arm',
+                      target_name='target',
+                      model_xml='custom_reacher2DoF.xml',
+                      ac=2, obs=13, gravity=gravity, RGB=RGB, ep_len=ep_len)
 
 
     def robot_specific_reset(self):
@@ -290,20 +294,25 @@ class CustomReacher3DoF(Base):
     1 DoF each joint
     target random in 3D space, not every point is
     '''
+
     def __init__(self, potential_constant=100,
                  electricity_cost=-0.1,
                  stall_torque_cost=-0.01,
                  joints_at_limit_cost=-0.01,
-                 gravity=9.81, RGB=False):
+                 ep_len=300,
+                 gravity=9.81,
+                 RGB=False):
         Base.__init__(self,XML_PATH=PATH_TO_CUSTOM_XML,
-                        robot_name='robot_arm',
-                        target_name='target',
-                        model_xml='custom_reacher3DoF.xml',
-                        ac=3, obs=15, gravity=gravity, RGB=RGB)
+                      robot_name='robot_arm',
+                      target_name='target',
+                      model_xml='custom_reacher3DoF.xml',
+                      ac=3, obs=15, gravity=gravity, RGB=RGB, ep_len=ep_len)
 
     def robot_specific_reset(self):
-        self.motor_names = ["robot_shoulder_joint", "robot_elbow_joint_x", "robot_elbow_joint_y", ]
-        self.motor_power = [75, 75, 75] #, 75, 75]
+        self.motor_names = ["robot_shoulder_joint",
+                            "robot_elbow_joint_x",
+                            "robot_elbow_joint_y"]
+        self.motor_power = [75, 75, 75]
         self.motors = [self.jdict[n] for n in self.motor_names]
 
         # target and potential
@@ -373,6 +382,7 @@ class CustomReacher3DoF(Base):
         return rendered_rgb
 
 
+# ---------
 class CustomReacher2DoF_2Target(Base):
     ''' 2DoF Reacher
     No joint limits
@@ -598,67 +608,121 @@ class CustomReacher6DoF(Base):
         return -self.potential_constant*np.linalg.norm(self.to_target_vec)
 
 
-def make_parallel_environments(Env, seed, num_processes,
-                               potential_constant=100,
-                               electricity_cost=-0.1,
-                               stall_torque_cost=-0.01,
-                               joints_at_limit_cost=-0.01,
-                               episode_time=300):
+def make_parallel_environments(Env, args):
     ''' imports SubprocVecEnv from baselines.
     :param seed                 int
     :param num_processes        int, # env
     '''
     from baselines.common.vec_env.subproc_vec_env import SubprocVecEnv
-    def multiple_envs(Env, seed, rank):
+    def multiple_envs(Env, args, rank):
         def _thunk():
-            env = Env(potential_constant,
-                      electricity_cost,
-                      stall_torque_cost,
-                      joints_at_limit_cost,
-                      episode_time)
-            env.seed(seed+rank*1000)
+            env = Env(args.potential_constant,
+                      args.electricity_cost,
+                      args.stall_torque_cost,
+                      args.joints_at_limit_cost,
+                      ep_len=args.episode_time,
+                      gravity=args.gravity,
+                      RGB=args.RGB)
+            env.seed(args.seed+rank*1000)
             return env
         return _thunk
-    return SubprocVecEnv([multiple_envs(Env,seed, i) for i in range(num_processes)])
+    return SubprocVecEnv([multiple_envs(Env, args, i) for i in range(args.num_processes)])
+
+
+def make_parallel_environments_RGB(Env, args):
+    ''' imports SubprocVecEnv from baselines.
+    :param seed                 int
+    :param num_processes        int, # env
+    '''
+    from baselines.common.vec_env.subproc_vec_env import SubprocVecEnv_RGB
+    def multiple_envs(Env, args, rank):
+        def _thunk():
+            env = Env(args.potential_constant,
+                      args.electricity_cost,
+                      args.stall_torque_cost,
+                      args.joints_at_limit_cost,
+                      ep_len=args.episode_time,
+                      gravity=args.gravity,
+                      RGB=args.RGB)
+            env.seed(args.seed+rank*1000)
+            return env
+        return _thunk
+    return SubprocVecEnv_RGB([multiple_envs(Env, args, i) for i in range(args.num_processes)])
 
 
 def test():
-    import sys
+    from itertools import count
+    try:
+        from Agent.arguments import get_args
+    except:
+        pass
 
-    dof = int(sys.argv[1])
-    if dof == 2:
-        env = CustomReacher2DoF()
+    args = get_args()
+    if args.dof == 2:
+        Env = CustomReacher2DoF
         print('CustomReacher2DoF2')
-    elif dof == 3:
-        env = CustomReacher3DoF()
+    elif args.dof == 3:
+        Env = CustomReacher3DoF
         print('CustomReacher3DoF')
-    elif dof == 6:
-        env = CustomReacher6DoF()
+    elif args.dof == 6:
+        Env = CustomReacher6DoF
         print('CustomReacher6DoF')
-    elif dof == 88:
-        env = Reacher_plane()
+    elif args.dof == 1:
+        Env = Reacher_plane
         print('Reacher_plane')
-    elif dof == 99:
-        nproc=4
-        env = make_parallel_environments(CustomReacher2DoF, 10, nproc, 200, -10, -1, -1, 200)
-        print('Parallel CustomReacher')
 
-    if dof == 99:
-        s = env.reset()
-        while True:
-            s, r, d, _ = env.step([env.action_space.sample()] * nproc)
-            if sum(d) > 0:
-                print(env.reset())
+    if args.num_processes > 1:
+        if args.RGB:
+            env = make_parallel_environments_RGB(Env, args)
+            (s, obs) = env.reset()
+            R = 0
+            for i in count(1):
+                s, obs, r, d, _ = env.step([env.action_space.sample()] * args.num_processes)
+                R += r
+                if sum(d) > 0:
+                    print('Step: {}, Reward: {}, mean: {}'.format(i, R, R.mean(axis=0)))
+                    R = 0
+                    env.reset()
+        else:
+            env = make_parallel_environments(Env, args)
+            s = env.reset()
+            R = 0
+            for i in count(1):
+                s, r, d, _ = env.step([env.action_space.sample()] * args.num_processes)
+                R += r
+                if sum(d) > 0:
+                    print('Step: {}, Reward: {}, mean: {}'.format(i, R, R.mean(axis=0)))
+                    R = 0
+                    env.reset()
     else:
-        s = env.reset()
-        print(s.shape)
-        while True:
-            s, r, d, _ = env.step(env.action_space.sample())
-            # print(r)
-            env.render()
-            if d:
-                s=env.reset()
-                print(env.target_position)
+        env = Env(args.potential_constant,
+                  args.electricity_cost,
+                  args.stall_torque_cost,
+                  args.joints_at_limit_cost,
+                  args.episode_time,
+                  gravity=args.gravity,
+                  RGB=args.RGB)
+        print(env.RGB, env.gravity, env.MAX_TIME)
+        if args.RGB:
+            s = env.reset()
+            s, obs = s
+            print(s.shape)
+            print(obs.shape)
+            while True:
+                (s, obs), r, d, _ = env.step(env.action_space.sample())
+                if d:
+                    s=env.reset()
+        else:
+            s = env.reset()
+            print(s.shape)
+            while True:
+                s, r, d, _ = env.step(env.action_space.sample())
+                # print(r)
+                env.render()
+                if d:
+                    s=env.reset()
+                    print(env.target_position)
+
 
 if __name__ == '__main__':
     test()

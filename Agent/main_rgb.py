@@ -8,15 +8,19 @@ import torch.nn as nn
 from torch.autograd import Variable
 import torch.optim as optim
 
+from torchvision.utils import make_grid
+import matplotlib.pyplot as plt
+
 from utils import log_print, make_log_dirs
 from arguments import FakeArgs, get_args
 from model import MLPPolicy
 from memory import RolloutStorage, StackedState, Results
 
-from train import train, exploration
+from train import train, exploration_rgb
 from test import test, test_existing_env
 
 from environments.custom_reacher import make_parallel_environments
+from environments.custom_reacher import make_parallel_environments_RGB
 
 
 def main():
@@ -49,16 +53,10 @@ def main():
 
     if args.num_processes > 1:
         from train import exploration
-        env = make_parallel_environments(CustomReacher,
-                                        args.seed,
-                                        args.num_processes,
-                                        args.potential_constant,
-                                        args.electricity_cost,
-                                        args.stall_torque_cost,
-                                        args.joints_at_limit_cost,
-                                        args.episode_time)
+        env = make_parallel_environments_RGB(CustomReacher,args)
+
     else:
-        from train import Exploration_single as exploration
+        from train import exploration_single as exploration
         env = CustomReacher(args.potential_constant,
                             args.electricity_cost,
                             args.stall_torque_cost,
@@ -98,7 +96,20 @@ def main():
     # ==== Training ====
     print('Learning {}(ac: {}, ob: {})'.format( args.env_id, ac_shape, ob_shape))
     print('\nTraining for %d Updates' % num_updates)
-    s = env.reset()
+    (s, obs) = env.reset()
+    print(s.shape)
+    print(obs.shape)
+
+    def show_state(obs):
+        ob = torch.Tensor(obs)
+        ob = ob.permute(0,3,1,2)
+        img = make_grid(ob, nrow=2)
+        npimg = img.numpy()
+        plt.imshow(np.transpose(npimg, (1,2,0)), interpolation='nearest')
+        plt.show()
+
+    show_state(obs)
+
     CurrentState.update(s)
     rollouts.states[0].copy_(CurrentState())
 
@@ -109,7 +120,7 @@ def main():
 
     MAX_REWARD = -999999
     for j in range(num_updates):
-        exploration(pi, CurrentState, rollouts, args, result, env)
+        exploration_rgb(pi, CurrentState, rollouts, args, result, env)
         vloss, ploss, ent = train(pi, args, rollouts, optimizer_pi)
 
         rollouts.last_to_first()

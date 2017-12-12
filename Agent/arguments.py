@@ -6,13 +6,12 @@ def get_args():
     parser.add_argument('--seed', type=int, default=10,
                         help='random seed (default: 10)')
 
-    # gym
-    parser.add_argument('--num-processes', type=int, default=4,
-                       help='Number of processors used (default: 4)')
-    parser.add_argument('--env-id', default='CustomReacher',
-                       help='Environment used (default: CustomReacher)')
-    parser.add_argument('--dof', type=int, default=2,
-                       help='DoF in environment (default: 2)')
+    # Environment
+    parser.add_argument('--num-processes', type=int, default=4)
+    parser.add_argument('--env-id', default='CustomReacher')
+    parser.add_argument('--dof', type=int, default=2)
+    parser.add_argument('--RGB', action='store_true', default=False)
+    parser.add_argument('--gravity', type=float, default=9.81)
 
     # Custom_reacher Reward penalties
     parser.add_argument('--episode-time',         type=int, default=300)
@@ -21,7 +20,6 @@ def get_args():
     parser.add_argument('--stall-torque-cost',    type=float, default=-0.01)
     parser.add_argument('--joints-at-limit-cost', type=float, default=-0.01)
 
-    parser.add_argument('--RGB', action='store_true', default=False,
 
     # PPO Loss
     parser.add_argument('--pi-lr', type=float, default=3e-4,
