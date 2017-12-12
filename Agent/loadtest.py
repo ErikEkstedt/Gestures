@@ -60,6 +60,8 @@ def main():
 
     pi = MLPPolicy(CurrentState.state_shape, ac_shape, hidden=args.hidden)
     pi.load_state_dict(saved_state_dict)
+    pi.train()
+
 
     total_reward = 0
     for i in range(args.num_test):
@@ -70,7 +72,6 @@ def main():
             CurrentState.update(state)
             value, action, _, _ = pi.sample(CurrentState(), deterministic=True)
             cpu_actions = action.data.cpu().numpy()[0]
-            print(cpu_actions)
 
             # Observe reward and next state
             state, reward, done, info = env.step(cpu_actions)
