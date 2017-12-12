@@ -12,7 +12,9 @@ def make_video(vid, filename='/tmp/video'):
         ims.append([im])
     ani = animation.ArtistAnimation(fig, ims, interval=30, blit=True,
                                     repeat_delay=1000)
-    ani.save(filename+'.mp4')
+    name = filename+'.mp4'
+    ani.save(name)
+    print('Saved video to:', name)
 
 if __name__ == '__main__':
     from arguments import get_args

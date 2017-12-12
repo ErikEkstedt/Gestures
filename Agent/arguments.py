@@ -10,8 +10,10 @@ def get_args():
     parser.add_argument('--num-processes', type=int, default=4)
     parser.add_argument('--env-id', default='CustomReacher')
     parser.add_argument('--dof', type=int, default=2)
-    parser.add_argument('--RGB', action='store_true', default=False)
     parser.add_argument('--gravity', type=float, default=9.81)
+    parser.add_argument('--RGB', action='store_true', default=False)
+    parser.add_argument('--video', action='store_true', default=False)
+    parser.add_argument('--render', action='store_true', default=False)
 
     # Custom_reacher Reward penalties
     parser.add_argument('--episode-time',         type=int, default=300)

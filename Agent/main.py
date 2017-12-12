@@ -14,7 +14,7 @@ from model import MLPPolicy
 from memory import RolloutStorage, StackedState, Results
 
 from train import train, exploration
-from test import test, test_existing_env, Test_and_Save_Video
+from test import test, test_existing_env, Test_and_Save_Video, test_and_render
 
 from environments.custom_reacher import make_parallel_environments
 
@@ -50,7 +50,6 @@ def main():
     if args.num_processes > 1:
         from train import exploration
         env = make_parallel_environments(CustomReacher,args)
-
     else:
         from train import Exploration_single as exploration
         env = CustomReacher(args.potential_constant,
@@ -58,14 +57,20 @@ def main():
                             args.stall_torque_cost,
                             args.joints_at_limit_cost,
                             args.episode_time)
+    if args.video:
+        video_env = CustomReacher(args.potential_constant,
+                                args.electricity_cost,
+                                args.stall_torque_cost,
+                                args.joints_at_limit_cost,
+                                args.episode_time,
+                                RGB=True)
 
     test_env = CustomReacher(args.potential_constant,
-                             args.electricity_cost,
-                             args.stall_torque_cost,
-                             args.joints_at_limit_cost,
-                             args.episode_time,
-                             RGB=True)
-
+                            args.electricity_cost,
+                            args.stall_torque_cost,
+                            args.joints_at_limit_cost,
+                            args.episode_time,
+                            RGB=False)
 
     ob_shape = env.observation_space.shape[0]
     ac_shape = env.action_space.shape[0]
@@ -79,7 +84,6 @@ def main():
                               args.num_processes,
                               CurrentState.size()[1],
                               ac_shape)
-
 
     # === Model ===
     pi = MLPPolicy(CurrentState.state_shape,
@@ -138,9 +142,7 @@ def main():
             pi.cpu()
             sd = deepcopy(pi.cpu().state_dict())
             # test_reward = test(test_env, MLPPolicy, sd, args)
-            # test_reward = test_existing_env(test_env, MLPPolicy, sd, args)
-            test_reward, videolist = Test_and_Save_Video(test_env, MLPPolicy, sd, args)
-
+            test_reward = test_existing_env(test_env, MLPPolicy, sd, args)
             # Plot result
             print('Average Test Reward: {}\n '.format(round(test_reward)))
             if args.vis:
@@ -161,6 +163,19 @@ def main():
             if test_reward > MAX_REWARD:
                 print('--'*45)
                 print('New High Score!\n')
+
+                if args.video:
+                    vid_reward, videolist = Test_and_Save_Video(video_env, MLPPolicy, sd, args)
+                    name = os.path.join(
+                        args.result_dir,
+                        'VIDEO{}_T{}i_V{}.pt'.format(frame,
+                                                     round(test_reward, 1),
+                                                     round(vid_reward, 1)))
+                    print('Saving Video List')
+                    torch.save(videolist, name)
+                elif args.render:
+                    test_and_render(test_env, MLPPolicy, sd, args)
+
                 name = os.path.join(
                     args.checkpoint_dir,
                     'BESTDICT{}_{}.pt'.format(frame, round(test_reward, 3)))
@@ -169,11 +184,6 @@ def main():
                     args.checkpoint_dir,
                     'BESTMODEL{}_{}.pt'.format(frame, round(test_reward, 3)))
                 torch.save(pi, name)
-                name = os.path.join(
-                    args.result_dir,
-                    'VIDEO{}_{}.pt'.format(frame, round(test_reward, 3)))
-                print('Saving Video List')
-                torch.save(videolist, name)
                 MAX_REWARD = test_reward
 
             if args.cuda:

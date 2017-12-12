@@ -80,6 +80,38 @@ def test(Env, Model, state_dict, args, verbose=False):
     return total_reward/args.num_test
 
 
+def test_and_render(env, Model, state_dict, args, verbose=False):
+    ''' Uses existing environment '''
+    # == Environment
+    ob_shape = env.observation_space.shape[0]
+    ac_shape = env.action_space.shape[0]
+    CurrentState = StackedState(1, args.num_stack, ob_shape)
+
+    # == Model
+    pi = Model(ob_shape, ac_shape)
+    pi = Model(CurrentState.state_shape,
+               ac_shape,
+               hidden=args.hidden)
+    pi.load_state_dict(state_dict)
+
+    # Testing
+    total_reward = []
+    episode_reward = 0
+    state = env.reset()
+    while True:
+        CurrentState.update(state)
+        value, action = pi.act(CurrentState())
+        cpu_actions = action.data.cpu().numpy()[0]
+        state, reward, done, info = env.step(cpu_actions)
+        env.render()
+        episode_reward += reward
+        if done:
+            if verbose: print(episode_reward)
+            total_reward.append(episode_reward)
+            episode_reward = 0
+            break
+
+
 # Video
 def make_video(vid, filenname):
     print('-'*50)
@@ -101,11 +133,7 @@ def Test_and_Save_Video(test_env, Model, state_dict, args, verbose=False):
 
     :output      - Average complete episodic reward
     '''
-    # Use only 1 processor for test
-    if args.cuda:
-        TestState.cuda()
-
-     # == Model
+    # == Model
     ob_shape = test_env.observation_space.shape[0]
     ac_shape = test_env.action_space.shape[0]
     CurrentState = StackedState(1, args.num_stack, ob_shape)
@@ -115,7 +143,6 @@ def Test_and_Save_Video(test_env, Model, state_dict, args, verbose=False):
                ac_shape,
                hidden=args.hidden)
     pi.load_state_dict(state_dict)
-
     # Test environments
     total_reward, episode_reward, best_episode_reward = 0, 0, -999
     for i in range(args.num_test):
