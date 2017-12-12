@@ -44,7 +44,6 @@ class Base(MyGymEnv):
         print('Robot name: {}, Target name={}'.format(self.robot_name, self.target_name))
         print('XML fileme: {}, Path={}'.format(self.model_xml, self.XML_PATH))
 
-
     def initialize_scene(self):
         return Scene(self.gravity, self.timestep, self.frame_skip)
 
@@ -114,6 +113,88 @@ class Base(MyGymEnv):
 
     def camera_adjust(self):
         self.camera.move_and_look_at(0.5, 0.5, 0.5, 0, 0, 0)
+
+
+class Reacher_plane(Base):
+    ''' 2DoF Reacher in a plane
+    No joint limits
+    1 DoF each joint (only z-axis)
+    target random in 3D space, not every point is
+    '''
+    def __init__(self, potential_constant=100,
+                 electricity_cost=-0.1,
+                 stall_torque_cost=-0.01,
+                 joints_at_limit_cost=-0.01,
+                 gravity=9.81, RGB=False):
+        Base.__init__(self, XML_PATH=PATH_TO_CUSTOM_XML,
+                        robot_name='robot_arm',
+                        target_name='target',
+                        model_xml='reacher_plane.xml',
+                        ac=2, obs=13, gravity=gravity, RGB=RGB)
+
+
+    def robot_specific_reset(self):
+        self.motor_names = ["robot_shoulder_joint", "robot_elbow_joint"] # , "right_shoulder2", "right_elbow"]
+        self.motor_power = [75, 75] #, 75, 75]
+        self.motors = [self.jdict[n] for n in self.motor_names]
+
+        # target and potential
+        self.robot_reset()
+        self.target_reset()
+        self.calc_to_target_vec()
+        self.potential = self.calc_potential()
+
+    def robot_reset(self):
+        ''' self.np_random for correct seed. '''
+        for j in self.robot_joints.values():
+            j.reset_current_position(
+                self.np_random.uniform( low=-0.01, high=0.01 ), 0)
+            j.set_motor_torque(0)
+
+    def target_reset(self):
+        ''' self.np_random for correct seed. '''
+        for j in self.target_joints.values():
+                j.reset_current_position( self.np_random.uniform( low=-0.2, high=0.2 ), 0)
+
+    def calc_to_target_vec(self):
+        ''' gets hand position, target position and the vector in bewteen'''
+        self.target_position = np.array(self.target_parts['target'].pose().xyz())
+        self.hand_position = np.array(self.parts['robot_hand'].pose().xyz())
+        self.to_target_vec = self.hand_position - self.target_position
+
+    def calc_state(self):
+        j = np.array([j.current_relative_position()
+                    for j in self.robot_joints.values()], dtype=np.float32).flatten()
+        self.joints_at_limit = np.count_nonzero(np.abs(j[0::2]) > 0.99)
+        self.joint_positions = j[0::2]
+        self.joint_speeds = j[1::2]
+        self.calc_to_target_vec()
+        return np.concatenate((self.target_position,
+                               self.hand_position,
+                               self.to_target_vec,
+                               self.joint_positions,
+                               self.joint_speeds),)
+
+    def calc_reward(self, a):
+        potential_old = self.potential
+        self.potential = self.calc_potential()
+
+        # cost
+        electricity_cost  = self.electricity_cost  * float(np.abs(a*self.joint_speeds).mean())  # let's assume we have DC motor with controller, and reverse current braking
+        electricity_cost += self.stall_torque_cost * float(np.square(a).mean())
+        joints_at_limit_cost = float(self.joints_at_limit_cost * self.joints_at_limit)
+
+        # Save rewards/they do in roboschool, don't know why.
+        self.rewards = [float(self.potential - potential_old), float(electricity_cost)]
+        return sum(self.rewards)
+
+    def calc_potential(self):
+        return -self.potential_constant*np.linalg.norm(self.to_target_vec)
+
+    def get_rgb(self):
+        rgb, _, _, _, _ = self.camera.render(False, False, False) # render_depth, render_labeling, print_timing)
+        rendered_rgb = np.fromstring(rgb, dtype=np.uint8).reshape( (self.VIDEO_H,self.VIDEO_W,3) )
+        return rendered_rgb
 
 
 class CustomReacher2DoF(Base):
@@ -554,9 +635,12 @@ def test():
     elif dof == 6:
         env = CustomReacher6DoF()
         print('CustomReacher6DoF')
+    elif dof == 88:
+        env = Reacher_plane()
+        print('Reacher_plane')
     elif dof == 99:
         nproc=4
-        env = make_parallel_environments(CustomReacher2, 10, nproc, 200, -10, -1, -1, 200)
+        env = make_parallel_environments(CustomReacher2DoF, 10, nproc, 200, -10, -1, -1, 200)
         print('Parallel CustomReacher')
 
     if dof == 99:

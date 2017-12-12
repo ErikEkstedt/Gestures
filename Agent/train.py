@@ -51,7 +51,7 @@ def exploration(pi, CurrentState, rollouts, args, result,  env):
 
 
 def train(pi, args, rollouts, optimizer_pi):
-    value, _, _, _ = pi.sample(rollouts.get_last_state())
+    value, _, _, _ = pi.sample(rollouts.get_last_state()) # one extra
     rollouts.compute_returns(value.data, args.no_gae, args.gamma, args.tau)
 
     # Calculate Advantage (normalize)
@@ -94,8 +94,6 @@ def train(pi, args, rollouts, optimizer_pi):
     return vloss, ploss, ent
 
 
-
-
 def Exploration_single(pi, CurrentState, rollouts, args, result,  env):
     ''' Exploration part of PPO training:
     1. Sample actions and gather rewards trajectory for num_steps.
@@ -120,8 +118,10 @@ def Exploration_single(pi, CurrentState, rollouts, args, result,  env):
 
         # If done then update final rewards and reset episode reward
         if done:
-            idx = (1-masks)
-            result.update_list(idx)
+            result.tmp_final_rewards *= masks
+            result.tmp_final_rewards += (1 - masks) * result.episode_rewards
+            result.episode_rewards *= masks
+            result.update_list()
             state = env.reset()
 
         result.episode_rewards *= masks                                # reset episode reward
@@ -140,6 +140,9 @@ def Exploration_single(pi, CurrentState, rollouts, args, result,  env):
                         value.data,
                         reward,
                         masks)
+
+
+
 
 # -----------------
 def Exploration_RGB(pi, CurrentState, rollouts, args, result,  env):

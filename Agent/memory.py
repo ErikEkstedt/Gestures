@@ -1,6 +1,7 @@
 import torch
 import numpy as np
 from torch.utils.data.sampler import BatchSampler, SubsetRandomSampler
+import time
 
 class Results_single(object):
     def __init__(self, max_n=200, max_u=200):
@@ -76,6 +77,10 @@ class Results(object):
         self.ent = []
         self.updates = 0
         self.max_u = max_u
+        self.start_time = time.time()
+
+    def time(self):
+        return time.time() - self.start_time
 
     def update_list(self):
         self.final_reward_list.insert(0, self.tmp_final_rewards.mean())
@@ -109,8 +114,8 @@ class Results(object):
         v, p, e = self.get_loss_mean()
         v, p, e = round(v, 2), round(p,2), round(e,2),
         r       = round(self.get_reward_mean(), 2)
-        print('Steps: {}, Avg.Rew: {}, VLoss: {}, PLoss: {},  Ent: {}'.format(
-            frame, r, v, p, e))
+        print('Time: {}, Steps: {}, Avg.Rew: {}, VLoss: {}, PLoss: {},  Ent: {}'.format(
+            int(self.time()), frame, r, v, p, e))
 
     def vis_plot(self, vis, frame, std):
         tr_rew_mean = self.get_reward_mean()
@@ -322,106 +327,60 @@ class RolloutStorage(object):
             yield states_batch, actions_batch, return_batch, masks_batch, old_action_log_probs_batch, adv_targ
 
 
-# not really working on/using
-class Memory(object):
-    '''Memory
-    Larger memory class that can store many states and use the latest for
-    on-Policy training and then keep around the data for off-policy training.
+def test():
+    from arguments import get_args
+    from environments.custom_reacher import CustomReacher2DoF, make_parallel_environments
 
-    Combining replaymemory from dqn and policy training (PPO)
-    '''
-    def __init__(self, num_data, max_memory=None):
-        super(Memory,self).__init__()
-        self.n = 0
-        self.states  = []
-        self.obs     = []
-        self.values  = []
-        self.rewards = []
-        self.masks   = []
-        self.actions = []
+    args = get_args()
 
-        self.returns = []
+    s_env = CustomReacher2DoF(args.potential_constant,
+                                args.electricity_cost,
+                                args.stall_torque_cost,
+                                args.joints_at_limit_cost,
+                                args.episode_time)
 
-        # returns
-        self.gamma = gamma
-        self.tau = tau
+    m_env = make_parallel_environments(CustomReacher2DoF,
+                                        args.seed,
+                                        args.num_processes,
+                                        args.potential_constant,
+                                        args.electricity_cost,
+                                        args.stall_torque_cost,
+                                        args.joints_at_limit_cost,
+                                        args.episode_time)
 
-    def cuda(self):
-        pass
+    m_ob = m_env.observation_space.shape[0]
+    m_ac = m_env.action_space.shape[0]
+    print('Mult:\nob: {}\nac: {}\n'.format(m_ob, m_ac))
 
-    def cpu(self):
-        pass
+    s_ob = s_env.observation_space.shape[0]
+    s_ac = s_env.action_space.shape[0]
+    print('Single:\nob: {}\nac: {}\n'.format(s_ob, s_ac))
 
-    def store(self, step, state, obs, action, value_preds, reward, mask):
-        self.states[step + 1].copy_(state)
-        self.obs[step + 1].copy_(obs)
-        self.actions[step].copy_(action)
-        self.value_preds[step].copy_(value_pred)
-        self.rewards[step].copy_(reward)
-        self.masks[step].copy_(mask)
+    # === Memory ===
+    multstate = StackedState(args.num_processes, args.num_stack, m_ob)
+    singlestate = StackedState(1, args.num_stack, s_ob)
 
-    def get_dqn_batch(self, M=32):
-        pass
+    print('Num_stack:', args.num_stack)
+    print('MultState:\nsize:{}\n'.format(multstate.size()))
+    print('SingleState:\nsize:{}\n'.format(singlestate.size()))
 
-    def compute_returns(self, N, use_gae):
-        '''
-        Data:
+    m = m_env.reset()
+    multstate.update(m)
 
-        values
-        rewards
+    s = s_env.reset()
+    singlestate.update(s)
 
-        params:
-        gamma
-        tau
+    print('MultState:\nCall:{}\n'.format(multstate()))
+    print('SingleState:\nCall:{}\n'.format(singlestate()))
 
-        '''
-        rewards = self.rewards[-N:]  # Get the N latest data points
-        values = self.values[-N:]
+    m = m_env.reset()
+    multstate.update(m)
+    s = s_env.reset()
+    singlestate.update(s)
 
-        returns = []
-        returns.append(next_value)
-        if use_gae:
-            gae = 0
-            for i, r in reversed(enumerate(rewards)):
-                delta = r + gamma * values[i+1] * masks[i] - values[i]
-                gae = delta + gamma * tau * masks[i] * gae
-                R = gae + values[i]
-                returns.insert(0, R)
-        else:
-            for i, r in reversed(enumerate(self.rewards)):
-                R = r + gamma * returns[0] * masks[i]  # latest entry of returns.
-                returns.insert(0, R)
-
-    def Batch_RETURns(self, N_latest_data_points):
-        '''
-        This is part of the general goal to calculate advantage
-        functions. Requires returns
-        '''
-
-        returns = self.compute_returns(N=N_latest_data_points)
-
-        advantages = agent.rollouts.returns[:-1] - agent.rollouts.value_preds[:-1]
-        advantages = (advantages - advantages.mean()) / (advantages.std() + 1e-5)
-
-        for pp in range(args.ppo_epoch):
-            sampler = BatchSampler(SubsetRandomSampler(range(args.num_steps)), args.batch_size, drop_last=False)
-            for indices in sampler:
-                indices = torch.LongTensor(indices)
-
-                if args.cuda:
-                    indices = indices.cuda()
-
-                # Reshape to do in a single forward pass for all steps
-                if args.cuda:
-                    states_batch  = agent.rollouts.states[:-1][indices].cuda()
-                    actions_batch = agent.rollouts.actions[indices].cuda()
-                    return_batch  = agent.rollouts.returns[:-1][indices].cuda()
-                    obs_batch  = agent.rollouts.obs[:-1][indices].cuda()
-                else:
-                    states_batch  = agent.rollouts.states[:-1][indices]
-                    actions_batch = agent.rollouts.actions[indices]
-                    return_batch  = agent.rollouts.returns[:-1][indices]
-                    obs_batch  = agent.rollouts.obs[:-1][indices]
+    print('MultState:\nCall:{}\n'.format(multstate()))
+    print('SingleState:\nCall:{}\n'.format(singlestate()))
 
 
-
+if __name__ == '__main__':
+    test()

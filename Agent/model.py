@@ -68,7 +68,6 @@ class MLPPolicy(nn.Module):
         v = self.value(x)
         ac_mean = self.action(x)
         ac_std = self.std(ac_mean)  #std annealing
-        # ac_mean, ac_std = self.diag_gauss(x, std)
         return v, ac_mean, ac_std
 
     def evaluate_actions(self, x, actions):
@@ -84,23 +83,15 @@ class MLPPolicy(nn.Module):
         dist_entropy = dist_entropy.sum(-1).mean()
         return v, action_log_probs, dist_entropy
 
-    def sample(self, s_t, deterministic=False):
+    def sample(self, s_t):
         input = Variable(s_t, volatile=True)
         v, action_mean, action_logstd = self(input)
         action_std = action_logstd.exp()
 
-        if deterministic:
-            action = action_mean
-        else:
-            # only care about noise if stochastic
-            # normal dist. mean=0, std=1
-            noise = Variable(torch.randn(action_std.size()))
-            if action_mean.is_cuda:
-                noise = noise.cuda()
-                # action_std = action_std.cuda()
-            # noise_scaler is for scaling the randomneww on the fly.
-            # debugging exploration
-            action = action_mean +  action_std * noise
+        noise = Variable(torch.randn(action_std.size()))
+        if action_mean.is_cuda:
+            noise = noise.cuda()
+        action = action_mean +  action_std * noise
 
         # calculate `old_log_probs` directly in exploration.
         action_log_probs = -0.5 * ((action - action_mean) / action_std).pow(2)\
@@ -110,6 +101,11 @@ class MLPPolicy(nn.Module):
         dist_entropy = 0.5 + math.log(2 * math.pi) + action_log_probs
         dist_entropy = dist_entropy.sum(-1).mean()
         return v, action, action_log_probs, action_std
+
+    def act(self, s_t):
+        input = Variable(s_t, volatile=True)
+        v, action, _ = self(input)
+        return v, action
 
 
 class Obs_stats(object):
