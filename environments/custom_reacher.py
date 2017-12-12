@@ -180,6 +180,7 @@ class CustomReacher2DoF(Base):
                                self.to_target_vec,
                                self.joint_positions,
                                self.joint_speeds),)
+
     def calc_reward(self, a):
         potential_old = self.potential
         self.potential = self.calc_potential()
@@ -189,7 +190,7 @@ class CustomReacher2DoF(Base):
         electricity_cost += self.stall_torque_cost * float(np.square(a).mean())
         joints_at_limit_cost = float(self.joints_at_limit_cost * self.joints_at_limit)
 
-        # Save rewards ?
+        # Save rewards/they do in roboschool, don't know why.
         self.rewards = [float(self.potential - potential_old), float(electricity_cost)]
         return sum(self.rewards)
 

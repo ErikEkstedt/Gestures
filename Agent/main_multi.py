@@ -8,11 +8,11 @@ import torch.nn as nn
 from torch.autograd import Variable
 import torch.optim as optim
 
-from utils import log_print
+from utils import log_print, make_log_dirs
 from arguments import FakeArgs, get_args
 from model import MLPPolicy
 from memory import RolloutStorage, StackedState, Results
-from train import Training, Exploration
+from train import train, exploration
 from test import test
 
 from environments.custom_reacher import make_parallel_environments
@@ -20,47 +20,10 @@ from environments.custom_reacher import make_parallel_environments
 from environments.custom_reacher import CustomReacher3DoF as CustomReacher
 # from environments.custom_reacher import CustomReacher6DoF as CustomReacher
 
-def make_log_dirs(args):
-    ''' ../root/day/DoF/run/ '''
-    def get_today():
-        t = datetime.date.today().ctime().split()[1:3]
-        s = "".join(t)
-        return s
-
-    rootpath = args.log_dir
-    if not os.path.exists(rootpath):
-        os.mkdir(rootpath)
-
-    day = get_today()
-    rootpath = os.path.join(rootpath, day)
-    if not os.path.exists(rootpath):
-        os.mkdir(rootpath)
-
-    dof = 'DoF' + str(2)
-    rootpath = os.path.join(rootpath, dof)
-    if not os.path.exists(rootpath):
-        os.mkdir(rootpath)
-
-    run = 0
-    while os.path.exists("{}/run-{}".format(rootpath, run)):
-        run += 1
-
-    rootpath = "{}/run-{}".format(rootpath, run)
-    result_dir = "{}/results".format(rootpath)
-    checkpoint_dir = "{}/checkpoints".format(rootpath)
-    os.mkdir(rootpath)
-    os.mkdir(checkpoint_dir)
-    os.mkdir(result_dir)
-
-    args.log_dir = rootpath
-    args.result_dir = result_dir
-    args.checkpoint_dir = checkpoint_dir
-    return args
 
 def main():
-    args = get_args()  # Real argparser
+    args = get_args()
     make_log_dirs(args)
-
     num_updates = int(args.num_frames) // args.num_steps // args.num_processes
     args.num_updates = num_updates
 
@@ -99,6 +62,7 @@ def main():
                    ac_shape,
                    hidden=args.hidden,
                    total_frames=args.num_frames)
+
     pi.train()
     optimizer_pi = optim.Adam(pi.parameters(), lr=args.pi_lr)
 
@@ -116,8 +80,8 @@ def main():
 
     MAX_REWARD = -999999
     for j in range(num_updates):
-        Exploration(pi, CurrentState, rollouts, args, result, env)
-        vloss, ploss, ent = Training(pi, args, rollouts, optimizer_pi)
+        exploration(pi, CurrentState, rollouts, args, result, env)
+        vloss, ploss, ent = train(pi, args, rollouts, optimizer_pi)
 
         rollouts.last_to_first()
         result.update_loss(vloss.data, ploss.data, ent.data)

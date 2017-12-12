@@ -1,3 +1,41 @@
+import pathlib
+import datetime
+import os
+
+def make_log_dirs(args):
+    ''' Creates dirs:
+        ../root/day/DoF/run/
+        ../root/day/DoF/run/checkpoints
+        ../root/day/DoF/run/results
+    '''
+    def get_today():
+        t = datetime.date.today().ctime().split()[1:3]
+        s = "".join(t)
+        return s
+
+    rootpath = args.log_dir
+    day = get_today()
+    dof = 'DoF' + str(args.dof)
+    rootpath = os.path.join(rootpath, day, dof)
+
+    run = 0
+    while os.path.exists("{}/run-{}".format(rootpath, run)):
+        run += 1
+
+    # Create Dirs
+    pathlib.Path(rootpath).mkdir(parents=True, exist_ok=True)
+    rootpath = "{}/run-{}".format(rootpath, run)
+    result_dir = "{}/results".format(rootpath)
+    checkpoint_dir = "{}/checkpoints".format(rootpath)
+    os.mkdir(rootpath)
+    os.mkdir(checkpoint_dir)
+    os.mkdir(result_dir)
+
+    # append to args
+    args.log_dir = rootpath
+    args.result_dir = result_dir
+    args.checkpoint_dir = checkpoint_dir
+
 def log_print(agent, dist_entropy, value_loss, floss, action_loss, j):
     print("\nUpdate: {}, frames:    {} \
           \nAverage final reward:   {}, \

@@ -29,7 +29,6 @@ def test(Env, Model, state_dict, args, verbose=False):
 
             value, action, _, _ = pi.sample(CurrentState(), deterministic=True)
             cpu_actions = action.data.cpu().numpy()[0]
-            # cpu_actions = action.data.squeeze(1).cpu().numpy()
             state, reward, done, info = env.step(cpu_actions)
             total_reward += reward
             episode_reward += reward
@@ -39,3 +38,18 @@ def test(Env, Model, state_dict, args, verbose=False):
                 done = False
                 break
     return total_reward/args.num_test
+
+
+def main():
+    from arguments import get_args
+    from model import MLPPolicy
+    from environments.custom_reacher import CustomReacher2DoF
+
+    args = get_args()
+    args.hidden=128
+    sd = torch.load('/home/erik/com_sci/Master_code/Project/Agent/Result/Dec9-SimpleCustomReacher/checkpoints/Good_state_dict251_40.30.pt')
+    test(CustomReacher2DoF, MLPPolicy, sd, args, True)
+
+
+if __name__ == '__main__':
+    main()

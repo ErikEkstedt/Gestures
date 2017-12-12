@@ -1,11 +1,10 @@
 from visdom import Visdom
-import datetime
-import os
 import numpy as np
 import torch
 
 # Run 'python -m visdom.server'
 # First goal - make visualizer that draws reward vs frames
+
 
 def to_numpy(x):
     if type(x) is torch.Tensor:
@@ -19,6 +18,7 @@ def to_numpy(x):
         pass
     return x
 
+
 class VisLogger(object):
     def __init__(self, args):
         ''' Visdom logger
@@ -31,50 +31,23 @@ class VisLogger(object):
             Make sure to execute 'python -m visdom.server' \
             (with the right python version) "
 
-        self._mkdirs(log_dir, name)  # Creates: self.log_dir, self.checkpoint_dir
         self.best_score = None       # best score achieved.
+        self.args_string = self.args_to_list(args, _print=True)
 
+        # Log args in vis-text and print to console
         self.description = self.viz.text('')
-        self.args_string = self.args_to_list(args)
         for line in self.args_string:
             self.viz.text(line, win=self.description, append=True)
-        self.print_args()
 
         self.windows = {}
 
-    def print_args(self, ):
-        for s in self.args_string:
-            print(s)
-
-    def args_to_list(self, args):
+    def args_to_list(self, args, _print=True):
         l = []
         for arg, value in args._get_kwargs():
             s = "{}: {}".format(arg, value)
+            if _print: print(s)
             l.append(s)
         return l
-
-    def get_logdir(self):
-        return self.log_dir, self.video_dir, self.checkpoint_dir
-
-    def _mkdirs(self, log_dir, name):
-        if not os.path.exists(log_dir):
-            os.mkdir(log_dir)
-        day = get_today()
-        if name:
-            log_dir = os.path.join(log_dir, name, day)
-        else:
-            log_dir = os.path.join(log_dir, day)
-
-        if not os.path.exists(log_dir):
-            os.mkdir(log_dir)
-        run = 0
-        while os.path.exists("%s/run-%d" % (log_dir, run)):
-            run += 1
-        self.log_dir = "%s/run-%d" % (log_dir, run)
-        self.video_dir = "%s/video" % (self.log_dir)
-        self.checkpoint_dir = "%s/checkpoints" % (self.log_dir)
-        os.mkdir(self.log_dir)
-        os.mkdir(self.checkpoint_dir)
 
     def line_update(self, Xdata, Ydata, name):
         '''
@@ -114,25 +87,20 @@ class VisLogger(object):
 
 
 def test():
-    # import torch
-    # import time
-    # import matplotlib.pyplot as plt
-    # import numpy as np
-    #
-    # logger = VisLogger()
-    # box = torch.Tensor([1,2,3,5,9,5,3,2,1])
-    # logger.bar_update(box, name='box1')
-    # time.sleep(1)
-    # logger.bar_update(box, name='box1')
-    # time.sleep(1)
-    # logger.bar_update(3*box, name='box1')
-    # time.sleep(1)
-    # logger.bar_update(3*box, name='box2')
-    from arguments import get_args
-    args=get_args()
-    make_log_dirs(args)
+    import torch
+    import time
+    import matplotlib.pyplot as plt
+    import numpy as np
 
-
+    logger = VisLogger()
+    box = torch.Tensor([1,2,3,5,9,5,3,2,1])
+    logger.bar_update(box, name='box1')
+    time.sleep(1)
+    logger.bar_update(box, name='box1')
+    time.sleep(1)
+    logger.bar_update(3*box, name='box1')
+    time.sleep(1)
+    logger.bar_update(3*box, name='box2')
 
 
 if __name__ == '__main__':

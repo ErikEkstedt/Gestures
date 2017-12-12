@@ -11,12 +11,14 @@ def get_args():
                        help='Number of processors used (default: 4)')
     parser.add_argument('--env-id', default='CustomReacher',
                        help='Environment used (default: CustomReacher)')
+    parser.add_argument('--dof', type=int, default=2,
+                       help='DoF in environment (default: 2)')
 
     # Custom_reacher Reward penalties
-    parser.add_argument('--episode-time', type=int, default=300)
-    parser.add_argument('--potential-constant', type=float, default=100)
-    parser.add_argument('--electricity-cost', type=float, default=-0.1)
-    parser.add_argument('--stall-torque-cost', type=float, default=-0.01)
+    parser.add_argument('--episode-time',         type=int, default=300)
+    parser.add_argument('--potential-constant',   type=float, default=100)
+    parser.add_argument('--electricity-cost',     type=float, default=-0.1)
+    parser.add_argument('--stall-torque-cost',    type=float, default=-0.01)
     parser.add_argument('--joints-at-limit-cost', type=float, default=-0.01)
 
     # PPO Loss
@@ -30,8 +32,8 @@ def get_args():
                         help='discount factor for rewards (default: 0.99)')
     parser.add_argument('--tau', type=float, default=0.95,
                         help='gae parameter (default: 0.95)')
-    parser.add_argument('--entropy-coef', type=float, default=0.01,
-                        help='entropy term coefficient (default: 0.01)')
+    parser.add_argument('--entropy-coef', type=float, default=0.0,
+                        help='entropy term coefficient (default: 0.0)')
     parser.add_argument('--clip-param', type=float, default=0.2,
                         help='ppo clip parameter (default: 0.2)')
     parser.add_argument('--max-grad-norm', type=float, default=5,
