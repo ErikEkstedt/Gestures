@@ -180,13 +180,21 @@ def exploration_rgb(pi, CurrentState, rollouts, args, result,  env):
 
         # If done then update final rewards and reset episode reward
         result.episode_rewards += reward
+
         if sum(done) > 0:
-            idx = (1-masks)
-            result.update_list(idx)
+            # If done then clean episode reward and update final rewards
+            result.tmp_final_rewards *= masks
+            result.tmp_final_rewards += (1 - masks) * result.episode_rewards
+            result.episode_rewards *= masks
+            result.update_list()
+
 
         result.episode_rewards *= masks                                # reset episode reward
         if args.cuda:
             masks = masks.cuda()
+
+        # reset current states for envs done
+        CurrentState.check_and_reset(masks)
 
         # reset current states for envs done
         CurrentState.check_and_reset(masks)

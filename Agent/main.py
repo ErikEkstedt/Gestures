@@ -14,7 +14,7 @@ from model import MLPPolicy
 from memory import RolloutStorage, StackedState, Results
 
 from train import train, exploration
-from test import test, test_existing_env
+from test import test, test_existing_env, Test_and_Save_Video
 
 from environments.custom_reacher import make_parallel_environments
 
@@ -49,10 +49,7 @@ def main():
 
     if args.num_processes > 1:
         from train import exploration
-        if args.RGB:
-            env = make_parallel_environments_RGB(CustomReacher,args)
-        else:
-            env = make_parallel_environments(CustomReacher,args)
+        env = make_parallel_environments(CustomReacher,args)
 
     else:
         from train import Exploration_single as exploration
@@ -66,7 +63,8 @@ def main():
                              args.electricity_cost,
                              args.stall_torque_cost,
                              args.joints_at_limit_cost,
-                             args.episode_time)
+                             args.episode_time,
+                             RGB=True)
 
 
     ob_shape = env.observation_space.shape[0]
@@ -140,7 +138,8 @@ def main():
             pi.cpu()
             sd = deepcopy(pi.cpu().state_dict())
             # test_reward = test(test_env, MLPPolicy, sd, args)
-            test_reward = test_existing_env(test_env, MLPPolicy, sd, args)
+            # test_reward = test_existing_env(test_env, MLPPolicy, sd, args)
+            test_reward, videolist = Test_and_Save_Video(test_env, MLPPolicy, sd, args)
 
             # Plot result
             print('Average Test Reward: {}\n '.format(round(test_reward)))
@@ -170,6 +169,11 @@ def main():
                     args.checkpoint_dir,
                     'BESTMODEL{}_{}.pt'.format(frame, round(test_reward, 3)))
                 torch.save(pi, name)
+                name = os.path.join(
+                    args.result_dir,
+                    'VIDEO{}_{}.pt'.format(frame, round(test_reward, 3)))
+                print('Saving Video List')
+                torch.save(videolist, name)
                 MAX_REWARD = test_reward
 
             if args.cuda:

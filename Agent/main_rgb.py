@@ -17,14 +17,14 @@ from model import MLPPolicy
 from memory import RolloutStorage, StackedState, Results
 
 from train import train, exploration_rgb
-from test import test, test_existing_env
+from test import test, test_existing_env, Test_and_Save_Video
 
-from environments.custom_reacher import make_parallel_environments
 from environments.custom_reacher import make_parallel_environments_RGB
 
 
 def main():
     args = get_args()
+    args.RGB=True
 
     # === Environment ===
     if args.dof == 6:
@@ -54,7 +54,6 @@ def main():
     if args.num_processes > 1:
         from train import exploration
         env = make_parallel_environments_RGB(CustomReacher,args)
-
     else:
         from train import exploration_single as exploration
         env = CustomReacher(args.potential_constant,
@@ -67,7 +66,8 @@ def main():
                              args.electricity_cost,
                              args.stall_torque_cost,
                              args.joints_at_limit_cost,
-                             args.episode_time)
+                             args.episode_time,
+                             RGB=args.RGB)
 
 
     ob_shape = env.observation_space.shape[0]
@@ -108,7 +108,7 @@ def main():
         plt.imshow(np.transpose(npimg, (1,2,0)), interpolation='nearest')
         plt.show()
 
-    show_state(obs)
+    # show_state(obs)
 
     CurrentState.update(s)
     rollouts.states[0].copy_(CurrentState())
@@ -137,7 +137,8 @@ def main():
 
         #  ==== TEST ======
         nt = 5
-        if not args.no_test and j % args.test_interval < nt and j > nt:
+        # if not args.no_test and j % args.test_interval < nt and j > nt:
+        if not args.no_test and j % args.test_interval < nt:
             ''' `j % args.test_interval < 5` is there because:
             If tests are not performed during some interval bad luck might make
             it that although the model becomes better the test occured
@@ -154,7 +155,8 @@ def main():
             pi.cpu()
             sd = deepcopy(pi.cpu().state_dict())
             # test_reward = test(test_env, MLPPolicy, sd, args)
-            test_reward = test_existing_env(test_env, MLPPolicy, sd, args)
+            # test_reward = test_existing_env(test_env, MLPPolicy, sd, args)
+            test_reward, videolist = Test_and_Save_Video(test_env, MLPPolicy, sd, args)
 
             # Plot result
             print('Average Test Reward: {}\n '.format(round(test_reward)))
@@ -184,6 +186,10 @@ def main():
                     args.checkpoint_dir,
                     'BESTMODEL{}_{}.pt'.format(frame, round(test_reward, 3)))
                 torch.save(pi, name)
+                name = os.path.join(
+                    args.result_dir,
+                    'VIDEO{}_{}.pt'.format(frame, round(test_reward, 3)))
+                torch.save(videolist, name)
                 MAX_REWARD = test_reward
 
             if args.cuda:

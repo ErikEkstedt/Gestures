@@ -4,7 +4,7 @@ import matplotlib
 import matplotlib.pyplot as plt
 import matplotlib.animation as animation
 
-def make_video(vid, filenname='/tmp/video'):
+def make_video(vid, filename='/tmp/video'):
     fig = plt.figure()
     ims = []
     for frame in tqdm(vid):
@@ -12,9 +12,11 @@ def make_video(vid, filenname='/tmp/video'):
         ims.append([im])
     ani = animation.ArtistAnimation(fig, ims, interval=30, blit=True,
                                     repeat_delay=1000)
-    ani.save(name+'.mp4')
+    ani.save(filename+'.mp4')
 
 if __name__ == '__main__':
-    import sys
-    vid = torch.load(sys.argv[1])
-    make_video(vid, sys.argv[2])
+    from arguments import get_args
+    import torch
+    args = get_args()
+    vid = torch.load(args.load_file)
+    make_video(vid)

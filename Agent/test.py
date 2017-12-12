@@ -4,9 +4,9 @@ import numpy as np
 import torch
 
 import matplotlib
-matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 import matplotlib.animation as animation
+from tqdm import tqdm
 # from OpenGL import GLU # fix for opengl issues on desktop  / nvidia
 
 
@@ -67,7 +67,7 @@ def test(Env, Model, state_dict, args, verbose=False):
         for j in count(1):
             CurrentState.update(state)
 
-            value, action, _, _ = pi.sample(CurrentState(), deterministic=True)
+            value, action, _, _ = pi.act(CurrentState())
             cpu_actions = action.data.cpu().numpy()[0]
             state, reward, done, info = env.step(cpu_actions)
             total_reward += reward
@@ -81,8 +81,9 @@ def test(Env, Model, state_dict, args, verbose=False):
 
 
 # Video
-
 def make_video(vid, filenname):
+    print('-'*50)
+    print('Making Video')
     fig = plt.figure()
     ims = []
     for frame in tqdm(vid):
@@ -92,7 +93,7 @@ def make_video(vid, filenname):
     ani.save(filenname)
 
 
-def Test_and_Save_Video(test_env, pi, args, verbose=False):
+def Test_and_Save_Video(test_env, Model, state_dict, args, verbose=False):
     '''
     Test with video
     :param pi - The policy playing
@@ -101,22 +102,28 @@ def Test_and_Save_Video(test_env, pi, args, verbose=False):
     :output      - Average complete episodic reward
     '''
     # Use only 1 processor for test
-    TestState = StackedState(1, args.num_stack, ob_shape)
     if args.cuda:
         TestState.cuda()
+
+     # == Model
+    ob_shape = test_env.observation_space.shape[0]
+    ac_shape = test_env.action_space.shape[0]
+    CurrentState = StackedState(1, args.num_stack, ob_shape)
+
+    pi = Model(ob_shape, ac_shape)
+    pi = Model(CurrentState.state_shape,
+               ac_shape,
+               hidden=args.hidden)
+    pi.load_state_dict(state_dict)
 
     # Test environments
     total_reward, episode_reward, best_episode_reward = 0, 0, -999
     for i in range(args.num_test):
-        (s, obs) = test_env.reset()
+        (state, obs) = test_env.reset()
         Video = []
         for j in count(1):
-            # Update current state
-            TestState.update(state)
-            Video.append(test_env.render('rgb_array'))
-
-            # Sample actions
-            value, action, _, _ = pi.sample(TestState(), deterministic=True)
+            CurrentState.update(state)
+            value, action = pi.act(CurrentState())
             cpu_actions = action.data.cpu().numpy()[0]
 
             # Observe reward and next state
@@ -136,12 +143,13 @@ def Test_and_Save_Video(test_env, pi, args, verbose=False):
                 done = False
                 break
 
-    videoname='{}/frame_{}_score_{}.mp4'.format(args.video_dir,
-                                            pi.n*args.num_processsor,
-                                            round(best_episode_reward,2))
-    make_video(BestVideo, videoname)
-    print('Saved Video: ', vid_name)
-    return total_reward/args.num_test
+    # videoname='{}/frame_{}_score_{}.pth'.format(args.result_dir,
+                                            # pi.n*args.num_processes,
+                                            # round(best_episode_reward,2))
+    # torch.save(BestVideo, videoname)
+    # make_video(BestVideo, videoname)
+    # print('Saved Video:\n{}\n '.format(videoname))
+    return total_reward/args.num_test, BestVideo
 
 
 def main():
