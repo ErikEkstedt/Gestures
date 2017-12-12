@@ -21,6 +21,7 @@ from environments.custom_reacher import make_parallel_environments
 
 def main():
     args = get_args()
+
     # === Environment ===
     if args.dof == 6:
         print('Not done with 6DoF!')
@@ -95,7 +96,7 @@ def main():
     optimizer_pi = optim.Adam(pi.parameters(), lr=args.pi_lr)
 
     # ==== Training ====
-    print('Learning {}(ac: {})'.format( args.env_id, ac_shape))
+    print('Learning {}(ac: {}, ob: {})'.format( args.env_id, ac_shape, ob_shape))
     print('\nTraining for %d Updates' % num_updates)
     s = env.reset()
     CurrentState.update(s)
@@ -139,6 +140,7 @@ def main():
                 print('-'*45)
                 print('Testing {} episodes'.format(args.num_test))
 
+            pi.cpu()
             sd = deepcopy(pi.cpu().state_dict())
             # test_reward = test(test_env, MLPPolicy, sd, args)
             test_reward = test_existing_env(test_env, MLPPolicy, sd, args)
@@ -154,7 +156,10 @@ def main():
                 args.checkpoint_dir,
                 'dict_{}_TEST_{}.pt'.format(frame, round(test_reward, 3)))
             torch.save(sd, name)
-            torch.save(pi, 'Model-'+name)
+            name = os.path.join(
+                args.checkpoint_dir,
+                'model_{}_TEST_{}.pt'.format(frame, round(test_reward, 3)))
+            torch.save(pi, name )
 
             #  ==== Save best model ======
             if test_reward > MAX_REWARD:
@@ -162,9 +167,12 @@ def main():
                 print('New High Score!\n')
                 name = os.path.join(
                     args.checkpoint_dir,
-                    'BEST{}_{}.pt'.format(frame, round(test_reward, 3)))
+                    'BESTDICT{}_{}.pt'.format(frame, round(test_reward, 3)))
                 torch.save(sd, name)
-                torch.save(pi, 'Model-'+name)
+                name = os.path.join(
+                    args.checkpoint_dir,
+                    'BESTMODEL{}_{}.pt'.format(frame, round(test_reward, 3)))
+                torch.save(pi, name)
                 MAX_REWARD = test_reward
 
             if args.cuda:
