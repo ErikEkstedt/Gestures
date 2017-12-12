@@ -8,6 +8,7 @@ from model import MLPPolicy
 
 
 def main():
+    import time
     args = get_args()
     if args.dof == 2:
         from environments.custom_reacher import CustomReacher2DoF
@@ -44,6 +45,7 @@ def main():
     pi.train()
 
 
+
     total_reward = 0
     for i in range(args.num_test):
         CurrentState.reset()
@@ -57,6 +59,7 @@ def main():
             # Observe reward and next state
             state, reward, done, info = env.step(cpu_actions)
             env.render()
+            print(env.potential)
 
             # If done then update final rewards and reset episode reward
             episode_reward += reward

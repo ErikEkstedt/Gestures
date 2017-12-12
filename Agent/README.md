@@ -10,10 +10,7 @@ Questions:
 * [x] Check that StackedState gives same output for all numbers of processes. YES! (memory.py - test())
 
 
-* [ ] Why is training score and test score so different in magnitue ?
+* good score with Dict_Dof3_bklabla on DoF2 env...
 
-
-Train 2DoF get rigid results
-
-Train 3DoF get rigid results
-* [higher train score - lower test score? How even?
+* [ ] Train 2DoF get rigid results
+* [ ] Train 3DoF get rigid results
