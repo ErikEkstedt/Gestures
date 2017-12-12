@@ -21,26 +21,34 @@ from environments.custom_reacher import make_parallel_environments
 
 def main():
     args = get_args()
-    make_log_dirs(args)
-    num_updates = int(args.num_frames) // args.num_steps // args.num_processes
-    args.num_updates = num_updates
-
-    # Logger
-    if args.vis:
-        from vislogger import VisLogger
-        vis = VisLogger(args)
-
     # === Environment ===
     if args.dof == 6:
         print('Not done with 6DoF!')
         return
         from environments.custom_reacher import CustomReacher6DoF as CustomReacher
-    if args.dof == 3:
+        args.env_id='CustomReacher6DoF'
+    elif args.dof == 3:
         from environments.custom_reacher import CustomReacher3DoF as CustomReacher
-    if args.dof == 2:
+        args.env_id='CustomReacher3DoF'
+    elif args.dof == 2:
         from environments.custom_reacher import CustomReacher2DoF as CustomReacher
+        args.env_id='CustomReacher2DoF'
     else:
         from environments.custom_reacher import Reacher_plane as CustomReacher
+        args.env_id='Reacher_plane'
+
+    # Logger
+    make_log_dirs(args)
+    num_updates = int(args.num_frames) // args.num_steps // args.num_processes
+    args.num_updates = num_updates
+
+    if args.vis:
+        from vislogger import VisLogger
+        vis = VisLogger(args)
+
+    print(args.env_id)
+    input()
+
 
 
     if args.num_processes > 1:
@@ -70,6 +78,7 @@ def main():
 
     ob_shape = env.observation_space.shape[0]
     ac_shape = env.action_space.shape[0]
+    print('Action size:', ac_shape)
 
     # === Memory ===
     result = Results(max_n=200, max_u=10)
