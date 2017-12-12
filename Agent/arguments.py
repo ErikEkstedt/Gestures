@@ -67,7 +67,8 @@ def get_args():
                         help='how many updates/test (default: 50)')
     parser.add_argument('--num-test', type=int, default=20,
                         help='Number of test after training (default: 20)')
-
+    parser.add_argument('--load-file', default='/tmp/',
+                        help='state_dic to load')
     # Log
     parser.add_argument('--vis-interval', type=int, default=1,
                         help='vis interval, one log per n updates (default: 1)')

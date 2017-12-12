@@ -19,24 +19,46 @@ from environments.custom_reacher import CustomReacher
 
 
 def main():
-    args = get_args()  # Real argparser
-    args.num_processes = 1  # only here temporary
+    args = get_args()
+    make_log_dirs(args)
     num_updates = int(args.num_frames) // args.num_steps // args.num_processes
-    args.updates = num_updates
-    ds = print_args(args)
+    args.num_updates = num_updates
 
+    # Logger
     if args.vis:
         from vislogger import VisLogger
-        vis = VisLogger(description_list=ds, log_dir=args.log_dir)
-        args.log_dir, args.video_dir, args.checkpoint_dir = vis.get_logdir()
+        vis = VisLogger(args)
 
-    torch.manual_seed(args.seed)
-    env = CustomReacher()
-    env.seed(args.seed)
+    # === Environment ===
+    if args.dof == 6:
+        print('Not done with 6DoF!')
+        return
+        from environments.custom_reacher import CustomReacher6DoF as CustomReacher
+    if args.dof == 3:
+        from environments.custom_reacher import CustomReacher3DoF as CustomReacher
+    if args.dof == 2:
+        from environments.custom_reacher import CustomReacher2DoF as CustomReacher
+    else:
+        from environments.custom_reacher import Reacher_plane as CustomReacher
 
-    result = Results_single(max_n=200, max_u=10)
+    print('Learning CustomReacher{}DoF'.format(args.dof))
+
+    env = CustomReacher(args.potential_constant,
+                             args.electricity_cost,
+                             args.stall_torque_cost,
+                             args.joints_at_limit_cost,
+                             args.episode_time)
+    test_env = CustomReacher(args.potential_constant,
+                             args.electricity_cost,
+                             args.stall_torque_cost,
+                             args.joints_at_limit_cost,
+                             args.episode_time)
+
     ob_shape = env.observation_space.shape[0]
     ac_shape = env.action_space.shape[0]
+
+    # === Memory ===
+    result = Results(max_n=200, max_u=10)
     CurrentState = StackedState(args.num_processes,
                                 args.num_stack,
                                 ob_shape)
@@ -46,6 +68,8 @@ def main():
                               CurrentState.size()[1],
                               ac_shape)
 
+
+    # === Model ===
     pi = MLPPolicy(CurrentState.state_shape,
                    ac_shape,
                    hidden=args.hidden,

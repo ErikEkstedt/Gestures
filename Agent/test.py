@@ -1,6 +1,6 @@
-import torch
 from itertools import count
 from memory import StackedState
+import numpy as np
 
 
 def test_existing_env(env, Model, state_dict, args, verbose=False):
@@ -18,27 +18,26 @@ def test_existing_env(env, Model, state_dict, args, verbose=False):
     pi.load_state_dict(state_dict)
 
     # Testing
-    total_reward, episode_reward = 0, 0
+    total_reward = []
+    episode_reward = 0
     for i in range(args.num_test):
         state = env.reset()
-        for j in count(1):
+        while True:
             CurrentState.update(state)
-
-            value, action, _, _ = pi.sample(CurrentState(), deterministic=True)
+            value, action = pi.act(CurrentState())
             cpu_actions = action.data.cpu().numpy()[0]
             state, reward, done, info = env.step(cpu_actions)
-            total_reward += reward
             episode_reward += reward
             if done:
                 if verbose: print(episode_reward)
+                total_reward.append(episode_reward)
                 episode_reward = 0
-                done = False
                 break
-    return total_reward/args.num_test
+
+    return np.array(total_reward).mean()
 
 def test(Env, Model, state_dict, args, verbose=False):
     '''Creates new env each time '''
-    torch.manual_seed(args.seed)
 
     # == Environment
     env = Env()
@@ -75,6 +74,7 @@ def test(Env, Model, state_dict, args, verbose=False):
 
 
 def main():
+    import torch
     from arguments import get_args
     from model import MLPPolicy
     from environments.custom_reacher import CustomReacher2DoF

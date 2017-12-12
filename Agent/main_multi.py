@@ -17,9 +17,6 @@ from train import train, exploration
 from test import test, test_existing_env
 
 from environments.custom_reacher import make_parallel_environments
-# from environments.custom_reacher import CustomReacher2DoF as CustomReacher
-from environments.custom_reacher import CustomReacher3DoF as CustomReacher
-# from environments.custom_reacher import CustomReacher6DoF as CustomReacher
 
 
 def main():
@@ -34,20 +31,42 @@ def main():
         vis = VisLogger(args)
 
     # === Environment ===
-    env = make_parallel_environments(CustomReacher,
-                                     args.seed,
-                                     args.num_processes,
-                                     args.potential_constant,
-                                     args.electricity_cost,
-                                     args.stall_torque_cost,
-                                     args.joints_at_limit_cost,
-                                     args.episode_time)
+    if args.dof == 6:
+        print('Not done with 6DoF!')
+        return
+        from environments.custom_reacher import CustomReacher6DoF as CustomReacher
+    if args.dof == 3:
+        from environments.custom_reacher import CustomReacher3DoF as CustomReacher
+    if args.dof == 2:
+        from environments.custom_reacher import CustomReacher2DoF as CustomReacher
+    else:
+        from environments.custom_reacher import Reacher_plane as CustomReacher
+
+
+    if args.num_processes > 1:
+        from train import exploration
+        env = make_parallel_environments(CustomReacher,
+                                        args.seed,
+                                        args.num_processes,
+                                        args.potential_constant,
+                                        args.electricity_cost,
+                                        args.stall_torque_cost,
+                                        args.joints_at_limit_cost,
+                                        args.episode_time)
+    else:
+        from train import Exploration_single as exploration
+        env = CustomReacher(args.potential_constant,
+                            args.electricity_cost,
+                            args.stall_torque_cost,
+                            args.joints_at_limit_cost,
+                            args.episode_time)
 
     test_env = CustomReacher(args.potential_constant,
                              args.electricity_cost,
                              args.stall_torque_cost,
                              args.joints_at_limit_cost,
                              args.episode_time)
+
 
     ob_shape = env.observation_space.shape[0]
     ac_shape = env.action_space.shape[0]
@@ -118,7 +137,7 @@ def main():
                 print('-'*45)
                 print('Testing {} episodes'.format(args.num_test))
 
-            sd = pi.cpu().state_dict()
+            sd = deepcopy(pi.cpu().state_dict())
             # test_reward = test(test_env, MLPPolicy, sd, args)
             test_reward = test_existing_env(test_env, MLPPolicy, sd, args)
 
