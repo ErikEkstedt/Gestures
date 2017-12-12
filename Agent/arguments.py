@@ -21,6 +21,8 @@ def get_args():
     parser.add_argument('--stall-torque-cost',    type=float, default=-0.01)
     parser.add_argument('--joints-at-limit-cost', type=float, default=-0.01)
 
+    parser.add_argument('--RGB', action='store_true', default=False,
+
     # PPO Loss
     parser.add_argument('--pi-lr', type=float, default=3e-4,
                         help='policy learning rate (default: 4e-4)')
