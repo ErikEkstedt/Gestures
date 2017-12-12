@@ -145,7 +145,7 @@ def Test_and_Save_Video(test_env, Model, state_dict, args, verbose=False):
     pi.load_state_dict(state_dict)
     # Test environments
     total_reward, episode_reward, best_episode_reward = 0, 0, -999
-    for i in range(args.num_test):
+    for i in range(3):
         (state, obs) = test_env.reset()
         Video = []
         for j in count(1):
