@@ -12,8 +12,9 @@ from utils import log_print, make_log_dirs
 from arguments import FakeArgs, get_args
 from model import MLPPolicy
 from memory import RolloutStorage, StackedState, Results
+
 from train import train, exploration
-from test import test
+from test import test, test_existing_env
 
 from environments.custom_reacher import make_parallel_environments
 # from environments.custom_reacher import CustomReacher2DoF as CustomReacher
@@ -41,6 +42,12 @@ def main():
                                      args.stall_torque_cost,
                                      args.joints_at_limit_cost,
                                      args.episode_time)
+
+    test_env = CustomReacher(args.potential_constant,
+                             args.electricity_cost,
+                             args.stall_torque_cost,
+                             args.joints_at_limit_cost,
+                             args.episode_time)
 
     ob_shape = env.observation_space.shape[0]
     ac_shape = env.action_space.shape[0]
@@ -104,34 +111,42 @@ def main():
             during a bad policy update. The policy adjust for this in the next
             update but we might miss good policies if we test too seldom.
             Thus we test in an interval of 5 every args.test_interval.
-            (default: args.num_test = 50) -> test updates [50,54], [100,104], ...
+            (default: args.num_test = 50)
+                -> test updates [50,54], [100,104], ...
             '''
             if j % args.test_interval == 0:
                 print('-'*45)
                 print('Testing {} episodes'.format(args.num_test))
 
             sd = pi.cpu().state_dict()
-            test_reward = test(CustomReacher, MLPPolicy, sd, args)
+            # test_reward = test(test_env, MLPPolicy, sd, args)
+            test_reward = test_existing_env(test_env, MLPPolicy, sd, args)
 
             # Plot result
             print('Average Test Reward: {}\n '.format(round(test_reward)))
             if args.vis:
-                vis.line_update(Xdata=frame, Ydata=test_reward, name='Test Score')
+                vis.line_update(Xdata=frame,
+                                Ydata=test_reward, name='Test Score')
 
             #  ==== Save best model ======
-            name = os.path.join(args.checkpoint_dir, 'dict_{}_TEST_{}.pt'.format(frame, round(test_reward,3)))
+            name = os.path.join(
+                args.checkpoint_dir,
+                'dict_{}_TEST_{}.pt'.format(frame, round(test_reward, 3)))
             torch.save(sd, name)
 
             #  ==== Save best model ======
             if test_reward > MAX_REWARD:
                 print('--'*45)
                 print('New High Score!\n')
-                name = os.path.join(args.checkpoint_dir, 'BEST{}_{}.pt'.format(frame, round(test_reward,3)))
+                name = os.path.join(
+                    args.checkpoint_dir,
+                    'BEST{}_{}.pt'.format(frame, round(test_reward, 3)))
                 torch.save(sd, name)
                 MAX_REWARD = test_reward
 
             if args.cuda:
                 pi.cuda()
+
 
 if __name__ == '__main__':
     main()
