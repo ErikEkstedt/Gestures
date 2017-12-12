@@ -312,7 +312,7 @@ class CustomReacher3DoF(Base):
         self.motor_names = ["robot_shoulder_joint",
                             "robot_elbow_joint_x",
                             "robot_elbow_joint_y"]
-        self.motor_power = [75, 75, 75]
+        self.motor_power = [75, 25, 25]
         self.motors = [self.jdict[n] for n in self.motor_names]
 
         # target and potential
