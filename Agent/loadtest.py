@@ -8,19 +8,19 @@ from model import MLPPolicy
 
 def environment(args):
     if args.dof == 2:
-        from environments.custom_reacher import CustomReacher2DoF
-        return CustomReacher2DoF
-        print('CustomReacher2DoF2')
+        from environments.reacher_envs import Reacher2DoF
+        return Reacher2DoF
+        print('Reacher2DoF2')
     elif args.dof == 3:
-        from environments.custom_reacher import CustomReacher3DoF
-        print('CustomReacher3DoF')
-        return CustomReacher3DoF
+        from environments.reacher_envs import Reacher3DoF
+        print('Reacher3DoF')
+        return Reacher3DoF
     elif args.dof == 6:
-        from environments.custom_reacher import CustomReacher6DoF
-        print('CustomReacher6DoF')
-        return CustomReacher6DoF
+        from environments.reacher_envs import Reacher6DoF
+        print('Reacher6DoF')
+        return Reacher6DoF
     elif args.dof == 88:
-        from environments.custom_reacher import Reacher_plane
+        from environments.reacher_envs import Reacher_plane
         print('Reacher_plane')
         return Reacher_plane
 
@@ -71,7 +71,6 @@ def test_without_args():
     print('Run...')
     run_episodes(env, pi, CurrentState)
 
-
 # --- Debugging ----
 
 def check_types(state):
@@ -112,6 +111,7 @@ def print_motors(env):
     for m in env.motor_names:
         print(m)
 
+# -----------------
 
 def main():
     args = get_args()

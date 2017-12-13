@@ -16,26 +16,26 @@ from memory import RolloutStorage, StackedState, Results
 from train import train, exploration
 from test import test, test_existing_env, Test_and_Save_Video, test_and_render
 
-from environments.custom_reacher import make_parallel_environments
-
+from environments.reacher_envs import make_parallel_environments
 
 def get_env(args):
     if args.dof == 2:
-        from environments.custom_reacher import CustomReacher2DoF
-        args.env_id='CustomReacher2DoF'
-        return CustomReacher2DoF
+        from environments.reacher_envs import Reacher2DoF
+        args.env_id='Reacher2DoF'
+        return Reacher2DoF
     elif args.dof == 3:
-        from environments.custom_reacher import CustomReacher3DoF
-        args.env_id='CustomReacher3DoF'
-        return CustomReacher3DoF
+        from environments.reacher_envs import Reacher3DoF
+        args.env_id='Reacher3DoF'
+        return Reacher3DoF
     elif args.dof == 6:
-        from environments.custom_reacher import CustomReacher6DoF
-        args.env_id='CustomReacher6DoF'
-        return CustomReacher6DoF
+        from environments.reacher_envs import Reacher6DoF
+        args.env_id='Reacher6DoF'
+        return Reacher6DoF
     else:
-        from environments.custom_reacher import Reacher_plane
+        from environments.reacher_envs import Reacher_plane
         args.env_id='Reacher_plane'
         return Reacher_plane
+
 
 def main():
     args = get_args()
