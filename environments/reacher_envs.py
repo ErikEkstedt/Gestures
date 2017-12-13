@@ -147,7 +147,7 @@ class Reacher_plane(Base):
         Base.__init__(self, XML_PATH=PATH_TO_CUSTOM_XML,
                         robot_name='robot_arm',
                         target_name='target',
-                        model_xml='reacher_plane.xml',
+                        model_xml='reacher/Reacher_plane.xml',
                         ac=2, obs=13, args=args)
         print('I am', self.model_xml)
 
@@ -215,7 +215,7 @@ class Reacher_plane(Base):
         return rendered_rgb
 
 
-class CustomReacher2DoF(Base):
+class Reacher2DoF(Base):
     '''
     2DoF Reacher
     No joint limits
@@ -226,7 +226,7 @@ class CustomReacher2DoF(Base):
         Base.__init__(self, XML_PATH=PATH_TO_CUSTOM_XML,
                       robot_name='robot_arm',
                       target_name='target',
-                      model_xml='custom_reacher2DoF.xml',
+                      model_xml='reacher/Reacher2DoF.xml',
                       ac=2, obs=13, args=args)
         print('I am', self.model_xml)
 
@@ -299,7 +299,7 @@ class CustomReacher2DoF(Base):
         return rendered_rgb
 
 
-class CustomReacher3DoF(Base):
+class Reacher3DoF(Base):
     '''
     2DoF Reacher
     No joint limits
@@ -310,7 +310,7 @@ class CustomReacher3DoF(Base):
         Base.__init__(self,XML_PATH=PATH_TO_CUSTOM_XML,
                       robot_name='robot_arm',
                       target_name='target',
-                      model_xml='custom_reacher3DoF.xml',
+                      model_xml='reacher/Reacher3DoF.xml',
                       ac=3, obs=15,
                       args = args)
         print('I am', self.model_xml)
@@ -389,7 +389,7 @@ class CustomReacher3DoF(Base):
         return rendered_rgb
 
 
-class CustomReacher6DoF(Base):
+class Reacher6DoF(Base):
     '''
     6DoF Reacher
     No joint limits
@@ -401,7 +401,7 @@ class CustomReacher6DoF(Base):
         Base.__init__(self,XML_PATH=PATH_TO_CUSTOM_XML,
                       robot_name='robot_arm',
                       target_name='target',
-                      model_xml='custom_reacher6DoF.xml',
+                      model_xml='reacher/Reacher6DoF.xml',
                       ac=6, obs=21,
                       args = args)
         print('I am', self.model_xml)
@@ -477,7 +477,7 @@ class CustomReacher6DoF(Base):
         return -self.potential_constant*np.linalg.norm(self.to_target_vec)
 
 # ---------
-class CustomReacher2DoF_2Target(Base):
+class Reacher2DoF_2Target(Base):
     ''' 2DoF Reacher
     No joint limits
     1 DoF each joint
