@@ -10,6 +10,7 @@
 Don't know why... might come back...
 But for now simply just save models with good score and then restart scirpt until correct behaviour. [This pains me]
 
+
 ### Possible Sources:
 * [x] Check that StackedState gives same output for all numbers of processes. YES! (memory.py - test())
 *	[x] torch.load? - loads corrupt file?
@@ -28,7 +29,6 @@ Project
 
 		However, my own CustomReacher environment is now working correctly and using a single process convergence is easily reached.
 		There still seems to be something wrong with the multiple process setup.
-
 
 # [Agent](Agent/)
 Pytorch training.
