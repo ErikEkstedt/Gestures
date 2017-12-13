@@ -612,10 +612,17 @@ def make_parallel_environments(Env, args):
     '''
     if args.RGB:
         # from baselines.common.vec_env.subproc_vec_env import SubprocVecEnv_RGB as SubprocVecEnv
-        from envs import SubprocVecEnv_RGB as SubprocVecEnv
+        try:
+            from envs import SubprocVecEnv_RGB as SubprocVecEnv
+        except:
+            from environments.envs import SubprocVecEnv_RGB as SubprocVecEnv
     else:
         # from baselines.common.vec_env.subproc_vec_env import SubprocVecEnv
-        from envs import SubprocVecEnv
+        try:
+            from envs import SubprocVecEnv
+        except:
+            from environments.envs import SubprocVecEnv
+
     def multiple_envs(Env, args, rank):
         def _thunk():
             env = Env(args)

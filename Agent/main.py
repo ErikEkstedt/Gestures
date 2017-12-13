@@ -19,24 +19,29 @@ from test import test, test_existing_env, Test_and_Save_Video, test_and_render
 from environments.custom_reacher import make_parallel_environments
 
 
+def get_env(args):
+    if args.dof == 2:
+        from environments.custom_reacher import CustomReacher2DoF
+        args.env_id='CustomReacher2DoF'
+        return CustomReacher2DoF
+    elif args.dof == 3:
+        from environments.custom_reacher import CustomReacher3DoF
+        args.env_id='CustomReacher3DoF'
+        return CustomReacher3DoF
+    elif args.dof == 6:
+        from environments.custom_reacher import CustomReacher6DoF
+        args.env_id='CustomReacher6DoF'
+        return CustomReacher6DoF
+    else:
+        from environments.custom_reacher import Reacher_plane
+        args.env_id='Reacher_plane'
+        return Reacher_plane
+
 def main():
     args = get_args()
 
     # === Environment ===
-    if args.dof == 6:
-        print('Not done with 6DoF!')
-        return
-        from environments.custom_reacher import CustomReacher6DoF as CustomReacher
-        args.env_id='CustomReacher6DoF'
-    elif args.dof == 3:
-        from environments.custom_reacher import CustomReacher3DoF as CustomReacher
-        args.env_id='CustomReacher3DoF'
-    elif args.dof == 2:
-        from environments.custom_reacher import CustomReacher2DoF as CustomReacher
-        args.env_id='CustomReacher2DoF'
-    else:
-        from environments.custom_reacher import Reacher_plane as CustomReacher
-        args.env_id='Reacher_plane'
+    Env = get_env(args)
 
     # Logger
     make_log_dirs(args)
@@ -49,28 +54,21 @@ def main():
 
     if args.num_processes > 1:
         from train import exploration
-        env = make_parallel_environments(CustomReacher,args)
+        env = make_parallel_environments(Env,args)
     else:
         from train import Exploration_single as exploration
-        env = CustomReacher(args.potential_constant,
-                            args.electricity_cost,
-                            args.stall_torque_cost,
-                            args.joints_at_limit_cost,
-                            args.episode_time)
-    if args.video:
-        video_env = CustomReacher(args.potential_constant,
-                                args.electricity_cost,
-                                args.stall_torque_cost,
-                                args.joints_at_limit_cost,
-                                args.episode_time,
-                                RGB=True)
+        env = Env(args)
 
-    test_env = CustomReacher(args.potential_constant,
-                            args.electricity_cost,
-                            args.stall_torque_cost,
-                            args.joints_at_limit_cost,
-                            args.episode_time,
-                            RGB=False)
+
+    tmp_rgb = args.RGB # save rgb flag
+    if args.video:
+        args.RGB = True
+        video_env = Env(args)
+
+    args.RGB = False
+    test_env = Env(args)
+    args.RGB = tmp_rgb # reset rgb flag
+
 
     ob_shape = env.observation_space.shape[0]
     ac_shape = env.action_space.shape[0]
@@ -165,6 +163,7 @@ def main():
                 print('New High Score!\n')
 
                 if args.video:
+                    ''' records video of record breaker '''
                     vid_reward, videolist = Test_and_Save_Video(video_env, MLPPolicy, sd, args)
                     name = os.path.join(
                         args.result_dir,
