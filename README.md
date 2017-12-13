@@ -1,18 +1,16 @@
-More important fixes
-* [ ] Continue training. Save checkpoint
-	* [checkpoint](https://discuss.pytorch.org/t/saving-and-loading-a-model-in-pytorch/2610/3)
+# Todo
 
+* [ ] Create 2 target 3 DoF env.
+* [ ] Continue training. Save checkpoint
 * [ ] Annealing learning rate
 
 
 ## Why does training improve but when loading state dict the result sucks?
 
+Don't know why... might come back...
+But for now simply just save models with good score and then restart scirpt until correct behaviour. [This pains me]
 
-Don't know why... might come back.
-For now if the tested saved model was good just try til you get rewards like it suppose to have.
-
-
-Possible Sources:
+###Possible Sources:
 * [x] Check that StackedState gives same output for all numbers of processes. YES! (memory.py - test())
 *	[x] torch.load? - loads corrupt file?
 	* torch.load and state dict works well.
@@ -21,18 +19,6 @@ Possible Sources:
 	* [x] moters, motor_names - different order? actions goes to wrong joints? NO
 	* Behaviour the same between resets.
 	* Behaviour different between creation.
-
-
-* good score with Dict_Dof3_bklabla on DoF2 env..jk.
-Plan
-* Train and get stable models reliably
-	* [ ] Dof2
-	* [ ] Dof3
-
-* Get rgb arrays from training
-	* [ ] Dof2
-	* [ ] Dof3
-
 
 Project
 ==========
