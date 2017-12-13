@@ -10,7 +10,7 @@
 Don't know why... might come back...
 But for now simply just save models with good score and then restart scirpt until correct behaviour. [This pains me]
 
-###Possible Sources:
+### Possible Sources:
 * [x] Check that StackedState gives same output for all numbers of processes. YES! (memory.py - test())
 *	[x] torch.load? - loads corrupt file?
 	* torch.load and state dict works well.
