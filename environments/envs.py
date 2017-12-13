@@ -163,7 +163,6 @@ class SubprocVecEnv_RGB(VecEnv):
     def close(self):
         if self.closed:
             return
-
         for remote in self.remotes:
             remote.send(('close', None))
         for p in self.ps:

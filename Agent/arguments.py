@@ -3,27 +3,27 @@ import torch
 
 def get_args():
     parser = argparse.ArgumentParser(description='PPOAgent')
-    parser.add_argument('--seed', type=int, default=10,
-                        help='random seed (default: 10)')
-
-    # Environment
     parser.add_argument('--num-processes', type=int, default=4)
+
+    # === Environment ===
     parser.add_argument('--env-id', default='CustomReacher')
     parser.add_argument('--dof', type=int, default=2)
+
+    parser.add_argument('--MAX_TIME', type=int, default=300)
     parser.add_argument('--gravity', type=float, default=9.81)
+    parser.add_argument('--power', type=float, default=0.5)
     parser.add_argument('--RGB', action='store_true', default=False)
     parser.add_argument('--video', action='store_true', default=False)
     parser.add_argument('--render', action='store_true', default=False)
 
-    # Custom_reacher Reward penalties
-    parser.add_argument('--episode-time',         type=int, default=300)
+    # Reward
     parser.add_argument('--potential-constant',   type=float, default=100)
     parser.add_argument('--electricity-cost',     type=float, default=-0.1)
     parser.add_argument('--stall-torque-cost',    type=float, default=-0.01)
     parser.add_argument('--joints-at-limit-cost', type=float, default=-0.01)
 
 
-    # PPO Loss
+    # === PPO Loss ===
     parser.add_argument('--pi-lr', type=float, default=3e-4,
                         help='policy learning rate (default: 4e-4)')
     parser.add_argument('--eps', type=float, default=1e-8,
@@ -61,16 +61,20 @@ def get_args():
                         help='std-start (Hyperparams for Roboschool in paper)')
     parser.add_argument('--std-stop', type=float, default=-1.7,
                         help='std stop (Hyperparams for Roboschool in paper)')
+    parser.add_argument('--seed', type=int, default=10,
+                        help='random seed (default: 10)')
+
 
     # Test
     parser.add_argument('--no-test', action='store_true', default=False,
-                        help='disables visdom visualization')
+                        help='disables test during training')
     parser.add_argument('--test-interval', type=int,  default=50,
                         help='how many updates/test (default: 50)')
     parser.add_argument('--num-test', type=int, default=20,
-                        help='Number of test after training (default: 20)')
+                        help='Number of test episodes during test (default: 20)')
     parser.add_argument('--load-file', default='/tmp/',
-                        help='state_dic to load')
+                        help='state_dict to load')
+
     # Log
     parser.add_argument('--vis-interval', type=int, default=1,
                         help='vis interval, one log per n updates (default: 1)')
