@@ -479,7 +479,7 @@ class Reacher6DoF(Base):
     def calc_potential(self):
         return -self.potential_constant*np.linalg.norm(self.to_target_vec)
 
-# ---------
+# Unfinished ---------
 class Reacher3DoF_2Target(Base):
     ''' 2DoF Reacher
     No joint limits
@@ -606,6 +606,96 @@ class Reacher3DoF_2Target(Base):
         return rendered_rgb
 
 
+class ReacherHumanoid(Base):
+    '''
+    2DoF Reacher
+    No joint limits
+    1 DoF each joint
+    target random in 3D space, not every point is
+    '''
+    def __init__(self,  args=None):
+        Base.__init__(self,XML_PATH=PATH_TO_CUSTOM_XML,
+                      robot_name='robot',
+                      target_name='target',
+                      model_xml='reacher/ReacherHumanoid.xml',
+                      ac=3, obs=15,
+                      args = args)
+        print('I am', self.model_xml)
+
+    def robot_specific_reset(self):
+        self.motor_names = ["robot_right_shoulder1",
+                            "robot_right_shoulder2",
+                            "robot_right_elbow"]
+        self.motor_power = [75, 75, 75]
+        self.motors = [self.jdict[n] for n in self.motor_names]
+
+        # target and potential
+        self.robot_reset()
+        self.target_reset()
+        self.calc_to_target_vec()
+        self.potential = self.calc_potential()
+
+    def robot_reset(self):
+        ''' self.np_random for correct seed. '''
+        for j in self.robot_joints.values():
+            j.reset_current_position(
+                self.np_random.uniform( low=-0.01, high=0.01 ), 0)
+            j.set_motor_torque(0)
+
+    def target_reset(self):
+        ''' self.np_random for correct seed. '''
+        for j in self.target_joints.values():
+            if "z" in j.name:
+                '''Above ground'''
+                j.reset_current_position(
+                    self.np_random.uniform( low=0.2, high=0.6 ), 0)
+            else:
+                j.reset_current_position( self.np_random.uniform( low=-0.3, high=0.3 ), 0)
+
+    def calc_to_target_vec(self):
+        ''' gets hand position, target position and the vector in bewteen'''
+        self.target_position = np.array(self.target_parts['target'].pose().xyz()).astype(np.float32)
+        self.hand_position = np.array(self.parts['robot_right_hand'].pose().xyz()).astype(np.float32)
+        self.to_target_vec = self.hand_position - self.target_position
+
+    def calc_state(self):
+        j = np.array([j.current_relative_position()
+                    for j in self.robot_joints.values()], dtype=np.float32).flatten()
+        self.joints_at_limit = np.count_nonzero(np.abs(j[0::2]) > 0.99)
+        self.joint_positions = j[0::2].astype(np.float32)
+        self.joint_speeds = j[1::2].astype(np.float32)
+        self.calc_to_target_vec()
+        return np.concatenate((self.target_position,
+                               self.hand_position,
+                               self.to_target_vec,
+                               self.joint_positions,
+                               self.joint_speeds),)
+
+    def calc_reward(self, a):
+        ''' Calcutates reward
+        :param a      np.ndarray action
+        '''
+        potential_old = self.potential
+        self.potential = self.calc_potential()
+
+        # cost
+        electricity_cost  = self.electricity_cost  * float(np.abs(a*self.joint_speeds).mean())  # let's assume we have DC motor with controller, and reverse current braking
+        electricity_cost += self.stall_torque_cost * float(np.square(a).mean())
+        joints_at_limit_cost = float(self.joints_at_limit_cost * self.joints_at_limit)
+
+        # Save rewards ?
+        self.rewards = [float(self.potential - potential_old), float(electricity_cost)]
+        return sum(self.rewards)
+
+    def calc_potential(self):
+        return -self.potential_constant*np.linalg.norm(self.to_target_vec)
+
+    def get_rgb(self):
+        rgb, _, _, _, _ = self.camera.render(False, False, False) # render_depth, render_labeling, print_timing)
+        rendered_rgb = np.fromstring(rgb, dtype=np.uint8).reshape( (self.VIDEO_H,self.VIDEO_W,3) )
+        return rendered_rgb
+
+
 def make_parallel_environments(Env, args):
     ''' imports SubprocVecEnv from baselines.
     :param seed                 int
@@ -643,7 +733,7 @@ def get_env(args):
     elif args.dof == 1:
         return Reacher_plane
     else:
-        return Reacher3DoF_2Target
+        return ReacherHumanoid
 
 
 def test():

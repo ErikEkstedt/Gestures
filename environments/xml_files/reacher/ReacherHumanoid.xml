@@ -13,30 +13,33 @@
 
 		<!-- Base -->
 		<geom conaffinity="0" contype="0" fromto="0 0 0 0 0 0.4" name="base" rgba="0.9 0.4 0.6 1" size=".02" type="cylinder"/>
-		
-		<body name="shoulder" pos="0 0 0.41">
-			<geom conaffinity="0" contype="0" fromto="-0.2 0 0 0.2 0 0" name="shoulder" rgba="0.9 0.4 0.6 1" size=".02" type="cylinder"/>
+		<geom conaffinity="0" contype="0" fromto="-0.2 0 0.4 0.2 0 0.4" name="robot" rgba="0.9 0.4 0.6 1" size=".02" type="cylinder"/>
+
+		<body name="robot" pos="0.2 0 0.41">
 			<!-- Arm -->
-			<body name="right_upper_arm" pos="0 -0.17 0.06">
-					<joint armature="0.0068" axis="2 1 1" name="right_shoulder1" pos="0 0 0" range="-85 60" stiffness="1" type="hinge"/>
-					<joint armature="0.0051" axis="0 -1 1" name="right_shoulder2" pos="0 0 0" range="-85 60" stiffness="1" type="hinge"/>
-					<geom fromto="0 0 0 .16 -.16 -.16" name="right_uarm1" size="0.04 0.16" type="capsule"/>
-					<body name="right_lower_arm" pos=".18 -.18 -.18">
-							<joint armature="0.0028" axis="0 -1 1" name="right_elbow" pos="0 0 0" range="-90 50" stiffness="0" type="hinge"/>
-							<geom fromto="0.01 0.01 0.01 .17 .17 .17" name="right_larm" size="0.031" type="capsule"/>
-							<geom name="right_hand" pos=".18 .18 .18" size="0.04" type="sphere"/>
+			<!-- <body name="robot_right_upper_arm" pos="0 &#45;0.17 0.06"> -->
+			<body name="robot_right_upper_arm" pos="0 0 0">
+					<joint armature="0.0068" axis="2 1 1" name="robot_right_shoulder1" pos="0 0 0" range="-85 60" stiffness="1" type="hinge"/>
+					<joint armature="0.0051" axis="0 -1 1" name="robot_right_shoulder2" pos="0 0 0" range="-85 60" stiffness="1" type="hinge"/>
+					<geom fromto="0 0 0 .16 -.16 -.16" name="robot_right_uarm1" size="0.04 0.16" type="capsule"/>
+					<body name="robot_right_lower_arm" pos=".18 -.18 -.18">
+							<joint armature="0.0028" axis="0 -1 1" name="robot_right_elbow" pos="0 0 0" range="-90 50" stiffness="0" type="hinge"/>
+							<geom fromto="0.01 0.01 0.01 .17 .17 .17" name="robot_right_larm" size="0.031" type="capsule"/>
+						<body name="robot_right_hand" pos=".18 .18 .18">
+							<geom name="robot_right_hand" pos="0 0 0" size="0.04" type="sphere"/>
+						</body>
 					</body>
 			</body>
-			<body name="left_upper_arm" pos="0 0.17 0.06">
-					<joint armature="0.0068" axis="2 -1 1" name="left_shoulder1" pos="0 0 0" range="-60 85" stiffness="1" type="hinge"/>
-					<joint armature="0.0051" axis="0 1 1" name="left_shoulder2" pos="0 0 0" range="-60 85" stiffness="1" type="hinge"/>
-					<geom fromto="0 0 0 .16 .16 -.16" name="left_uarm1" size="0.04 0.16" type="capsule"/>
-					<body name="left_lower_arm" pos=".18 .18 -.18">
-							<joint armature="0.0028" axis="0 -1 -1" name="left_elbow" pos="0 0 0" range="-90 50" stiffness="0" type="hinge"/>
-							<geom fromto="0.01 -0.01 0.01 .17 -.17 .17" name="left_larm" size="0.031" type="capsule"/>
-							<geom name="left_hand" pos=".18 -.18 .18" size="0.04" type="sphere"/>
-					</body>
-			</body>
+			<!-- <body name="robot_left_upper_arm" pos="0 0.17 0.06"> -->
+			<!-- 		<joint armature="0.0068" axis="2 &#45;1 1" name="robot_left_shoulder1" pos="0 0 0" range="&#45;60 85" stiffness="1" type="hinge"/> -->
+			<!-- 		<joint armature="0.0051" axis="0 1 1" name="robot_left_shoulder2" pos="0 0 0" range="&#45;60 85" stiffness="1" type="hinge"/> -->
+			<!-- 		<geom fromto="0 0 0 .16 .16 &#45;.16" name="robot_left_uarm1" size="0.04 0.16" type="capsule"/> -->
+			<!-- 		<body name="left_lower_arm" pos=".18 .18 &#45;.18"> -->
+			<!-- 				<joint armature="0.0028" axis="0 &#45;1 &#45;1" name="robot_left_elbow" pos="0 0 0" range="&#45;90 50" stiffness="0" type="hinge"/> -->
+			<!-- 				<geom fromto="0.01 &#45;0.01 0.01 .17 &#45;.17 .17" name="robot_left_larm" size="0.031" type="capsule"/> -->
+			<!-- 				<geom name="robot_left_hand" pos=".18 &#45;.18 .18" size="0.04" type="sphere"/> -->
+			<!-- 		</body> -->
+			<!-- </body> -->
 		</body>
 		<!-- Target -->
 		<body name="target" pos="0 0 .01">
@@ -47,8 +50,12 @@
 		</body>
 	</worldbody>
 	<actuator>
-		<motor ctrllimited="true" ctrlrange="-1.0 1.0" gear="200.0" joint="robot_shoulder1"/>
-		<motor ctrllimited="true" ctrlrange="-1.0 1.0" gear="200.0" joint="robot_shoulder2"/>
-		<motor ctrllimited="true" ctrlrange="-1.0 1.0" gear="200.0" joint="robot_elbow_j"/>
+		<motor ctrllimited="true" ctrlrange="-1.0 1.0" gear="200.0" joint="robot_right_shoulder1"/>
+		<motor ctrllimited="true" ctrlrange="-1.0 1.0" gear="200.0" joint="robot_right_shoulder2"/>
+		<motor ctrllimited="true" ctrlrange="-1.0 1.0" gear="200.0" joint="robot_right_elbow"/>
+
+		<!-- <motor ctrllimited="true" ctrlrange="&#45;1.0 1.0" gear="200.0" joint="robot_left_shoulder1"/> -->
+		<!-- <motor ctrllimited="true" ctrlrange="&#45;1.0 1.0" gear="200.0" joint="robot_left_shoulder2"/> -->
+		<!-- <motor ctrllimited="true" ctrlrange="&#45;1.0 1.0" gear="200.0" joint="robot_left_elbow"/> -->
 	</actuator>
 </mujoco>
