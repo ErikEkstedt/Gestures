@@ -26,6 +26,20 @@ def total_params(p):
         n *= int(i)
     return n
 
+class CNNAutoencoder(nn.Module):
+    def __init__(self, input_size, action_shape,
+                    hidden=128,
+                    std_start=-0.6,
+                    std_stop=-1.7,
+                    total_frames=1e6):
+        super(CNNAutoencoder, self).__init__()
+        self.input_size = input_size
+        self.conv1 = nn.Conv2d(input, hidden)
+        self.conv2 = nn.Conv2d()
+
+    def forward(self, input):
+        pass
+
 
 class MLPPolicy(nn.Module):
     def __init__(self, input_size, action_shape,

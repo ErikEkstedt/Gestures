@@ -7,22 +7,33 @@ from memory import StackedState
 from model import MLPPolicy
 
 def environment(args):
-    if args.dof == 2:
-        from environments.reacher_envs import Reacher2DoF
-        return Reacher2DoF
-        print('Reacher2DoF2')
-    elif args.dof == 3:
-        from environments.reacher_envs import Reacher3DoF
-        print('Reacher3DoF')
-        return Reacher3DoF
-    elif args.dof == 6:
-        from environments.reacher_envs import Reacher6DoF
-        print('Reacher6DoF')
-        return Reacher6DoF
-    elif args.dof == 88:
-        from environments.reacher_envs import Reacher_plane
-        print('Reacher_plane')
-        return Reacher_plane
+    if "eacher" in args.env_id:
+        if args.dof == 2:
+            from environments.reacher_envs import Reacher2DoF
+            return Reacher2DoF
+            print('Reacher2DoF2')
+        elif args.dof == 3:
+            from environments.reacher_envs import Reacher3DoF
+            print('Reacher3DoF')
+            return Reacher3DoF
+        elif args.dof == 6:
+            from environments.reacher_envs import Reacher6DoF
+            print('Reacher6DoF')
+            return Reacher6DoF
+        elif args.dof == 88:
+            from environments.reacher_envs import Reacher_plane
+            print('Reacher_plane')
+            return Reacher_plane
+    else:
+        if args.dof == 3:
+            from environments.humanoid_envs import Humanoid3DoF
+            print('Humanoid3DoF')
+            return Humanoid3DoF
+        elif args.dof == 6:
+            from environments.humanoid_envs import Humanoid6DoF
+            print('Humanoid6DoF')
+            return Humanoid6DoF
+
 
 def run_episodes(env, pi, CurrentState, args, verbose=True):
     total_reward = 0
@@ -35,7 +46,7 @@ def run_episodes(env, pi, CurrentState, args, verbose=True):
             cpu_actions = action.data.cpu().numpy()[0]
             # Observe reward and next state
             state, reward, done, info = env.step(cpu_actions)
-            check_types(state)
+            # check_types(state)
             if args.render: env.render()
             if verbose:
                 print('\nPotential:\t{}\nReward:\t{}' \
