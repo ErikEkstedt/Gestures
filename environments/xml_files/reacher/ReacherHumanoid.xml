@@ -1,0 +1,54 @@
+<mujoco model="3DoF_Hum">
+	<compiler angle="radian" inertiafromgeom="true"/>
+	<default>
+		<joint armature="1" damping="1" limited="true"/>
+		<geom contype="0" friction="1 0.1 0.1" rgba="0.7 0.7 0 1"/>
+	</default>
+
+	<option integrator="RK4" iterations="50" solver="PGS" timestep="0.003">
+	</option>
+	<worldbody>
+		<!-- Arena -->
+		<geom conaffinity="0" contype="0" name="ground" pos="0 0 0" rgba="0.9 0.1 0.0 1" size="1 1 10" type="plane"/>
+
+		<!-- Base -->
+		<geom conaffinity="0" contype="0" fromto="0 0 0 0 0 0.4" name="base" rgba="0.9 0.4 0.6 1" size=".02" type="cylinder"/>
+		
+		<body name="shoulder" pos="0 0 0.41">
+			<geom conaffinity="0" contype="0" fromto="-0.2 0 0 0.2 0 0" name="shoulder" rgba="0.9 0.4 0.6 1" size=".02" type="cylinder"/>
+			<!-- Arm -->
+			<body name="right_upper_arm" pos="0 -0.17 0.06">
+					<joint armature="0.0068" axis="2 1 1" name="right_shoulder1" pos="0 0 0" range="-85 60" stiffness="1" type="hinge"/>
+					<joint armature="0.0051" axis="0 -1 1" name="right_shoulder2" pos="0 0 0" range="-85 60" stiffness="1" type="hinge"/>
+					<geom fromto="0 0 0 .16 -.16 -.16" name="right_uarm1" size="0.04 0.16" type="capsule"/>
+					<body name="right_lower_arm" pos=".18 -.18 -.18">
+							<joint armature="0.0028" axis="0 -1 1" name="right_elbow" pos="0 0 0" range="-90 50" stiffness="0" type="hinge"/>
+							<geom fromto="0.01 0.01 0.01 .17 .17 .17" name="right_larm" size="0.031" type="capsule"/>
+							<geom name="right_hand" pos=".18 .18 .18" size="0.04" type="sphere"/>
+					</body>
+			</body>
+			<body name="left_upper_arm" pos="0 0.17 0.06">
+					<joint armature="0.0068" axis="2 -1 1" name="left_shoulder1" pos="0 0 0" range="-60 85" stiffness="1" type="hinge"/>
+					<joint armature="0.0051" axis="0 1 1" name="left_shoulder2" pos="0 0 0" range="-60 85" stiffness="1" type="hinge"/>
+					<geom fromto="0 0 0 .16 .16 -.16" name="left_uarm1" size="0.04 0.16" type="capsule"/>
+					<body name="left_lower_arm" pos=".18 .18 -.18">
+							<joint armature="0.0028" axis="0 -1 -1" name="left_elbow" pos="0 0 0" range="-90 50" stiffness="0" type="hinge"/>
+							<geom fromto="0.01 -0.01 0.01 .17 -.17 .17" name="left_larm" size="0.031" type="capsule"/>
+							<geom name="left_hand" pos=".18 -.18 .18" size="0.04" type="sphere"/>
+					</body>
+			</body>
+		</body>
+		<!-- Target -->
+		<body name="target" pos="0 0 .01">
+			<joint armature="0" axis="1 0 0" damping="0" limited="true" name="target_x" pos="0 0 0" range="-.27 .27" stiffness="0" type="slide"/>
+			<joint armature="0" axis="0 1 0" damping="0" limited="true" name="target_y" pos="0 0 0" range="-.27 .27" stiffness="0" type="slide"/>
+			<joint armature="0" axis="0 0 1" damping="0" limited="true" name="target_z" pos="0 0 0" range="-.27 .27" stiffness="0" type="slide"/>
+			<geom conaffinity="0" contype="0" name="target" pos="0 0 0" rgba="0.9 0.2 0.2 1" size=".025" type="sphere" mass="0"/>
+		</body>
+	</worldbody>
+	<actuator>
+		<motor ctrllimited="true" ctrlrange="-1.0 1.0" gear="200.0" joint="robot_shoulder1"/>
+		<motor ctrllimited="true" ctrlrange="-1.0 1.0" gear="200.0" joint="robot_shoulder2"/>
+		<motor ctrllimited="true" ctrlrange="-1.0 1.0" gear="200.0" joint="robot_elbow_j"/>
+	</actuator>
+</mujoco>

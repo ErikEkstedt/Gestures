@@ -81,7 +81,6 @@ class Base(MyGymEnv):
         return max_time
 
     def load_xml_get_robot(self, verbose=False):
-        # self.mjcf = self.scene.cpp_world.load_mjcf( os.path.join(self.XML_PATH, self.model_xml))
         self.mjcf = self.scene.cpp_world.load_mjcf(
             os.path.join(os.path.dirname(__file__),
                          "xml_files/",
@@ -414,9 +413,9 @@ class Reacher6DoF(Base):
         self.motor_names = ["robot_shoulder_joint_x", "robot_elbow_joint_x"]
         self.motor_names += ["robot_shoulder_joint_y", "robot_elbow_joint_y"]
         self.motor_names += ["robot_shoulder_joint_z", "robot_elbow_joint_z"]
-        self.motor_power = [50, 50] #, 75, 75]
-        self.motor_power += [50, 50] #, 75, 75]
-        self.motor_power += [50, 50] #, 75, 75]
+        self.motor_power = [75, 75]
+        self.motor_power += [75, 75]
+        self.motor_power += [75, 75]
         self.motors = [self.jdict[n] for n in self.motor_names]
 
         # target and potential
@@ -481,22 +480,19 @@ class Reacher6DoF(Base):
         return -self.potential_constant*np.linalg.norm(self.to_target_vec)
 
 # ---------
-class Reacher2DoF_2Target(Base):
+class Reacher3DoF_2Target(Base):
     ''' 2DoF Reacher
     No joint limits
     1 DoF each joint
     Two targets
     '''
-    def __init__(self, potential_constant=100,
-                 electricity_cost=-0.1,
-                 stall_torque_cost=-0.01,
-                 joints_at_limit_cost=-0.01,
-                 gravity=9.81, RGB=False):
+    def __init__(self, args=None):
         Base.__init__(self,XML_PATH=PATH_TO_CUSTOM_XML,
                         robot_name='robot_arm',
                         target_name='target_elbow',
-                        model_xml='custom_modeling.xml',
-                        ac=3, obs=13, gravity=gravity, RGB=RGB)
+                        model_xml='reacher/Reacher3DoF_2Targets.xml',
+                        ac=3, obs=13,
+                        args=args)
 
     def robot_specific_reset(self):
         self.motor_names = ["robot_shoulder_joint", "robot_elbow_joint_x","robot_elbow_joint_y"] # , "right_shoulder2", "right_elbow"]
@@ -518,6 +514,7 @@ class Reacher2DoF_2Target(Base):
 
     def target_reset(self):
         ''' self.np_random for correct seed. '''
+        print(self.target_joints)
         r=0.2
         theta= 3.14 * self.np_random.rand()
         x = r*np.cos(theta)
@@ -638,13 +635,16 @@ def make_parallel_environments(Env, args):
 
 def get_env(args):
     if args.dof == 2:
-        return CustomReacher2DoF
+        return Reacher2DoF
     elif args.dof == 3:
-        return CustomReacher3DoF
+        return Reacher3DoF
     elif args.dof == 6:
-        return CustomReacher6DoF
+        return Reacher6DoF
     elif args.dof == 1:
         return Reacher_plane
+    else:
+        return Reacher3DoF_2Target
+
 
 def test():
     from itertools import count
@@ -705,4 +705,4 @@ def test():
 
 
 if __name__ == '__main__':
-    test()
+        test()
