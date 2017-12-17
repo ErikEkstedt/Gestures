@@ -20,6 +20,10 @@
 * [ ] Create 2 target 3 DoF env.
 * [ ] Humanoid with appropriate limits.
 
+## Dynamics Model
+* Go through tha main againg.
+* envs - learn from mujoco gym?
+* train on humanoid-reacher-custom-evns
 ----------------------------------------------------------------------------
 ## Why does training improve but when loading state dict the result sucks?
 Don't know why... might come back...
