@@ -2,6 +2,7 @@ from roboschool.scene_abstract import Scene, SingleRobotEmptyScene
 import os
 import numpy as np
 import gym
+from itertools import count
 # from OpenGL import GL # fix for opengl issues on desktop  / nvidia
 from OpenGL import GLE # fix for opengl issues on desktop  / nvidia
 
@@ -144,6 +145,7 @@ class Base(MyGymEnv):
     def camera_adjust(self):
         self.camera.move_and_look_at(1.0, 0, 0.5, 0, 0, 0)
 
+
 class Humanoid3DoF(Base):
     def __init__(self,  args=None):
         Base.__init__(self,XML_PATH=PATH_TO_CUSTOM_XML,
@@ -224,6 +226,7 @@ class Humanoid3DoF(Base):
 
     def calc_potential(self):
         return -self.potential_constant*np.linalg.norm(self.to_target_vec)
+
 
 class Humanoid(Base):
     def __init__(self,  args=None):
@@ -318,6 +321,7 @@ class Humanoid(Base):
     def calc_potential(self):
         return -self.potential_constant*np.linalg.norm(self.to_target_vec)
 
+
 class Humanoid_upper_torso(Base):
     def __init__(self,  args=None):
         Base.__init__(self,XML_PATH=PATH_TO_CUSTOM_XML,
@@ -405,6 +409,7 @@ class Humanoid_upper_torso(Base):
     def calc_potential(self):
         return -self.potential_constant*np.linalg.norm(self.to_target_vec)
 
+
 class Humanoid6DoF(Base):
     def __init__(self,  args=None):
         Base.__init__(self,XML_PATH=PATH_TO_CUSTOM_XML,
@@ -486,6 +491,7 @@ class Humanoid6DoF(Base):
     def calc_potential(self):
         return -self.potential_constant*np.linalg.norm(self.to_target_vec)
 
+
 def make_parallel_environments(Env, args):
     ''' imports SubprocVecEnv from baselines.
     :param seed                 int
@@ -523,39 +529,34 @@ def get_env(args):
     else:
         return Humanoid
 
-def test():
-    from itertools import count
-    try:
-        from Agent.arguments import get_args
-    except:
-        pass
 
-    args = get_args()
-    Env = get_env(args)
-
-    if args.num_processes > 1:
-        env = make_parallel_environments(Env, args)
-        if args.RGB:
-            (s, obs) = env.reset()
-            R = 0
-            for i in count(1):
-                s, obs, r, d, _ = env.step([env.action_space.sample()] * args.num_processes)
-                R += r
-                if sum(d) > 0:
-                    print('Step: {}, Reward: {}, mean: {}'.format(i, R, R.mean(axis=0)))
-                    R = 0
-                    env.reset()
-        else:
-            s = env.reset()
-            R = 0
-            for i in count(1):
-                s, r, d, _ = env.step([env.action_space.sample()] * args.num_processes)
-                R += r
-                if sum(d) > 0:
-                    print('Step: {}, Reward: {}, mean: {}'.format(i, R, R.mean(axis=0)))
-                    R = 0
-                    env.reset()
+def parallel_episodes(Env, args):
+    env = make_parallel_environments(Env, args)
+    if args.RGB:
+        (s, obs) = env.reset()
     else:
+        s = env.reset()
+    R = 0
+    for i in count(1):
+        if args.RGB:
+            s, obs, r, d, _ = env.step([env.action_space.sample()] * args.num_processes)
+        else:
+            s, r, d, _ = env.step([env.action_space.sample()] * args.num_processes)
+        R += r
+        if sum(d) > 0:
+            print('Step: {}, Reward: {}, mean: {}'.format(i, R, R.mean(axis=0)))
+            R = 0
+            env.reset()
+
+
+def single_episodes(Env, args):
+    env = make_parallel_environments(Env, args)
+    if args.RGB:
+        (s, obs) = env.reset()
+    else:
+        s = env.reset()
+    R = 0
+    for i in count(1):
         env = Env(args)
         print('RGB: {}\tGravity: {}\tMAX: {}\t'.format(env.RGB,
                                                        env.gravity,
@@ -567,6 +568,7 @@ def test():
             print(obs.shape)
             while True:
                 (s, obs), r, d, _ = env.step(env.action_space.sample())
+                R += r
                 if d:
                     s=env.reset()
         else:
@@ -584,7 +586,22 @@ def test():
                 if args.render: env.render()
                 if d:
                     s=env.reset()
-                    print(env.target_position)
+                    print('Target pos: ',env.target_position)
+
+
+def test():
+    try:
+        from Agent.arguments import get_args
+    except:
+        pass
+
+    args = get_args()
+    Env = get_env(args)
+
+    if args.num_processes > 1:
+        parallel_episodes(Env, args)
+    else:
+        single_episodes(Env, args)
 
 
 if __name__ == '__main__':

@@ -50,6 +50,14 @@
 				<joint armature="0" axis="0 0 1" damping="0" limited="true" name="target_z" pos="0 0 0" range="-.27 .27" stiffness="0" type="slide"/>
 				<geom conaffinity="0" contype="0" name="target" pos="0 0 0" rgba="0.9 0.0 0.0 1" size=".025" type="sphere" mass="0"/>
 			</body>
+
+			<!-- Target2 -->
+			<body name="target2">
+				<joint armature="0" axis="1 0 0" damping="0" limited="true" name="target2_x" pos="0 0 0" range="-.27 .27" stiffness="0" type="slide"/>
+				<joint armature="0" axis="0 1 0" damping="0" limited="true" name="target2_y" pos="0 0 0" range="-.27 .27" stiffness="0" type="slide"/>
+				<joint armature="0" axis="0 0 1" damping="0" limited="true" name="target2_z" pos="0 0 0" range="-.27 .27" stiffness="0" type="slide"/>
+				<geom conaffinity="0" contype="0" name="target2" pos="0 0 0" rgba="0.9 0.0 0.0 1" size=".025" type="sphere" mass="0"/>
+			</body>
     </worldbody>
     <actuator><!-- this section is not supported, same constants in code -->
         <motor gear="25" joint="robot_right_shoulder1" name ="robot_right_shoulder1"/>
