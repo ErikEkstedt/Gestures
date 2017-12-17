@@ -1,15 +1,29 @@
 # Todo
 
-* [ ] Create 2 target 3 DoF env.
-* [ ] Continue training. Save checkpoint
+## ML:
 * [ ] Annealing learning rate
+* [ ] make CNN autoencoder module
+* [ ] Train jointly with rgb info and state
+	* [ ] Compare convergence rate 
+	* [ ] Compare training time
+* [ ] predictive dynamics model which tries to predict a robots movement and instantly choose that predictive state as target.
 
+## Program:
+* [ ] Make target rgb-visible during rendering.
+* [ ] Think about mimic in practice
+	* [ ] Have rgb at certain intervals be the target.
+	* [ ] Update after one target is reached.
+* [ ] Continue training. Save checkpoint
+* [ ] After som easy convergence put two robots in an environment and have one mimic the other.
 
+## Environment:
+* [ ] Create 2 target 3 DoF env.
+* [ ] Humanoid with appropriate limits.
+
+----------------------------------------------------------------------------
 ## Why does training improve but when loading state dict the result sucks?
-
 Don't know why... might come back...
 But for now simply just save models with good score and then restart scirpt until correct behaviour. [This pains me]
-
 
 ### Possible Sources:
 * [x] Check that StackedState gives same output for all numbers of processes. YES! (memory.py - test())
@@ -18,8 +32,11 @@ But for now simply just save models with good score and then restart scirpt unti
 	* same input gives same output everytime
 * [ ] Environment
 	* [x] moters, motor_names - different order? actions goes to wrong joints? NO
-	* Behaviour the same between resets.
-	* Behaviour different between creation.
+	* Beahviour:
+		* same between resets.
+		* different between init's
+
+------------------------------------------------------------------------------
 
 Project
 ==========
@@ -46,24 +63,6 @@ Pytorch training.
 
 # [Environments](environments/)
 
-##  [ custom_envs.py ](environments/custom_envs.py)
-All custom environments.
-
-* **Reacher_plane**
-* **CustomReacher2Dof**
-* **CustomReacher3Dof**
-* **CustomReacher6Dof**
-
-All containing functions:
-* robot_specific_reset()
-	* robot_reset()
-	* target_reset()
-* calc_state()
-	* calc_to_target_vec()
-* calc_reward(action)
-	* calc_potential()
-* get_rgb()
-
 ##  [gym_env.py](environments/custom_envs.py)
 
 Extends OpenAI's gym.Env class.
@@ -73,13 +72,54 @@ Extends OpenAI's gym.Env class.
 * _step
 * HUD
 
+## environment code
+
+All robot functions in `envs` containing functions:
+* robot_specific_reset()
+	* robot_reset()
+	* target_reset()
+* calc_state()
+	* calc_to_target_vec()
+* calc_reward(action)
+	* calc_potential()
+* get_rgb()
+
+##   [reacher_envs.py ](environments/reacher_envs.py) (DoF = Degrees of Freedom)
+All custom environments.
+
+* **Reacher_plane**
+* **Reacher2Dof**
+* **Reacher3Dof**
+* **Reacher6Dof**
+
+##   [humanoid_envs.py ](environments/humanoid_envs.py)
+All custom environments.
+
+* **Humanoid**
+* **Humanoid_right3DoF**
+* **Humanoid6DoF**
+
+
+
 ## [xml_files](environments/xml_files)
 Directory for the xml files.
 
-* custom_reacher
-* half_humanoid
-* humanoid
-* fixed torso
+### reacher
+*  Reacher2DoF.xml
+*  Reacher3DoF.xml
+*  Reacher3DoF_2Targets.xml
+*  Reacher6DoF.xml
+*  Reacher_plane
+*  ReacherHumanoid.xml
+
+### humanoid
+
+* humanoid.xml
+	* Roboschool's symmetric humanoid
+* humanoid6DoF.xml
+* humanoid_right3DoF.xml
+* upper_torso.xml
+
 
 # [Baselines](Baselines/)
 OpenAI baselines training
