@@ -502,7 +502,7 @@ class Reacher3DoF_2Target(Base):
 
     def robot_specific_reset(self):
         self.motor_names = ["robot_shoulder_joint", "robot_elbow_joint_x","robot_elbow_joint_y"] # , "right_shoulder2", "right_elbow"]
-        self.motor_power = [75, 75, 75] #, 75, 75]
+        self.motor_power = [200, 200, 200] #, 75, 75]
         self.motors = [self.jdict[n] for n in self.motor_names]
 
         # target and potential
