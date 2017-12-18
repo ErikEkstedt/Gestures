@@ -497,8 +497,8 @@ class Reacher3DoF_2Target(Base):
                         args=args)
 
         # rewards constant for targets
-        self.reward_constant1 = 1
-        self.reward_constant2 = 1
+        self.reward_constant1 = args.r1
+        self.reward_constant2 = args.r2
 
     def robot_specific_reset(self):
         self.motor_names = ["robot_shoulder_joint", "robot_elbow_joint_x","robot_elbow_joint_y"] # , "right_shoulder2", "right_elbow"]
@@ -639,13 +639,11 @@ def make_parallel_environments(Env, args):
     :param num_processes        int, # env
     '''
     if args.RGB:
-        # from baselines.common.vec_env.subproc_vec_env import SubprocVecEnv_RGB as SubprocVecEnv
         try:
             from envs import SubprocVecEnv_RGB as SubprocVecEnv
         except:
             from environments.envs import SubprocVecEnv_RGB as SubprocVecEnv
     else:
-        # from baselines.common.vec_env.subproc_vec_env import SubprocVecEnv
         try:
             from envs import SubprocVecEnv
         except:

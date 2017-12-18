@@ -21,12 +21,6 @@ def run_episodes(env, pi, CurrentState, args, verbose=True):
             state, reward, done, info = env.step(cpu_actions)
             # check_types(state)
             if args.render: env.render()
-            if verbose:
-                print('\nPotential:\t{}\nReward:\t{}' \
-                      '\nTarget:\t{}\nRobot:\t{}'.format(env.potential,
-                                                         reward,
-                                                         env.target_position,
-                                                         env.hand_position))
             # If done then update final rewards and reset episode reward
             episode_reward += reward
             if done:
@@ -36,6 +30,7 @@ def run_episodes(env, pi, CurrentState, args, verbose=True):
                     print('\nEpisode Reward:', episode_reward)
                     print('Avg Reward: ', total_reward/(j+1))
                 break
+
     return total_reward/args.num_test
 
 def test_without_args():
@@ -100,7 +95,7 @@ def print_motors(env):
 def main():
     args = get_args()
     Env = get_env(args)
-    env = Env()
+    env = Env(args)
 
     torch.manual_seed(args.seed)
     env.seed(args.seed)
@@ -124,7 +119,7 @@ def main():
     render = input('Wish to render?')
     if render is 'y':
         args.render = True
-        run_episodes(env, pi, CurrentState, args, verbose=False)
+        run_episodes(env, pi, CurrentState, args, verbose=True)
 
 
 if __name__ == '__main__':
