@@ -97,8 +97,12 @@ def main():
     Env = get_env(args)
     env = Env(args)
 
-    torch.manual_seed(args.seed)
-    env.seed(args.seed)
+    if False:
+        env.seed(args.seed)
+
+    # torch.manual_seed(args.seed)
+    # env.seed(args.seed)
+
     ob_shape = env.observation_space.shape[0]
     ac_shape = env.action_space.shape[0]
 

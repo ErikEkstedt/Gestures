@@ -24,7 +24,6 @@ class MyGymEnv(gym.Env):
 
         if self.RGB:
             self.rgb_space = gym.spaces.Box(low=0, high=255, shape=(400, 600, 3))
-        self._seed()
 
     def _seed(self, seed=None):
         self.np_random, seed = gym.utils.seeding.np_random(seed)

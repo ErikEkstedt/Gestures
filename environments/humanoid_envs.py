@@ -73,12 +73,7 @@ class Base(MyGymEnv):
     def apply_action(self, a):
         assert( np.isfinite(a).all() )
         for i, m, power in zip(range(len(self.motors)), self.motors, self.motor_power):
-            m.set_motor_torque( float(power*self.power*np.clip(a[i], -1, +1)) )
-
-    # def apply_action(self, a):
-    #     assert( np.isfinite(a).all() )
-    #     for n,j in enumerate(self.ordered_joints):
-    #         j.set_motor_torque( self.power*j.power_coef*float(np.clip(a[n], -1, +1)) )
+            m.set_motor_torque(float(power*self.power*np.clip(a[i], -1, +1)) )
 
     def stop_condition(self):
         max_time = False
@@ -171,23 +166,23 @@ class Humanoid3DoF(Base):
         self.potential = self.calc_potential()
 
     def robot_reset(self):
-        ''' self.np_random for correct seed. '''
+        ''' np.random for correct seed. '''
         for j in self.robot_joints.values():
             j.reset_current_position(
-                self.np_random.uniform( low=-0.03, high=0.03 ), 0)
+                np.random.uniform( low=-0.03, high=0.03 ), 0)
             j.set_motor_torque(0)
 
     def target_reset(self):
-        ''' self.np_random for correct seed. '''
+        ''' np.random for correct seed. '''
         for j in self.target_joints.values():
             if "z" in j.name:
                 '''Above ground'''
                 j.reset_current_position(
-                    self.np_random.uniform( low=0.2, high=0.6 ), 0)
+                    np.random.uniform( low=0.2, high=0.6 ), 0)
             elif "x" in j.name:
-                j.reset_current_position( self.np_random.uniform( low=0, high=0.4 ), 0)
+                j.reset_current_position( np.random.uniform( low=0, high=0.4 ), 0)
             else:
-                j.reset_current_position( self.np_random.uniform( low=-0.3, high=0 ), 0)
+                j.reset_current_position( np.random.uniform( low=-0.3, high=0 ), 0)
 
     def calc_to_target_vec(self):
         ''' gets hand position, target position and the vector in bewteen'''
@@ -227,7 +222,7 @@ class Humanoid3DoF(Base):
     def calc_potential(self):
         return -self.potential_constant*np.linalg.norm(self.to_target_vec)
 
-class Humanoid6DoF(Base):
+class Humanoid6DoF_2target(Base):
     def __init__(self,  args=None):
         Base.__init__(self,XML_PATH=PATH_TO_CUSTOM_XML,
                       robot_name='robot',
@@ -241,11 +236,11 @@ class Humanoid6DoF(Base):
         self.motor_names = ["robot_right_shoulder1",
                             "robot_right_shoulder2",
                             "robot_right_elbow"]
-        self.motor_power = [75, 75, 75]
+        self.motor_power = [100, 100, 100]
         self.motor_names = ["robot_left_shoulder1",
                             "robot_left_shoulder2",
                             "robot_left_elbow"]
-        self.motor_power += [75, 75, 75]
+        self.motor_power += [100, 100, 100]
         self.motors = [self.jdict[n] for n in self.motor_names]
 
         # target and potential
@@ -257,8 +252,7 @@ class Humanoid6DoF(Base):
     def robot_reset(self):
         ''' self.np_random for correct seed. '''
         for j in self.robot_joints.values():
-            j.reset_current_position(
-                self.np_random.uniform( low=-0.3, high=0.3 ), 0)
+            j.reset_current_position(np.random.uniform(low=-0.3, high=0.3 ), 0)
             j.set_motor_torque(0)
 
     def target_reset(self):
@@ -267,17 +261,17 @@ class Humanoid6DoF(Base):
         One for each arm. Each a maximum distance of 0.3 from shoulder.
         '''
         # target 1.
-        r = self.np_random.uniform(low=0.3, high=0.5)
-        theta = 0.5 * np.pi * self.np_random.rand()
-        phi = 0.25 * np.pi * self.np_random.rand()
+        r = np.random.uniform(low=0.3, high=0.5)
+        theta = 0.5 * np.pi * np.random.rand()
+        phi = 0.25 * np.pi * np.random.rand()
         x = r*np.sin(theta)*np.cos(phi)
         y = r*np.sin(theta)*np.sin(phi)
         z = r*np.cos(theta)
 
         # taret 2
-        r = self.np_random.uniform(low=0.3, high=0.5)
-        theta = 0.5 * np.pi * self.np_random.rand()
-        phi = -0.25 * np.pi * self.np_random.rand()
+        r = np.random.uniform(low=0.3, high=0.5)
+        theta = 0.5 * np.pi * np.random.rand()
+        phi = -0.25 * np.pi * np.random.rand()
         x1 = r*np.sin(theta)*np.cos(phi)
         y1 = r*np.sin(theta)*np.sin(phi)
         z1 = r*np.cos(theta)

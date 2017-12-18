@@ -512,14 +512,14 @@ class Reacher3DoF_2Target(Base):
         self.potential = self.calc_potential()
 
     def robot_reset(self):
-        ''' self.np_random for correct seed. '''
+        ''' np.random for correct seed. '''
         for j in self.robot_joints.values():
             j.reset_current_position(
-                self.np_random.uniform( low=-0.01, high=0.01 ), 0)
+                np.random.uniform( low=-0.01, high=0.01 ), 0)
             j.set_motor_torque(0)
 
     def target_reset(self):
-        ''' self.np_random for correct seed.
+        ''' np.random for correct seed.
         Two targets for 3DoF.
 
         First target is on circle with radius 0.2. The second target is on a
@@ -528,14 +528,14 @@ class Reacher3DoF_2Target(Base):
 
         # circle in xy-plane
         r=0.2
-        theta = 2 * np.pi * self.np_random.rand()
+        theta = 2 * np.pi * np.random.rand()
         x = r*np.cos(theta)
         y = r*np.sin(theta)
         z = 0.41
 
         # sphere, r=0.2, origo in x,y,z
-        theta = np.pi * self.np_random.rand()
-        phi = 2 * np.pi * self.np_random.rand()
+        theta = np.pi * np.random.rand()
+        phi = 2 * np.pi * np.random.rand()
         x1 = x + r*np.sin(theta)*np.cos(phi)
         y1 = y + r*np.sin(theta)*np.sin(phi)
         z1 = z + r*np.cos(theta)

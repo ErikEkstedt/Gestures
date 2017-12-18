@@ -41,7 +41,7 @@ def main():
     else:
         from train import Exploration_single as exploration
         env = Env(args)
-
+        env.seed(args.seed)
 
     tmp_rgb = args.RGB # save rgb flag
     if args.video:
