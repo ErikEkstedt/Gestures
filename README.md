@@ -4,9 +4,10 @@
 1. [x] Create 2 target 3 DoF env.
 2. [x] Start training with 2 targets.
 3. [ ] Torso
-4. [ ] annealing lr
-5. [ ] CNN
-6. [ ] dynamics model 
+4. [ ] grab random target positions.
+5. [ ] annealing lr
+6. [ ] CNN
+7. [ ] dynamics model 
 
 
 ## ML:

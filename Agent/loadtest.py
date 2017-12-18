@@ -5,34 +5,7 @@ from itertools import count
 from arguments import get_args
 from memory import StackedState
 from model import MLPPolicy
-
-def environment(args):
-    if "eacher" in args.env_id:
-        if args.dof == 2:
-            from environments.reacher_envs import Reacher2DoF
-            return Reacher2DoF
-            print('Reacher2DoF2')
-        elif args.dof == 3:
-            from environments.reacher_envs import Reacher3DoF
-            print('Reacher3DoF')
-            return Reacher3DoF
-        elif args.dof == 6:
-            from environments.reacher_envs import Reacher6DoF
-            print('Reacher6DoF')
-            return Reacher6DoF
-        elif args.dof == 88:
-            from environments.reacher_envs import Reacher_plane
-            print('Reacher_plane')
-            return Reacher_plane
-    else:
-        if args.dof == 3:
-            from environments.humanoid_envs import Humanoid3DoF
-            print('Humanoid3DoF')
-            return Humanoid3DoF
-        elif args.dof == 6:
-            from environments.humanoid_envs import Humanoid6DoF
-            print('Humanoid6DoF')
-            return Humanoid6DoF
+from utils import get_env
 
 
 def run_episodes(env, pi, CurrentState, args, verbose=True):
@@ -126,7 +99,8 @@ def print_motors(env):
 
 def main():
     args = get_args()
-    env = environment(args)()
+    Env = get_env(args)
+    env = Env()
 
     torch.manual_seed(args.seed)
     env.seed(args.seed)

@@ -16,42 +16,8 @@ from memory import RolloutStorage, StackedState, Results
 from train import train, exploration
 from test import test, test_existing_env, Test_and_Save_Video, test_and_render
 
+from utils import get_env
 from environments.reacher_envs import make_parallel_environments
-
-def get_env(args):
-    if 'eacher' in args.env_id:
-        if args.dof == 2:
-            from environments.reacher_envs import Reacher2DoF
-            args.env_id='Reacher2DoF'
-            return Reacher2DoF
-        elif args.dof == 3:
-            from environments.reacher_envs import Reacher3DoF
-            args.env_id='Reacher3DoF'
-            return Reacher3DoF
-        elif args.dof == 32:
-            from environments.reacher_envs import Reacher3DoF_2Target
-            args.env_id='Reacher3DoF_2Target'
-            return Reacher3DoF_2Target
-        elif args.dof == 6:
-            from environments.reacher_envs import Reacher6DoF
-            args.env_id='Reacher6DoF'
-            return Reacher6DoF
-        else:
-            from environments.reacher_envs import Reacher_plane
-            args.env_id='Reacher_plane'
-            return Reacher_plane
-    elif 'umanoid' in args.env_id:
-        if args.dof == 3:
-            from environments.humanoid_envs import Humanoid3DoF
-            args.env_id='Humanoid3DoF'
-            return Humanoid3DoF
-        elif args.dof == 6:
-            from environments.reacher_envs import Humanoid6DoF
-            args.env_id='Humanoid6DoF'
-            return Humanoid6DoF
-    else:
-        print('Unknown environmnet')
-        return
 
 
 def main():
