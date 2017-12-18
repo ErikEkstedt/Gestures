@@ -1,5 +1,11 @@
 # Todo
 
+# Monday
+1. [ ] Create 2 target 3 DoF env.
+2. Start training with 2 targets.
+3. Torso
+
+
 ## ML:
 * [ ] Annealing learning rate
 * [ ] make CNN autoencoder module
@@ -21,13 +27,18 @@
 * [ ] Humanoid with appropriate limits.
 
 ## Dynamics Model
-* Go through tha main againg.
+* Go through tha main again.
 * envs - learn from mujoco gym?
 * train on humanoid-reacher-custom-evns
+
+
+
 ----------------------------------------------------------------------------
+
 ## Why does training improve but when loading state dict the result sucks?
 Don't know why... might come back...
 But for now simply just save models with good score and then restart scirpt until correct behaviour. [This pains me]
+
 
 ### Possible Sources:
 * [x] Check that StackedState gives same output for all numbers of processes. YES! (memory.py - test())

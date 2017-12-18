@@ -41,9 +41,10 @@ def collect_random_data(env, data_size = 100, render=False):
 
 def save_data(data_size, dirpath='/home/erik/DATA/Project/', verbose=True):
     ''' Collects random data and saves it to disk through pickle.
-# Arguments:
-        data_size - Integer of data size
-        dirpath - Directory savepath
+    # Arguments:
+
+    :param data_size - Integer of data size
+    :param dirpath   - Directory savepath
     '''
     run = 0
     while os.path.exists("%s/data%d.p" % (dirpath, run)):
