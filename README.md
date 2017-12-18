@@ -18,6 +18,7 @@
 	* [ ] Compare training time
 * [ ] predictive dynamics model which tries to predict a robots movement and instantly choose that predictive state as target.
 
+
 ## Program:
 * [ ] Make target rgb-visible during rendering.
 * [ ] Think about mimic in practice
@@ -26,9 +27,11 @@
 * [ ] Continue training. Save checkpoint
 * [ ] After som easy convergence put two robots in an environment and have one mimic the other.
 
+
 ## Environment:
 * [ ] Create 2 target 3 DoF env.
 * [ ] Humanoid with appropriate limits.
+
 
 ## Dynamics Model
 * Go through tha main again.

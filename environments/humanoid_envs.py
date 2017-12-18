@@ -81,7 +81,7 @@ class Base(MyGymEnv):
             max_time = True
         return max_time
 
-    def load_xml_get_robot(self, verbose=False):
+    def load_xml_get_robot(self, verbose=True):
         self.mjcf = self.scene.cpp_world.load_mjcf(
             os.path.join(os.path.dirname(__file__),
                          "xml_files/",
@@ -152,7 +152,6 @@ class Humanoid3DoF(Base):
         print('I am', self.model_xml)
 
     def robot_specific_reset(self):
-        # Right joints
         self.motor_names = ["robot_right_shoulder1",
                             "robot_right_shoulder2",
                             "robot_right_elbow"]
@@ -173,16 +172,14 @@ class Humanoid3DoF(Base):
             j.set_motor_torque(0)
 
     def target_reset(self):
-        ''' np.random for correct seed. '''
         for j in self.target_joints.values():
             if "z" in j.name:
                 '''Above ground'''
-                j.reset_current_position(
-                    np.random.uniform( low=0.2, high=0.6 ), 0)
+                j.reset_current_position(np.random.uniform(low=0.2, high=0.6), 0)
             elif "x" in j.name:
-                j.reset_current_position( np.random.uniform( low=0, high=0.4 ), 0)
+                j.reset_current_position(np.random.uniform(low=0, high=0.4), 0)
             else:
-                j.reset_current_position( np.random.uniform( low=-0.3, high=0 ), 0)
+                j.reset_current_position(np.random.uniform(low=-0.3, high=0), 0)
 
     def calc_to_target_vec(self):
         ''' gets hand position, target position and the vector in bewteen'''
@@ -222,6 +219,7 @@ class Humanoid3DoF(Base):
     def calc_potential(self):
         return -self.potential_constant*np.linalg.norm(self.to_target_vec)
 
+
 class Humanoid6DoF_2target(Base):
     def __init__(self,  args=None):
         Base.__init__(self,XML_PATH=PATH_TO_CUSTOM_XML,
@@ -230,7 +228,11 @@ class Humanoid6DoF_2target(Base):
                       model_xml='humanoid/humanoid6DoF.xml',
                       ac=6, obs=21,
                       args = args)
+
         print('I am', self.model_xml)
+        # rewards constant for targets
+        self.reward_constant1 = args.r1
+        self.reward_constant2 = args.r2
 
     def robot_specific_reset(self):
         self.motor_names = ["robot_right_shoulder1",
@@ -261,7 +263,7 @@ class Humanoid6DoF_2target(Base):
         One for each arm. Each a maximum distance of 0.3 from shoulder.
         '''
         # target 1.
-        r = np.random.uniform(low=0.3, high=0.5)
+        r = np.random.uniform(low=0.2, high=0.5)
         theta = 0.5 * np.pi * np.random.rand()
         phi = 0.25 * np.pi * np.random.rand()
         x = r*np.sin(theta)*np.cos(phi)
@@ -269,7 +271,7 @@ class Humanoid6DoF_2target(Base):
         z = r*np.cos(theta)
 
         # taret 2
-        r = np.random.uniform(low=0.3, high=0.5)
+        r = np.random.uniform(low=0.2, high=0.5)
         theta = 0.5 * np.pi * np.random.rand()
         phi = -0.25 * np.pi * np.random.rand()
         x1 = r*np.sin(theta)*np.cos(phi)
@@ -327,7 +329,6 @@ class Humanoid6DoF_2target(Base):
         self.important_positions = np.concatenate((robot_pos1, robot_pos2))
         self.to_target_vec = np.concatenate((self.totarget1, self.totarget2),)
 
-
     def calc_state(self):
         j = np.array([j.current_relative_position()
                     for j in self.robot_joints.values()],
@@ -338,7 +339,7 @@ class Humanoid6DoF_2target(Base):
         self.joint_speeds = j[1::2]
         self.calc_to_target_vec()
         return np.concatenate((self.target_position,
-                               self.hand_position,
+                               self.important_positions,
                                self.to_target_vec,
                                self.joint_positions,
                                self.joint_speeds),)
@@ -351,14 +352,18 @@ class Humanoid6DoF_2target(Base):
         electricity_cost += self.stall_torque_cost * float(np.square(a).mean())
         joints_at_limit_cost = float(self.joints_at_limit_cost * self.joints_at_limit)
 
-        # Save rewards ?
-        self.rewards = [float(self.potential - potential_old), float(electricity_cost)]
-        reward = sum(self.rewards)
+        r1 = self.reward_constant1 * float(self.potential[0] - potential_old[0]) # elbow
+        r2 = self.reward_constant2 * float(self.potential[1] - potential_old[1]) # hand
 
+        # Save rewards ?
+        self.rewards = [r1, r2, electricity_cost]
+        reward = sum(self.rewards)
         return reward
 
     def calc_potential(self):
-        return -self.potential_constant*np.linalg.norm(self.to_target_vec)
+        p1 = -self.potential_constant*np.linalg.norm(self.totarget1)
+        p2 = -self.potential_constant*np.linalg.norm(self.totarget2)
+        return p1, p2
 
 
 class Humanoid(Base):
@@ -397,25 +402,24 @@ class Humanoid(Base):
         self.potential = self.calc_potential()
 
     def robot_reset(self):
-        ''' self.np_random for correct seed. '''
         for j in self.robot_joints.values():
             j.reset_current_position(
-                self.np_random.uniform( low=-0.03, high=0.03 ), 0)
+                np.random.uniform( low=-0.03, high=0.03 ), 0)
             j.set_motor_torque(0)
 
     def target_reset(self):
-        ''' self.np_random for correct seed. '''
+        ''' np.random for correct seed. '''
         for j in self.target_joints.values():
             if "z" in j.name:
                 '''Above ground'''
                 j.reset_current_position(
-                    self.np_random.uniform( low=0.2, high=0.6 ), 0)
+                    np.random.uniform( low=0.2, high=0.6 ), 0)
             elif "x" in j.name:
                 j.reset_current_position(
-                    self.np_random.uniform( low=0, high=0.4 ), 0)
+                    np.random.uniform( low=0, high=0.4 ), 0)
             else:
                 j.reset_current_position(
-                    self.np_random.uniform( low=-0.3, high=0 ), 0)
+                    np.random.uniform( low=-0.3, high=0 ), 0)
 
     def calc_to_target_vec(self):
         ''' gets hand position, target position and the vector in bewteen'''
@@ -485,8 +489,8 @@ def make_parallel_environments(Env, args):
 def get_env(args):
     if args.dof == 3:
         return Humanoid3DoF
-    elif args.dof == 6:
-        return Humanoid6DoF
+    elif args.dof == 62:
+        return Humanoid6DoF_2target
     elif args.dof == 9:
         return Humanoid_upper_torso
     else:
@@ -548,7 +552,6 @@ def single_episodes(Env, args):
                 # print(r)
                 if args.render:
                     env.render()
-                    env.reset()
                 if d:
                     s=env.reset()
                     print('Target pos: ',env.target_position)

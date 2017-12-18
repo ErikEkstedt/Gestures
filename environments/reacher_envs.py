@@ -82,7 +82,7 @@ class Base(MyGymEnv):
             max_time = True
         return max_time
 
-    def load_xml_get_robot(self, verbose=False):
+    def load_xml_get_robot(self, verbose=True):
         self.mjcf = self.scene.cpp_world.load_mjcf(
             os.path.join(os.path.dirname(__file__),
                          "xml_files/",
@@ -495,14 +495,14 @@ class Reacher3DoF_2Target(Base):
                         model_xml='reacher/Reacher3DoF_2Targets.xml',
                         ac=3, obs=24,
                         args=args)
-
+        print('I am', self.model_xml)
         # rewards constant for targets
         self.reward_constant1 = args.r1
         self.reward_constant2 = args.r2
 
     def robot_specific_reset(self):
         self.motor_names = ["robot_shoulder_joint", "robot_elbow_joint_x","robot_elbow_joint_y"] # , "right_shoulder2", "right_elbow"]
-        self.motor_power = [200, 200, 200] #, 75, 75]
+        self.motor_power = [100, 100, 100] #, 75, 75]
         self.motors = [self.jdict[n] for n in self.motor_names]
 
         # target and potential
@@ -514,8 +514,7 @@ class Reacher3DoF_2Target(Base):
     def robot_reset(self):
         ''' np.random for correct seed. '''
         for j in self.robot_joints.values():
-            j.reset_current_position(
-                np.random.uniform( low=-0.01, high=0.01 ), 0)
+            j.reset_current_position(np.random.uniform(low=-0.01, high=0.01 ), 0)
             j.set_motor_torque(0)
 
     def target_reset(self):
