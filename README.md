@@ -1,9 +1,12 @@
 # Todo
 
 # Monday
-1. [ ] Create 2 target 3 DoF env.
-2. Start training with 2 targets.
-3. Torso
+1. [x] Create 2 target 3 DoF env.
+2. [x] Start training with 2 targets.
+3. [ ] Torso
+4. [ ] annealing lr
+5. [ ] CNN
+6. [ ] dynamics model 
 
 
 ## ML:

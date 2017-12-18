@@ -2,6 +2,8 @@ from roboschool.scene_abstract import Scene, SingleRobotEmptyScene
 import os
 import numpy as np
 import gym
+from itertools import count
+
 # from OpenGL import GL # fix for opengl issues on desktop  / nvidia
 from OpenGL import GLE # fix for opengl issues on desktop  / nvidia
 
@@ -479,7 +481,7 @@ class Reacher6DoF(Base):
     def calc_potential(self):
         return -self.potential_constant*np.linalg.norm(self.to_target_vec)
 
-# Unfinished ---------
+
 class Reacher3DoF_2Target(Base):
     ''' 2DoF Reacher
     No joint limits
@@ -491,8 +493,12 @@ class Reacher3DoF_2Target(Base):
                         robot_name='robot_arm',
                         target_name='target_elbow',
                         model_xml='reacher/Reacher3DoF_2Targets.xml',
-                        ac=3, obs=13,
+                        ac=3, obs=24,
                         args=args)
+
+        # rewards constant for targets
+        self.reward_constant1 = 1
+        self.reward_constant2 = 1
 
     def robot_specific_reset(self):
         self.motor_names = ["robot_shoulder_joint", "robot_elbow_joint_x","robot_elbow_joint_y"] # , "right_shoulder2", "right_elbow"]
@@ -513,62 +519,77 @@ class Reacher3DoF_2Target(Base):
             j.set_motor_torque(0)
 
     def target_reset(self):
-        ''' self.np_random for correct seed. '''
-        print(self.target_joints)
+        ''' self.np_random for correct seed.
+        Two targets for 3DoF.
+
+        First target is on circle with radius 0.2. The second target is on a
+        sphere with radius 0.2 with origo in target 1.
+        '''
+
+        # circle in xy-plane
         r=0.2
-        theta= 3.14 * self.np_random.rand()
+        theta = 2 * np.pi * self.np_random.rand()
         x = r*np.cos(theta)
         y = r*np.sin(theta)
         z = 0.41
 
-        r=0.1
-        theta= 3.14 * self.np_random.rand()
-        x1 = x + r*np.cos(theta)
-        y1 = y + r*np.sin(theta)
-        z1 = z + r*self.np_random.rand()*2-1
+        # sphere, r=0.2, origo in x,y,z
+        theta = np.pi * self.np_random.rand()
+        phi = 2 * np.pi * self.np_random.rand()
+        x1 = x + r*np.sin(theta)*np.cos(phi)
+        y1 = y + r*np.sin(theta)*np.sin(phi)
+        z1 = z + r*np.cos(theta)
+
+        verbose = False
         for name, j in self.target_joints.items():
             if "0" in name:
                 if "z" in name:
                     j.reset_current_position(0.41, 0)
-                    print('z0')
-                    print(name)
+                    if verbose:
+                        print('z0')
+                        print(name)
                 elif "x" in name:
-                    print('x0')
-                    print(name)
+                    if verbose:
+                        print('x0')
+                        print(name)
                     j.reset_current_position(x,0)
                 else:
-                    print('y0')
-                    print(name)
+                    if verbose:
+                        print('y0')
+                        print(name)
                     j.reset_current_position(y, 0)
             else:
                 if "z" in name:
-                    print('z1')
-                    print(name)
+                    if verbose:
+                        print('z1')
+                        print(name)
                     j.reset_current_position(0.21, 0)
                 elif "x" in name:
-                    print('x1')
-                    print(name)
+                    if verbose:
+                        print('x1')
+                        print(name)
                     j.reset_current_position(x1,0)
                 else:
-                    print('y1')
-                    print(name)
+                    if verbose:
+                        print('y1')
+                        print(name)
                     j.reset_current_position(y1, 0)
 
     def calc_to_target_vec(self):
         ''' gets hand position, target position and the vector in bewteen'''
         # Elbow target
         target_position1 = np.array(self.target_parts['target_elbow'].pose().xyz())
-        elbow_position = np.array(self.parts['robot_arm1'].pose().xyz())
-        totarget1 = elbow_position - target_position1
+        elbow_position = np.array(self.parts['robot_elbow'].pose().xyz())
+        self.totarget1 = elbow_position - target_position1
 
         # Hand target
         target_position2 = np.array(self.target_parts['target_hand'].pose().xyz())
         hand_position = np.array(self.parts['robot_hand'].pose().xyz())
-        totarget2 = hand_position - target_position2
+        self.totarget2 = hand_position - target_position2
 
         self.target_position = np.concatenate((target_position1, target_position2))
         self.important_positions = np.concatenate((elbow_position, hand_position))
-        self.to_target_vec = np.concatenate((totarget1, totarget2),)
+        self.to_target_vec = np.concatenate((self.totarget1, self.totarget2),)
 
     def calc_state(self):
         j = np.array([j.current_relative_position()
@@ -577,7 +598,7 @@ class Reacher3DoF_2Target(Base):
         self.joints_at_limit = np.count_nonzero(np.abs(j[0::2]) > 0.99)
         self.joint_positions = j[0::2]
         self.joint_speeds = j[1::2]
-        self.calc_to_target_vec()
+        self.calc_to_target_vec()  # calcs target_position, important_pos, to_target_vec
         return np.concatenate((self.target_position,
                                self.important_positions,
                                self.to_target_vec,
@@ -593,18 +614,25 @@ class Reacher3DoF_2Target(Base):
         electricity_cost += self.stall_torque_cost * float(np.square(a).mean())
         joints_at_limit_cost = float(self.joints_at_limit_cost * self.joints_at_limit)
 
+        r1 = self.reward_constant1 * float(self.potential[0] - potential_old[0]) # elbow
+        r2 = self.reward_constant2 * float(self.potential[1] - potential_old[1]) # hand
+
         # Save rewards ?
-        self.rewards = [float(self.potential - potential_old), float(electricity_cost)]
+        self.rewards = [r1, r2, electricity_cost]
         return sum(self.rewards)
 
     def calc_potential(self):
-        return -self.potential_constant*np.linalg.norm(self.to_target_vec)
+        p1 = -self.potential_constant*np.linalg.norm(self.totarget1)
+        p2 = -self.potential_constant*np.linalg.norm(self.totarget2)
+        return p1, p2
 
     def get_rgb(self):
         rgb, _, _, _, _ = self.camera.render(False, False, False) # render_depth, render_labeling, print_timing)
         rendered_rgb = np.fromstring(rgb, dtype=np.uint8).reshape( (self.VIDEO_H,self.VIDEO_W,3) )
         return rendered_rgb
 
+
+# Unfinished ---------
 
 class ReacherHumanoid(Base):
     '''
@@ -696,6 +724,7 @@ class ReacherHumanoid(Base):
         return rendered_rgb
 
 
+# ===== Test Helpers =====
 def make_parallel_environments(Env, args):
     ''' imports SubprocVecEnv from baselines.
     :param seed                 int
@@ -722,12 +751,13 @@ def make_parallel_environments(Env, args):
         return _thunk
     return SubprocVecEnv([multiple_envs(Env, args, i) for i in range(args.num_processes)])
 
-
 def get_env(args):
     if args.dof == 2:
         return Reacher2DoF
     elif args.dof == 3:
         return Reacher3DoF
+    elif args.dof == 32:
+        return Reacher3DoF_2Target
     elif args.dof == 6:
         return Reacher6DoF
     elif args.dof == 1:
@@ -735,9 +765,55 @@ def get_env(args):
     else:
         return ReacherHumanoid
 
+def parallel_episodes(Env, args):
+    env = make_parallel_environments(Env, args)
+    if args.RGB:
+        (s, obs) = env.reset()
+    else:
+        s = env.reset()
+    R = 0
+    for i in count(1):
+        if args.RGB:
+            s, obs, r, d, _ = env.step([env.action_space.sample()] * args.num_processes)
+        else:
+            s, r, d, _ = env.step([env.action_space.sample()] * args.num_processes)
+        R += r
+        if sum(d) > 0:
+            print('Step: {}, Reward: {}, mean: {}'.format(i, R, R.mean(axis=0)))
+            R = 0
+            env.reset()
+
+def single_episodes(Env, args):
+    env = Env(args)
+    print('RGB: {}\tGravity: {}\tMAX: {}\t'.format(env.RGB, env.gravity, env.MAX_TIME))
+    if args.RGB:
+        s = env.reset()
+        s, obs = s
+        print(s.shape)
+        print(obs.shape)
+        while True:
+            (s, obs), r, d, _ = env.step(env.action_space.sample())
+            R += r
+            if d:
+                s=env.reset()
+    else:
+        s = env.reset()
+        print("jdict", env.jdict)
+        print("robot_joints", env.robot_joints)
+        print("motor_names" , env.motor_names)
+        print("motor_power" , env.motor_power)
+        print(s.shape)
+        while True:
+            a = env.action_space.sample()
+            s, r, d, _ = env.step(a)
+            print('Reward: ', r)
+            if args.render: env.render()
+            if d:
+                s=env.reset()
+                print('Target pos: ',env.target_position)
+
 
 def test():
-    from itertools import count
     try:
         from Agent.arguments import get_args
     except:
@@ -747,51 +823,9 @@ def test():
     Env = get_env(args)
 
     if args.num_processes > 1:
-        env = make_parallel_environments(Env, args)
-        if args.RGB:
-            (s, obs) = env.reset()
-            R = 0
-            for i in count(1):
-                s, obs, r, d, _ = env.step([env.action_space.sample()] * args.num_processes)
-                R += r
-                if sum(d) > 0:
-                    print('Step: {}, Reward: {}, mean: {}'.format(i, R, R.mean(axis=0)))
-                    R = 0
-                    env.reset()
-        else:
-            s = env.reset()
-            R = 0
-            for i in count(1):
-                s, r, d, _ = env.step([env.action_space.sample()] * args.num_processes)
-                R += r
-                if sum(d) > 0:
-                    print('Step: {}, Reward: {}, mean: {}'.format(i, R, R.mean(axis=0)))
-                    R = 0
-                    env.reset()
+        parallel_episodes(Env, args)
     else:
-        env = Env(args)
-        print('RGB: {}\tGravity: {}\tMAX: {}\t'.format(env.RGB,
-                                                       env.gravity,
-                                                       env.MAX_TIME))
-        if args.RGB:
-            s = env.reset()
-            s, obs = s
-            print(s.shape)
-            print(obs.shape)
-            while True:
-                (s, obs), r, d, _ = env.step(env.action_space.sample())
-                if d:
-                    s=env.reset()
-        else:
-            s = env.reset()
-            print(s.shape)
-            while True:
-                s, r, d, _ = env.step(env.action_space.sample())
-                # print(r)
-                if args.render: env.render()
-                if d:
-                    s=env.reset()
-                    print(env.target_position)
+        single_episodes(Env, args)
 
 
 if __name__ == '__main__':

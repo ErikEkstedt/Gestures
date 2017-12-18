@@ -28,6 +28,10 @@ def get_env(args):
             from environments.reacher_envs import Reacher3DoF
             args.env_id='Reacher3DoF'
             return Reacher3DoF
+        elif args.dof == 32:
+            from environments.reacher_envs import Reacher3DoF_2Target
+            args.env_id='Reacher3DoF_2Target'
+            return Reacher3DoF_2Target
         elif args.dof == 6:
             from environments.reacher_envs import Reacher6DoF
             args.env_id='Reacher6DoF'
