@@ -19,28 +19,15 @@ from memory import RolloutStorage, StackedState, Results
 from train import train, exploration_rgb
 from test import test, test_existing_env, Test_and_Save_Video
 
-from environments.custom_reacher import make_parallel_environments_RGB
-
+from utils import get_env
+from environments.reacher_envs import make_parallel_environments
 
 def main():
     args = get_args()
-    args.RGB=True
+    args.RGB = True
 
     # === Environment ===
-    if args.dof == 6:
-        print('Not done with 6DoF!')
-        return
-        from environments.custom_reacher import CustomReacher6DoF as CustomReacher
-        args.env_id='CustomReacher6DoF'
-    elif args.dof == 3:
-        from environments.custom_reacher import CustomReacher3DoF as CustomReacher
-        args.env_id='CustomReacher3DoF'
-    elif args.dof == 2:
-        from environments.custom_reacher import CustomReacher2DoF as CustomReacher
-        args.env_id='CustomReacher2DoF'
-    else:
-        from environments.custom_reacher import Reacher_plane as CustomReacher
-        args.env_id='Reacher_plane'
+    Env = get_env(args)
 
     # Logger
     make_log_dirs(args)
@@ -53,22 +40,13 @@ def main():
 
     if args.num_processes > 1:
         from train import exploration
-        env = make_parallel_environments_RGB(CustomReacher,args)
+        env = make_parallel_environments(Env,args)
     else:
-        from train import exploration_single as exploration
-        env = CustomReacher(args.potential_constant,
-                            args.electricity_cost,
-                            args.stall_torque_cost,
-                            args.joints_at_limit_cost,
-                            args.episode_time)
+        from train import Exploration_single as exploration
+        env = Env(args)
+        env.seed(args.seed)
 
-    test_env = CustomReacher(args.potential_constant,
-                             args.electricity_cost,
-                             args.stall_torque_cost,
-                             args.joints_at_limit_cost,
-                             args.episode_time,
-                             RGB=args.RGB)
-
+    test_env = Env(args)
 
     ob_shape = env.observation_space.shape[0]
     ac_shape = env.action_space.shape[0]
@@ -97,8 +75,8 @@ def main():
     print('Learning {}(ac: {}, ob: {})'.format( args.env_id, ac_shape, ob_shape))
     print('\nTraining for %d Updates' % num_updates)
     (s, obs) = env.reset()
-    print(s.shape)
-    print(obs.shape)
+    print('joint state shape:', s.shape)
+    print('observation shaep:',obs.shape)
 
     def show_state(obs):
         ob = torch.Tensor(obs)
@@ -169,11 +147,17 @@ def main():
                 args.checkpoint_dir,
                 'dict_{}_TEST_{}.pt'.format(frame, round(test_reward, 3)))
             torch.save(sd, name)
-            name = os.path.join(
-                args.checkpoint_dir,
-                'model_{}_TEST_{}.pt'.format(frame, round(test_reward, 3)))
-            torch.save(pi, name )
 
+            name = os.path.join(
+                args.result_dir,
+                'video{}_TEST_{}.pt'.format(frame, round(test_reward, 3)))
+            torch.save(videolist, name)
+
+            # name = os.path.join(
+            #     args.checkpoint_dir,
+            #     'model_{}_TEST_{}.pt'.format(frame, round(test_reward, 3)))
+            # torch.save(pi, name )
+            #
             #  ==== Save best model ======
             if test_reward > MAX_REWARD:
                 print('--'*45)
@@ -188,7 +172,7 @@ def main():
                 torch.save(pi, name)
                 name = os.path.join(
                     args.result_dir,
-                    'VIDEO{}_{}.pt'.format(frame, round(test_reward, 3)))
+                    'BESTVIDEO{}_{}.pt'.format(frame, round(test_reward, 3)))
                 torch.save(videolist, name)
                 MAX_REWARD = test_reward
 

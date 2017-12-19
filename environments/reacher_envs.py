@@ -31,12 +31,15 @@ class Base(MyGymEnv):
             ''' Defaults '''
             MyGymEnv.__init__(self, action_dim=ac, obs_dim=obs, RGB=False)
 
-            # Env
+            # Env (xml forward walkers)
             self.MAX_TIME=300
-            self.potential_constant = 100
-            self.electricity_cost  = -0.1
-            self.stall_torque_cost = -0.01
-            self.joints_at_limit_cost = -0.01
+            self.potential_constant   = 100
+            self.electricity_cost     = -2.0  # cost for using motors -- this parameter should be carefully tuned against reward for making progress, other values less improtant
+            self.stall_torque_cost    = -0.1  # cost for running electric current through a motor even at zero rotational speed, small
+            self.joints_at_limit_cost = -0.2  # discourage stuck joints
+
+            self.reward_constant1     = 1
+            self.reward_constant2     = 1
 
             # Scene
             self.gravity = 9.81
@@ -44,7 +47,7 @@ class Base(MyGymEnv):
             self.frame_skip = 1
 
             # Robot
-            self.power = 0.5
+            self.power = 0.8
         else:
             MyGymEnv.__init__(self, action_dim=ac, obs_dim=obs, RGB=args.RGB)
             self.MAX_TIME=args.MAX_TIME
@@ -55,6 +58,8 @@ class Base(MyGymEnv):
             self.stall_torque_cost    = args.stall_torque_cost
             self.joints_at_limit_cost = args.joints_at_limit_cost
             self.MAX_TIME             = args.MAX_TIME
+            self.reward_constant1     = args.r1
+            self.reward_constant2     = args.r2
 
             # Scene
             self.gravity              = args.gravity
@@ -63,7 +68,6 @@ class Base(MyGymEnv):
 
             # Robot
             self.power                = args.power # 0.5
-
     def print_relevant_information(self):
         print('Robot name: {}, Target name={}'.format(self.robot_name, self.target_name))
         print('XML fileme: {}, Path={}'.format(self.model_xml, self.XML_PATH))
@@ -82,7 +86,7 @@ class Base(MyGymEnv):
             max_time = True
         return max_time
 
-    def load_xml_get_robot(self, verbose=True):
+    def load_xml_get_robot(self, verbose=False):
         self.mjcf = self.scene.cpp_world.load_mjcf(
             os.path.join(os.path.dirname(__file__),
                          "xml_files/",
@@ -137,9 +141,6 @@ class Base(MyGymEnv):
             if name in jname:
                 parts[jname] = part
         return joints, parts
-
-    def camera_adjust(self):
-        self.camera.move_and_look_at(1.0, 0, 0.5, 0, 0, 0)
 
 
 class Reacher_plane(Base):
@@ -497,8 +498,6 @@ class Reacher3DoF_2Target(Base):
                         args=args)
         print('I am', self.model_xml)
         # rewards constant for targets
-        self.reward_constant1 = args.r1
-        self.reward_constant2 = args.r2
 
     def robot_specific_reset(self):
         self.motor_names = ["robot_shoulder_joint", "robot_elbow_joint_x","robot_elbow_joint_y"] # , "right_shoulder2", "right_elbow"]
@@ -626,10 +625,14 @@ class Reacher3DoF_2Target(Base):
         return p1, p2
 
     def get_rgb(self):
+        self.camera_adjust()
         rgb, _, _, _, _ = self.camera.render(False, False, False) # render_depth, render_labeling, print_timing)
         rendered_rgb = np.fromstring(rgb, dtype=np.uint8).reshape( (self.VIDEO_H,self.VIDEO_W,3) )
         return rendered_rgb
 
+    def camera_adjust(self):
+        # self.camera.move_and_look_at(1.0, 0, 0.5, 0, 0, 0)
+        self.camera.move_and_look_at( 0.5, 0, 1, 0, 0, 0.4)
 
 # ===== Test Helpers =====
 def make_parallel_environments(Env, args):

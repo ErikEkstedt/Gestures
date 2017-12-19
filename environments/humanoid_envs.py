@@ -26,16 +26,20 @@ class Base(MyGymEnv):
         self.model_xml   = model_xml
         self.robot_name  = robot_name
         self.target_name = target_name
+
         if args is None:
             ''' Defaults '''
             MyGymEnv.__init__(self, action_dim=ac, obs_dim=obs, RGB=False)
 
             # Env (xml forward walkers)
             self.MAX_TIME=300
-            self.potential_constant = 100
-            self.electricity_cost  = -2.0  # cost for using motors -- this parameter should be carefully tuned against reward for making progress, other values less improtant
-            self.stall_torque_cost = -0.1  # cost for running electric current through a motor even at zero rotational speed, small
+            self.potential_constant   = 100
+            self.electricity_cost     = -2.0  # cost for using motors -- this parameter should be carefully tuned against reward for making progress, other values less improtant
+            self.stall_torque_cost    = -0.1  # cost for running electric current through a motor even at zero rotational speed, small
             self.joints_at_limit_cost = -0.2  # discourage stuck joints
+
+            self.reward_constant1     = 1
+            self.reward_constant2     = 1
 
             # Scene
             self.gravity = 9.81
@@ -54,6 +58,8 @@ class Base(MyGymEnv):
             self.stall_torque_cost    = args.stall_torque_cost
             self.joints_at_limit_cost = args.joints_at_limit_cost
             self.MAX_TIME             = args.MAX_TIME
+            self.reward_constant1     = args.r1
+            self.reward_constant2     = args.r2
 
             # Scene
             self.gravity              = args.gravity
@@ -81,7 +87,7 @@ class Base(MyGymEnv):
             max_time = True
         return max_time
 
-    def load_xml_get_robot(self, verbose=True):
+    def load_xml_get_robot(self, verbose=False):
         self.mjcf = self.scene.cpp_world.load_mjcf(
             os.path.join(os.path.dirname(__file__),
                          "xml_files/",
@@ -223,17 +229,14 @@ class Humanoid3DoF(Base):
 class Humanoid6DoF_2target(Base):
     def __init__(self,  args=None):
         Base.__init__(self,XML_PATH=PATH_TO_CUSTOM_XML,
-                      robot_name='robot',
-                      target_name='target',
-                      model_xml='humanoid/humanoid6DoF.xml',
-                      ac=6, obs=21,
-                      args = args)
+                        robot_name='robot',
+                        target_name='target',
+                        model_xml='humanoid/humanoid6DoF.xml',
+                        ac=6, obs=21,
+                        args = args)
 
         print('I am', self.model_xml)
         # rewards constant for targets
-        self.reward_constant1 = args.r1
-        self.reward_constant2 = args.r2
-
     def robot_specific_reset(self):
         self.motor_names = ["robot_right_shoulder1",
                             "robot_right_shoulder2",
@@ -339,10 +342,10 @@ class Humanoid6DoF_2target(Base):
         self.joint_speeds = j[1::2]
         self.calc_to_target_vec()
         return np.concatenate((self.target_position,
-                               self.important_positions,
-                               self.to_target_vec,
-                               self.joint_positions,
-                               self.joint_speeds),)
+                                self.important_positions,
+                                self.to_target_vec,
+                                self.joint_positions,
+                                self.joint_speeds),)
 
     def calc_reward(self, a):
         potential_old = self.potential
@@ -364,6 +367,9 @@ class Humanoid6DoF_2target(Base):
         p1 = -self.potential_constant*np.linalg.norm(self.totarget1)
         p2 = -self.potential_constant*np.linalg.norm(self.totarget2)
         return p1, p2
+
+    def custom_camera_adjust(self):
+        self.camera.move_and_look_at(0, 0, 0, 1, 0, 0.4)
 
 
 class Humanoid(Base):
@@ -457,6 +463,7 @@ class Humanoid(Base):
 
     def calc_potential(self):
         return -self.potential_constant*np.linalg.norm(self.to_target_vec)
+
 
 
 def make_parallel_environments(Env, args):

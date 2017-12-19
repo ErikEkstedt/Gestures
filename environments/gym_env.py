@@ -52,8 +52,6 @@ class MyGymEnv(gym.Env):
         s = self.calc_state()
         self.potential = self.calc_potential()
         if self.RGB:
-            self.camera_adjust()
-            print('camera adjust')
             rgb = self.get_rgb()
             return (s, rgb)
         else:

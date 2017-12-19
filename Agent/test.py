@@ -145,8 +145,8 @@ def Test_and_Save_Video(test_env, Model, state_dict, args, verbose=False):
     pi.load_state_dict(state_dict)
     # Test environments
     total_reward, episode_reward, best_episode_reward = 0, 0, -999
-    for i in range(3):
-        (state, obs) = test_env.reset()
+    for i in range(args.num_test):
+        state, obs = test_env.reset()
         Video = []
         for j in count(1):
             CurrentState.update(state)
@@ -154,7 +154,7 @@ def Test_and_Save_Video(test_env, Model, state_dict, args, verbose=False):
             cpu_actions = action.data.cpu().numpy()[0]
 
             # Observe reward and next state
-            (state, rgb), reward, done, info = test_env.step(cpu_actions)
+            state, rgb, reward, done, info = test_env.step(cpu_actions)
             Video.append(rgb)
 
             # If done then update final rewards and reset episode reward

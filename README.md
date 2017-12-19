@@ -2,12 +2,17 @@
 
 # Monday
 1. [x] Create 2 target 3 DoF env.
-2. [x] Start training with 2 targets.
-3. [ ] Torso
-4. [ ] grab random target positions.
-5. [ ] annealing lr
-6. [ ] CNN
-7. [ ] dynamics model 
+	* get angles between elbow and upper arm.
+	* collect rgb from training
+3. [x] Start training with 2 targets.
+4. [ ] Torso
+	* angles of shoulders?
+	* can it reach? what points?
+5. [ ] grab random target positions.
+	* show image, coords
+6. [ ] annealing lr
+7. [ ] CNN
+8. [ ] dynamics model 
 
 
 ## ML:

@@ -1,4 +1,15 @@
+#  Todo
+
+
+NOW:
+
+Torso!
+
+angle
+
+
 # Environment
+
 
 In my custom classes i load the xml file for the robot only once. Only if no scene has been initialized. For me this makes the reset() work as expected.
 

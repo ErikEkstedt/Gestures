@@ -48,7 +48,7 @@ def main():
         args.RGB = True
         video_env = Env(args)
 
-    args.RGB = False
+    args.RGB = True
     test_env = Env(args)
     args.RGB = tmp_rgb # reset rgb flag
 
@@ -123,7 +123,8 @@ def main():
             pi.cpu()
             sd = deepcopy(pi.cpu().state_dict())
             # test_reward = test(test_env, MLPPolicy, sd, args)
-            test_reward = test_existing_env(test_env, MLPPolicy, sd, args)
+            # test_reward = test_existing_env(test_env, MLPPolicy, sd, args)
+            test_reward, BestVideo = Test_and_Save_Video(test_env, MLPPolicy, sd, args)
             # Plot result
             print('Average Test Reward: {}\n '.format(round(test_reward)))
             if args.vis:
@@ -131,42 +132,31 @@ def main():
                                 Ydata=test_reward, name='Test Score')
 
             #  ==== Save best model ======
-            name = os.path.join(
-                args.checkpoint_dir,
-                'dict_{}_TEST_{}.pt'.format(frame, round(test_reward, 3)))
-            torch.save(sd, name)
-            name = os.path.join(
-                args.checkpoint_dir,
-                'model_{}_TEST_{}.pt'.format(frame, round(test_reward, 3)))
-            torch.save(pi, name )
-
-            #  ==== Save best model ======
             if test_reward > MAX_REWARD:
                 print('--'*45)
                 print('New High Score!\n')
-
-                if args.video:
-                    ''' records video of record breaker '''
-                    vid_reward, videolist = Test_and_Save_Video(video_env, MLPPolicy, sd, args)
-                    name = os.path.join(
-                        args.result_dir,
-                        'VIDEO{}_T{}i_V{}.pt'.format(frame,
-                                                     round(test_reward, 1),
-                                                     round(vid_reward, 1)))
-                    print('Saving Video List')
-                    torch.save(videolist, name)
-                elif args.render:
-                    test_and_render(test_env, MLPPolicy, sd, args)
+                name = os.path.join(
+                    args.result_dir,
+                    'BESTVIDEO{}_T{}.pt'.format(frame, round(test_reward, 1)))
+                print('Saving Best Video')
+                torch.save(BestVideo, name)
 
                 name = os.path.join(
                     args.checkpoint_dir,
                     'BESTDICT{}_{}.pt'.format(frame, round(test_reward, 3)))
                 torch.save(sd, name)
+                MAX_REWARD = test_reward
+            else:
                 name = os.path.join(
                     args.checkpoint_dir,
-                    'BESTMODEL{}_{}.pt'.format(frame, round(test_reward, 3)))
-                torch.save(pi, name)
-                MAX_REWARD = test_reward
+                    'dict_{}_TEST_{}.pt'.format(frame, round(test_reward, 3)))
+                torch.save(sd, name)
+
+                name = os.path.join(
+                    args.result_dir,
+                    'BESTVIDEO{}_T{}.pt'.format(frame, round(test_reward, 1)))
+                print('Saving Video')
+                torch.save(BestVideo, name)
 
             if args.cuda:
                 pi.cuda()
