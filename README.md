@@ -5,14 +5,18 @@
 	* get angles between elbow and upper arm.
 	* collect rgb from training
 3. [x] Start training with 2 targets.
-4. [ ] Torso
+# Tuesday
+
+5. [ ] Torso
 	* angles of shoulders?
 	* can it reach? what points?
-5. [ ] grab random target positions.
+	* [x] train and record best
+
+6. [ ] grab random target positions.
 	* show image, coords
-6. [ ] annealing lr
-7. [ ] CNN
-8. [ ] dynamics model 
+7. [ ] annealing lr
+8. [ ] CNN
+9. [ ] dynamics model 
 
 
 ## ML:

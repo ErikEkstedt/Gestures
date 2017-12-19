@@ -28,8 +28,9 @@ def main():
 
     # Logger
     make_log_dirs(args)
-    num_updates = int(args.num_frames) // args.num_steps // args.num_processes
-    args.num_updates = num_updates
+
+    args.num_updates   = int(args.num_frames) // args.num_steps // args.num_processes
+    args.test_interval = int(args.test_interval) //args.num_steps // args.num_processes
 
     if args.vis:
         from vislogger import VisLogger
@@ -77,7 +78,7 @@ def main():
 
     # ==== Training ====
     print('Learning {}(ac: {}, ob: {})'.format( args.env_id, ac_shape, ob_shape))
-    print('\nTraining for %d Updates' % num_updates)
+    print('\nTraining for %d Updates' % args.num_updates)
     s = env.reset()
     CurrentState.update(s)
     rollouts.states[0].copy_(CurrentState())
@@ -88,7 +89,7 @@ def main():
         pi.cuda()
 
     MAX_REWARD = -999999
-    for j in range(num_updates):
+    for j in range(args.num_updates):
         exploration(pi, CurrentState, rollouts, args, result, env)
         vloss, ploss, ent = train(pi, args, rollouts, optimizer_pi)
 
@@ -106,7 +107,7 @@ def main():
 
         #  ==== TEST ======
         nt = 5
-        if not args.no_test and j % args.test_interval < nt and j > nt:
+        if not args.no_test and j % args.test_interval < nt:
             ''' `j % args.test_interval < 5` is there because:
             If tests are not performed during some interval bad luck might make
             it that although the model becomes better the test occured
@@ -137,7 +138,7 @@ def main():
                 print('New High Score!\n')
                 name = os.path.join(
                     args.result_dir,
-                    'BESTVIDEO{}_T{}.pt'.format(frame, round(test_reward, 1)))
+                    'BESTVIDEO{}_{}.pt'.format(round(test_reward, 1)), frame)
                 print('Saving Best Video')
                 torch.save(BestVideo, name)
 
@@ -154,7 +155,7 @@ def main():
 
                 name = os.path.join(
                     args.result_dir,
-                    'BESTVIDEO{}_T{}.pt'.format(frame, round(test_reward, 1)))
+                    'VIDEO{}_{}.pt'.format(round(test_reward, 1)), frame)
                 print('Saving Video')
                 torch.save(BestVideo, name)
 

@@ -18,7 +18,7 @@ def make_video(vid, filename='/tmp/video'):
     ani.save(name)
     print('Saved video to:', name)
 
-def watch_result(args, vid):
+def watch_result(vid, args=None):
     import cv2
     name = args.load_file.split('/')[-1]
     print(name)
@@ -28,10 +28,32 @@ def watch_result(args, vid):
             if cv2.waitKey(20) & 0xFF == ord('q'):
                 break
 
+def watch_result(vid):
+    import cv2
+    while True:
+        for v in vid:
+            cv2.imshow('frame', cv2.cvtColor(v, cv2.COLOR_RGB2BGR))
+            if cv2.waitKey(20) & 0xFF == ord('q'):
+                return
+
+def watch_folder(result_dir):
+    import os
+    for d, r, files in os.walk(result_dir):
+        print('directory:',d)
+        for f in files:
+            filepath = os.path.join(d, f)
+            print(f)
+            vid = torch.load(filepath)
+            watch_result(vid)
+
+
 if __name__ == '__main__':
-    from arguments import get_args
+    # from arguments import get_args
     import torch
-    args = get_args()
-    vid = torch.load(args.load_file)
+    # args = get_args()
+    # vid = torch.load(args.load_file)
     # make_video(vid)
-    watch_result(args, vid)
+    # watch_result(vid, args)
+
+    import sys
+    watch_folder(sys.argv[1])
