@@ -51,9 +51,6 @@
 		</body>
 	</worldbody>
 	<actuator>
-		<!-- <motor ctrllimited="true" ctrlrange="&#45;1.0 1.0" gear="200.0" joint="robot_shoulder_joint"/> -->
-		<!-- <motor ctrllimited="true" ctrlrange="&#45;1.0 1.0" gear="200.0" joint="robot_elbow_joint_x"/> -->
-		<!-- <motor ctrllimited="true" ctrlrange="&#45;1.0 1.0" gear="200.0" joint="robot_elbow_joint_y"/> -->
 		<motor gear="100.0" joint="robot_shoulder_joint_z"/>
 		<motor gear="100.0" joint="robot_shoulder_joint_y"/>
 		<motor gear="100.0" joint="robot_elbow_joint"/>

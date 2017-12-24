@@ -20,10 +20,8 @@
 			<joint axis="0 0 1" limited="false" name="robot_shoulder_joint" pos="0 0 0" type="hinge"/>
 			<geom fromto="0 0 0 0.2 0 0" name="robot_arm0" rgba="0.0 0.4 0.8 0.9" size=".01" type="capsule"/>
 
-
 			<!-- Lower Arm -->
 			<body name="robot_arm1" pos="0.21 0 0">
-
 				<body name="robot_elbow" pos="0 0 0">
 					<geom contype="0" conaffinity="0" pos="0 0 0" name="robot_arm1" rgba="0.9 0.1 0.1 0.9" size=".025" type="sphere"/>
 				</body>
