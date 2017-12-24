@@ -43,41 +43,12 @@ def sphere_target(r0, r1, x0=0, y0=0, z0=0.41):
     return [x, y, z, x1, y1, z1]
 
 
-class ReacherBase(Base):
-    def __init__(self, args=None):
-        Base.__init__(self,XML_PATH=PATH_TO_CUSTOM_XML,
-                        robot_name='robot_arm',
-                        target_name='target0',
-                        model_xml='reacher/reacher_base.xml',
-                        ac=3, obs=24,
-                        args=args)
-        print('I am', self.model_xml)
-
-    def robot_specific_reset(self):
-        self.motor_names = ["robot_shoulder_joint_z",
-                            "robot_shoulder_joint_y",
-                            "robot_elbow_joint"]
-        self.motor_power = [100, 100, 100]
-        self.motors = [self.jdict[n] for n in self.motor_names]
-
-        # target and potential
-        self.robot_reset()
-        self.target_reset()
-        self.calc_to_target_vec()
-        self.potential = self.calc_potential()
-
+class ReacherCommon():
     def robot_reset(self):
         ''' np.random for correct seed. '''
         for j in self.robot_joints.values():
             j.reset_current_position(np.random.uniform(low=-0.01, high=0.01 ), 0)
             j.set_motor_torque(0)
-
-    def target_reset(self):
-        r0, r1 = 0.2, 0.2
-        x0, y0, z0 = 0, 0, 0.41
-        coords = sphere_target(r0, r1, x0, y0, z0)
-        coords = plane_target(r0, r1, x0, y0, z0)
-        self.set_custom_target(coords)
 
     def set_custom_target(self, coords):
         x, y, z, x1, y1, z1 = coords
@@ -128,52 +99,11 @@ class ReacherBase(Base):
                             self.joint_positions,
                             self.joint_speeds),)
 
-    def calc_reward(self, a):
-        potential_old = self.potential
-        self.potential = self.calc_potential()
-
-        # cost
-        electricity_cost  = self.electricity_cost  * float(np.abs(a*self.joint_speeds).mean())  # let's assume we have DC motor with controller, and reverse current braking
-        electricity_cost += self.stall_torque_cost * float(np.square(a).mean())
-        joints_at_limit_cost = float(self.joints_at_limit_cost * self.joints_at_limit)
-
-        r1 = self.reward_constant1 * float(self.potential[0] - potential_old[0]) # elbow
-        r2 = self.reward_constant2 * float(self.potential[1] - potential_old[1]) # hand
-
-        # Save rewards ?
-        self.rewards = [r1, r2, electricity_cost, joints_at_limit_cost]
-        return sum(self.rewards)
-
-    # Reward
-    def calc_reward(self, a):
-        distance_reward = absolute_reward
-        return sum(self.rewards)
-
-    def absolute_reward(self, a):
-        self.potential = self.calc_potential()
-        r1 = self.reward_constant1 * float(self.potential[0])
-        r2 = self.reward_constant2 * float(self.potential[1])
-        return r1 + r2
-
-    def diff_reward(self, a):
-        potential_old = self.potential
-        self.potential = self.calc_potential()
-        r1 = self.reward_constant1 * float(self.potential[0] - potential_old[0])
-        r2 = self.reward_constant2 * float(self.potential[1] - potential_old[1])
-        return r1 + r2
-
-    def cost(self, a):
-        electricity_cost  = self.electricity_cost  * float(np.abs(a*self.joint_speeds).mean())  # let's assume we have DC motor with controller, and reverse current braking
-        electricity_cost += self.stall_torque_cost * float(np.square(a).mean())
-        joints_at_limit_cost = float(self.joints_at_limit_cost * self.joints_at_limit)
-        return electricity_cost, joints_at_limit_cost
-
     def calc_potential(self):
         p1 = -self.potential_constant*np.linalg.norm(self.totarget1)
         p2 = -self.potential_constant*np.linalg.norm(self.totarget2)
         return p1, p2
 
-    # Camera
     def get_rgb(self):
         self.camera_adjust()
         rgb, _, _, _, _ = self.camera.render(False, False, False) # render_depth, render_labeling, print_timing)
@@ -181,10 +111,119 @@ class ReacherBase(Base):
         return rendered_rgb
 
     def camera_adjust(self):
-        # self.camera.move_and_look_at(1.0, 0, 0.5, 0, 0, 0)
         self.camera.move_and_look_at( 0.5, 0, 1, 0, 0, 0.4)
 
 
+def calc_reward(self, a):
+    ''' Reward function '''
+    # Distance Reward
+    potential_old = self.potential
+    self.potential = self.calc_potential()
+    r1 = self.reward_constant1 * float(self.potential[0] - potential_old[0]) # elbow
+    r2 = self.reward_constant2 * float(self.potential[1] - potential_old[1]) # hand
+
+    # Cost
+    electricity_cost  = self.electricity_cost * float(np.abs(a*self.joint_speeds).mean())  # let's assume we have DC motor with controller, and reverse current braking
+    electricity_cost += self.stall_torque_cost * float(np.square(a).mean())
+    joints_at_limit_cost = float(self.joints_at_limit_cost * self.joints_at_limit)
+
+    # Save rewards ?
+    self.rewards = [r1, r2, electricity_cost, joints_at_limit_cost]
+    return sum(self.rewards)
+
+def calc_reward(self, a):
+    ''' Absolute potential as reward '''
+    self.potential = self.calc_potential()
+    r1 = self.reward_constant1 * float(self.potential[0])
+    r2 = self.reward_constant2 * float(self.potential[1])
+    return r1 + r2
+
+
+class ReacherPlane(ReacherCommon, Base):
+    def __init__(self, args=None):
+        Base.__init__(self,XML_PATH=PATH_TO_CUSTOM_XML,
+                        robot_name='robot_arm',
+                        target_name='target0',
+                        model_xml='reacher/reacher_plane.xml',
+                        ac=2, obs=24,
+                        args=args)
+        print('I am', self.model_xml)
+
+    def robot_specific_reset(self):
+        self.motor_names = ["robot_shoulder_joint_z",
+                            "robot_elbow_joint"]
+        self.motor_power = [100, 100]
+        self.motors = [self.jdict[n] for n in self.motor_names]
+
+        # target and potential
+        self.robot_reset()
+        self.target_reset()
+        self.calc_to_target_vec()
+        self.potential = self.calc_potential()
+
+    def target_reset(self):
+        r0, r1 = 0.2, 0.2
+        x0, y0, z0 = 0, 0, 0.41
+        coords = sphere_target(r0, r1, x0, y0, z0)
+        coords = plane_target(r0, r1, x0, y0, z0)
+        self.set_custom_target(coords)
+
+    def calc_reward(self, a):
+        ''' Absolute potential as reward '''
+        self.potential = self.calc_potential()
+        r1 = self.reward_constant1 * float(self.potential[0])
+        r2 = self.reward_constant2 * float(self.potential[1])
+        return r1 + r2
+
+
+class Reacher(ReacherCommon, Base):
+    def __init__(self, args=None):
+        Base.__init__(self,XML_PATH=PATH_TO_CUSTOM_XML,
+                        robot_name='robot_arm',
+                        target_name='target0',
+                        model_xml='reacher/reacher_base.xml',
+                        ac=3, obs=24,
+                        args=args)
+        print('I am', self.model_xml)
+
+    def robot_specific_reset(self):
+        self.motor_names = ["robot_shoulder_joint_z",
+                            "robot_shoulder_joint_y",
+                            "robot_elbow_joint"]
+        self.motor_power = [100, 100, 100]
+        self.motors = [self.jdict[n] for n in self.motor_names]
+
+        # target and potential
+        self.robot_reset()
+        self.target_reset()
+        self.calc_to_target_vec()
+        self.potential = self.calc_potential()
+
+    def target_reset(self):
+        r0, r1 = 0.2, 0.2
+        x0, y0, z0 = 0, 0, 0.41
+        coords = sphere_target(r0, r1, x0, y0, z0)
+        self.set_custom_target(coords)
+
+    def calc_reward(self, a):
+        ''' Reward function '''
+        # Distance Reward
+        potential_old = self.potential
+        self.potential = self.calc_potential()
+        r1 = self.reward_constant1 * float(self.potential[0] - potential_old[0]) # elbow
+        r2 = self.reward_constant2 * float(self.potential[1] - potential_old[1]) # hand
+
+        # Cost
+        electricity_cost  = self.electricity_cost * float(np.abs(a*self.joint_speeds).mean())  # let's assume we have DC motor with controller, and reverse current braking
+        electricity_cost += self.stall_torque_cost * float(np.square(a).mean())
+        joints_at_limit_cost = float(self.joints_at_limit_cost * self.joints_at_limit)
+
+        # Save rewards ?
+        self.rewards = [r1, r2, electricity_cost, joints_at_limit_cost]
+        return sum(self.rewards)
+
+
+# test functions
 def single_episodes(Env, args):
     env = Env(args)
     print('RGB: {}\tGravity: {}\tMAX: {}\t'.format(env.RGB, env.gravity, env.MAX_TIME))
@@ -214,10 +253,12 @@ def single_episodes(Env, args):
                 s=env.reset()
                 print('Target pos: ',env.target_position)
 
+
 def test():
     from Agent.arguments import get_args
     args = get_args()
-    single_episodes(ReacherBase, args)
+    # single_episodes(ReacherPlane, args)
+    single_episodes(Reacher, args)
 
 if __name__ == '__main__':
         test()

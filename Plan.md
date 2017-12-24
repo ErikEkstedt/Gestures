@@ -15,14 +15,15 @@
 	* [ ] 3D 
 
 ## Reward
-1. [ ] Only absolute distance
-2. [ ] Only difference distance 
-3. [ ] both above with:
-	* [ ] Electricity cost, EC
-	* [ ] Torque cost, TC
-	* [ ] stuck cost, SC
-4. [ ] Hierarchical scaling
+1. [x] Only absolute distance
+2. [x] Only difference distance 
+3. [x] both above with:
+	* [x] Electricity cost, EC
+	* [x] Torque cost, TC
+	* [x] stuck cost, SC
+4. [x] Hierarchical scaling
 
+These are hyperparameters defined in Agent.arguments. 
 ## architecture
 1. [ ] FC
 	* Layers/Hidden
