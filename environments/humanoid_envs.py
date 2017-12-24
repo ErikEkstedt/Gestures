@@ -88,10 +88,8 @@ class Base(MyGymEnv):
         return max_time
 
     def load_xml_get_robot(self, verbose=False):
-        self.mjcf = self.scene.cpp_world.load_mjcf(
-            os.path.join(os.path.dirname(__file__),
-                         "xml_files/",
-                         self.model_xml))
+        # os.path.join(os.path.dirname(__file__), "xml_files/", self.model_xml))
+        self.mjcf = self.scene.cpp_world.load_mjcf( os.path.join(PATH_TO_CUSTOM_XML, self.xml_model))
         self.ordered_joints = []
         self.jdict = {}
         self.parts = {}
