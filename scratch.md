@@ -17,9 +17,3 @@ But for now simply just save models with good score and then restart scirpt unti
 	* Changed the seed function in the environment such that one needs to explicitly call that function from `the outside`.
 
 * It "feels" like either the torques are way over exaggerated or not strong enough. Why ??
-
-
-
-
-
-

@@ -484,7 +484,8 @@ class Reacher6DoF(Base):
 
 
 class Reacher3DoF_2Target(Base):
-    ''' 2DoF Reacher
+    '''
+    2DoF Reacher
     No joint limits
     1 DoF each joint
     Two targets
