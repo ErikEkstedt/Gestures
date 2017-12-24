@@ -30,7 +30,6 @@ def main():
     make_log_dirs(args)
 
     args.num_updates   = int(args.num_frames) // args.num_steps // args.num_processes
-    args.test_interval = int(args.test_interval) //args.num_steps // args.num_processes
 
     if args.vis:
         from vislogger import VisLogger
@@ -52,7 +51,6 @@ def main():
     args.RGB = True
     test_env = Env(args)
     args.RGB = tmp_rgb # reset rgb flag
-
 
     ob_shape = env.observation_space.shape[0]
     ac_shape = env.action_space.shape[0]
@@ -136,12 +134,11 @@ def main():
             if test_reward > MAX_REWARD:
                 print('--'*45)
                 print('New High Score!\n')
-                name = os.path.join(
-                    args.result_dir,
-                    'BESTVIDEO{}_{}.pt'.format(round(test_reward, 1)), frame)
+                print('error: ', test_reward)
+                name = os.path.join(args.result_dir,
+                    'BESTVIDEO{}_{}.pt'.format(round(test_reward, 1), frame))
                 print('Saving Best Video')
                 torch.save(BestVideo, name)
-
                 name = os.path.join(
                     args.checkpoint_dir,
                     'BESTDICT{}_{}.pt'.format(frame, round(test_reward, 3)))
@@ -152,12 +149,6 @@ def main():
                     args.checkpoint_dir,
                     'dict_{}_TEST_{}.pt'.format(frame, round(test_reward, 3)))
                 torch.save(sd, name)
-
-                name = os.path.join(
-                    args.result_dir,
-                    'VIDEO{}_{}.pt'.format(round(test_reward, 1)), frame)
-                print('Saving Video')
-                torch.save(BestVideo, name)
 
             if args.cuda:
                 pi.cuda()

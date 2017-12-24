@@ -42,7 +42,33 @@ def sphere_target(r0, r1, x0=0, y0=0, z0=0.41):
     z1 = z + r1*np.cos(theta)
     return [x, y, z, x1, y1, z1]
 
+# Reward functions
+def calc_reward(self, a):
+    ''' Reward function '''
+    # Distance Reward
+    potential_old = self.potential
+    self.potential = self.calc_potential()
+    r1 = self.reward_constant1 * float(self.potential[0] - potential_old[0]) # elbow
+    r2 = self.reward_constant2 * float(self.potential[1] - potential_old[1]) # hand
 
+    # Cost
+    electricity_cost  = self.electricity_cost * float(np.abs(a*self.joint_speeds).mean())  # let's assume we have DC motor with controller, and reverse current braking
+    electricity_cost += self.stall_torque_cost * float(np.square(a).mean())
+    joints_at_limit_cost = float(self.joints_at_limit_cost * self.joints_at_limit)
+
+    # Save rewards ?
+    self.rewards = [r1, r2, electricity_cost, joints_at_limit_cost]
+    return sum(self.rewards)
+
+def calc_reward(self, a):
+    ''' Absolute potential as reward '''
+    self.potential = self.calc_potential()
+    r1 = self.reward_constant1 * float(self.potential[0])
+    r2 = self.reward_constant2 * float(self.potential[1])
+    return r1 + r2
+
+
+# Environments
 class ReacherCommon():
     def robot_reset(self):
         ''' np.random for correct seed. '''
@@ -113,30 +139,6 @@ class ReacherCommon():
     def camera_adjust(self):
         self.camera.move_and_look_at( 0.5, 0, 1, 0, 0, 0.4)
 
-
-def calc_reward(self, a):
-    ''' Reward function '''
-    # Distance Reward
-    potential_old = self.potential
-    self.potential = self.calc_potential()
-    r1 = self.reward_constant1 * float(self.potential[0] - potential_old[0]) # elbow
-    r2 = self.reward_constant2 * float(self.potential[1] - potential_old[1]) # hand
-
-    # Cost
-    electricity_cost  = self.electricity_cost * float(np.abs(a*self.joint_speeds).mean())  # let's assume we have DC motor with controller, and reverse current braking
-    electricity_cost += self.stall_torque_cost * float(np.square(a).mean())
-    joints_at_limit_cost = float(self.joints_at_limit_cost * self.joints_at_limit)
-
-    # Save rewards ?
-    self.rewards = [r1, r2, electricity_cost, joints_at_limit_cost]
-    return sum(self.rewards)
-
-def calc_reward(self, a):
-    ''' Absolute potential as reward '''
-    self.potential = self.calc_potential()
-    r1 = self.reward_constant1 * float(self.potential[0])
-    r2 = self.reward_constant2 * float(self.potential[1])
-    return r1 + r2
 
 
 class ReacherPlane(ReacherCommon, Base):
@@ -252,7 +254,6 @@ def single_episodes(Env, args):
             if d:
                 s=env.reset()
                 print('Target pos: ',env.target_position)
-
 
 def test():
     from Agent.arguments import get_args

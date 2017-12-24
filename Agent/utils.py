@@ -9,9 +9,12 @@ def get_env(args):
             args.env_id='Reacher2DoF'
             return Reacher2DoF
         elif args.dof == 3:
-            from environments.reacher_envs import Reacher3DoF
+            # from environments.reacher_envs import Reacher3DoF
+            # args.env_id='Reacher3DoF'
+            # return Reacher3DoF
+            from environments.Reacher import Reacher
             args.env_id='Reacher3DoF'
-            return Reacher3DoF
+            return Reacher
         elif args.dof == 32:
             from environments.reacher_envs import Reacher3DoF_2Target
             args.env_id='Reacher3DoF_2Target'

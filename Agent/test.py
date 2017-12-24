@@ -145,9 +145,9 @@ def Test_and_Save_Video(test_env, Model, state_dict, args, verbose=False):
     pi.load_state_dict(state_dict)
     # Test environments
     total_reward, episode_reward, best_episode_reward = 0, 0, -999
+    Video = []
     for i in range(args.num_test):
         state, obs = test_env.reset()
-        Video = []
         for j in count(1):
             CurrentState.update(state)
             value, action = pi.act(CurrentState())
@@ -162,22 +162,15 @@ def Test_and_Save_Video(test_env, Model, state_dict, args, verbose=False):
             episode_reward += reward
             if done:
                 if verbose: print(episode_reward)
-                if episode_reward > best_episode_reward:
-                    BestVideo = Video
-                    best_episode_reward = episode_reward
-                Video = []
+                # if episode_reward > best_episode_reward:
+                #     BestVideo = Video
+                #     best_episode_reward = episode_reward
+                # Video = []
                 episode_reward = 0
                 done = False
                 break
-
-    # videoname='{}/frame_{}_score_{}.pth'.format(args.result_dir,
-                                            # pi.n*args.num_processes,
-                                            # round(best_episode_reward,2))
-    # torch.save(BestVideo, videoname)
-    # make_video(BestVideo, videoname)
-    # print('Saved Video:\n{}\n '.format(videoname))
-    return total_reward/args.num_test, BestVideo
-
+    # return total_reward/args.num_test, BestVideo
+    return total_reward/args.num_test, Video
 
 def main():
     import torch
