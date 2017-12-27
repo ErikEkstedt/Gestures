@@ -1,6 +1,6 @@
+import argparse
 import numpy as np
-import gym
-from copy import deepcopy
+# from copy import deepcopy
 import os
 
 import torch
@@ -27,7 +27,7 @@ def get_args():
     parser.add_argument('--num-processes', type=int, default=4)
 
     # === Environment ===
-    parser.add_argument('--env-id', default='CustomReacher')
+    parser.add_argument('--env-id', default='ReacherPlane')
     parser.add_argument('--dof', type=int, default=2)
 
     parser.add_argument('--MAX_TIME', type=int, default=300)
@@ -88,6 +88,19 @@ def get_args():
     return args
 
 
+'''
+Trains on ReacherPlane where the reacher has 2 DoF and two targets.
+
+The reward is the sum of the two absolute potentials
+(the p2-norm of the difference vector multiplied by a reward_constant)
+constant = 100
+r1, r2 = 1, 1
+
+The absolute potential is wuite large and results in huge values for the value
+loss. (starting at 38M). The best result got -9797. as test average.
+
+'''
+
 def main():
     # === Settings ===
     args = get_args()
@@ -96,10 +109,10 @@ def main():
     vis = VisLogger(args)
 
     # === Environment ===
-    tmp_rgb = args.RGB # reset rgb flag
-
     Env = ReacherPlane  # using Env as variable so I only need to change this line between experiments
     env = make_parallel_environments(Env,args)
+
+    tmp_rgb = args.RGB # reset rgb flag
     args.RGB = True
     test_env = Env(args)
     args.RGB = tmp_rgb # reset rgb flag
@@ -172,7 +185,8 @@ def main():
                 print('Testing {} episodes'.format(args.num_test))
 
             pi.cpu()
-            sd = deepcopy(pi.cpu().state_dict())
+            # sd = deepcopy(pi.cpu().state_dict())
+            sd = pi.cpu().state_dict()
             # test_reward = test(test_env, MLPPolicy, sd, args)
             # test_reward = test_existing_env(test_env, MLPPolicy, sd, args)
             test_reward, BestVideo = Test_and_Save_Video(test_env, MLPPolicy, sd, args)

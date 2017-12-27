@@ -67,6 +67,38 @@ def calc_reward(self, a):
     r2 = self.reward_constant2 * float(self.potential[1])
     return r1 + r2
 
+def calc_reward(self, a):
+    ''' Difference potential as reward '''
+    potential_old = self.potential
+    self.potential = self.calc_potential()
+    r1 = self.reward_constant1 * float(self.potential[0] - potential_old[0]) # elbow
+    r2 = self.reward_constant2 * float(self.potential[1] - potential_old[1]) # hand
+    return r1 + r2
+
+def calc_reward(self, a):
+    ''' Hierarchical Difference potential as reward '''
+    potential_old = self.potential
+    self.potential = self.calc_potential()
+    r1 = 10 * float(self.potential[0] - potential_old[0]) # elbow
+    r2 = 1 * float(self.potential[1] - potential_old[1]) # hand
+    return r1 + r2
+
+def calc_reward(self, a):
+    ''' Hierarchical Difference potential as reward '''
+    potential_old = self.potential
+    self.potential = self.calc_potential()
+    r1 = 1 * float(self.potential[0] - potential_old[0]) # elbow
+    r2 = 10 * float(self.potential[1] - potential_old[1]) # hand
+    return r1 + r2
+
+def calc_reward(self, a):
+    ''' IN PROGRESS Difference potential as reward '''
+    potential_old = self.potential
+    self.potential = self.calc_potential()
+    r1 = float(self.potential[0] - potential_old[0]) # elbow
+    r2 = float(self.potential[1] - potential_old[1]) # hand
+    return r1 + r2
+
 
 # Environments
 class ReacherCommon():
@@ -140,14 +172,13 @@ class ReacherCommon():
         self.camera.move_and_look_at( 0.5, 0, 1, 0, 0, 0.4)
 
 
-
 class ReacherPlane(ReacherCommon, Base):
     def __init__(self, args=None):
         Base.__init__(self,XML_PATH=PATH_TO_CUSTOM_XML,
                         robot_name='robot_arm',
                         target_name='target0',
                         model_xml='reacher/reacher_plane.xml',
-                        ac=2, obs=24,
+                        ac=2, obs=22,
                         args=args)
         print('I am', self.model_xml)
 
@@ -171,14 +202,24 @@ class ReacherPlane(ReacherCommon, Base):
         self.set_custom_target(coords)
 
     def calc_reward(self, a):
-        ''' Absolute potential as reward '''
+        ''' Reward function '''
+        # Distance Reward
+        potential_old = self.potential
         self.potential = self.calc_potential()
-        r1 = self.reward_constant1 * float(self.potential[0])
-        r2 = self.reward_constant2 * float(self.potential[1])
-        return r1 + r2
+        r1 = self.reward_constant1 * float(self.potential[0] - potential_old[0]) # elbow
+        r2 = self.reward_constant2 * float(self.potential[1] - potential_old[1]) # hand
+
+        # Cost
+        electricity_cost  = self.electricity_cost * float(np.abs(a*self.joint_speeds).mean())  # let's assume we have DC motor with controller, and reverse current braking
+        electricity_cost += self.stall_torque_cost * float(np.square(a).mean())
+        joints_at_limit_cost = float(self.joints_at_limit_cost * self.joints_at_limit)
+
+        # Save rewards ?
+        self.rewards = [r1, r2, electricity_cost, joints_at_limit_cost]
+        return sum(self.rewards)
 
 
-class Reacher(ReacherCommon, Base):
+class Reacher3D(ReacherCommon, Base):
     def __init__(self, args=None):
         Base.__init__(self,XML_PATH=PATH_TO_CUSTOM_XML,
                         robot_name='robot_arm',
@@ -230,12 +271,13 @@ def single_episodes(Env, args):
     env = Env(args)
     print('RGB: {}\tGravity: {}\tMAX: {}\t'.format(env.RGB, env.gravity, env.MAX_TIME))
     if args.RGB:
-        s = env.reset()
-        s, obs = s
+        s, obs = env.reset()
         print(s.shape)
         print(obs.shape)
+        print(obs.dtype)
+        input('Press Enter to start')
         while True:
-            (s, obs), r, d, _ = env.step(env.action_space.sample())
+            s, obs, r, d, _ = env.step(env.action_space.sample())
             R += r
             if d:
                 s=env.reset()
@@ -246,6 +288,7 @@ def single_episodes(Env, args):
         print("motor_names" , env.motor_names)
         print("motor_power" , env.motor_power)
         print(s.shape)
+        input()
         while True:
             a = env.action_space.sample()
             s, r, d, _ = env.step(a)
@@ -255,11 +298,12 @@ def single_episodes(Env, args):
                 s=env.reset()
                 print('Target pos: ',env.target_position)
 
+
 def test():
     from Agent.arguments import get_args
     args = get_args()
-    # single_episodes(ReacherPlane, args)
-    single_episodes(Reacher, args)
+    single_episodes(ReacherPlane, args)
+    # single_episodes(Reacher, args)
 
 if __name__ == '__main__':
         test()

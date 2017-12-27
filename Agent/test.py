@@ -1,5 +1,4 @@
 from itertools import count
-from memory import StackedState
 import numpy as np
 import torch
 
@@ -8,6 +7,12 @@ import matplotlib.pyplot as plt
 import matplotlib.animation as animation
 from tqdm import tqdm
 # from OpenGL import GLU # fix for opengl issues on desktop  / nvidia
+
+
+try:
+    from memory import StackedState
+except:
+    from Agent.memory import StackedState
 
 
 def test_existing_env(env, Model, state_dict, args, verbose=False):
@@ -155,7 +160,8 @@ def Test_and_Save_Video(test_env, Model, state_dict, args, verbose=False):
 
             # Observe reward and next state
             state, rgb, reward, done, info = test_env.step(cpu_actions)
-            Video.append(rgb)
+            if j % 2 == 0:
+                Video.append(rgb)
 
             # If done then update final rewards and reset episode reward
             total_reward += reward
