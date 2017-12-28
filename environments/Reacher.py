@@ -202,21 +202,12 @@ class ReacherPlane(ReacherCommon, Base):
         self.set_custom_target(coords)
 
     def calc_reward(self, a):
-        ''' Reward function '''
-        # Distance Reward
+        ''' Hierarchical Difference potential as reward '''
         potential_old = self.potential
         self.potential = self.calc_potential()
-        r1 = self.reward_constant1 * float(self.potential[0] - potential_old[0]) # elbow
-        r2 = self.reward_constant2 * float(self.potential[1] - potential_old[1]) # hand
-
-        # Cost
-        electricity_cost  = self.electricity_cost * float(np.abs(a*self.joint_speeds).mean())  # let's assume we have DC motor with controller, and reverse current braking
-        electricity_cost += self.stall_torque_cost * float(np.square(a).mean())
-        joints_at_limit_cost = float(self.joints_at_limit_cost * self.joints_at_limit)
-
-        # Save rewards ?
-        self.rewards = [r1, r2, electricity_cost, joints_at_limit_cost]
-        return sum(self.rewards)
+        r1 = 1 * float(self.potential[0] - potential_old[0]) # elbow
+        r2 = 10 * float(self.potential[1] - potential_old[1]) # hand
+        return r1 + r2
 
 
 class Reacher3D(ReacherCommon, Base):
@@ -255,14 +246,6 @@ class Reacher3D(ReacherCommon, Base):
         self.potential = self.calc_potential()
         r1 = self.reward_constant1 * float(self.potential[0] - potential_old[0]) # elbow
         r2 = self.reward_constant2 * float(self.potential[1] - potential_old[1]) # hand
-
-        # Cost
-        electricity_cost  = self.electricity_cost * float(np.abs(a*self.joint_speeds).mean())  # let's assume we have DC motor with controller, and reverse current braking
-        electricity_cost += self.stall_torque_cost * float(np.square(a).mean())
-        joints_at_limit_cost = float(self.joints_at_limit_cost * self.joints_at_limit)
-
-        # Save rewards ?
-        self.rewards = [r1, r2, electricity_cost, joints_at_limit_cost]
         return sum(self.rewards)
 
 

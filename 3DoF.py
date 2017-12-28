@@ -16,7 +16,7 @@ from Agent.memory import RolloutStorage, StackedState, Results
 from Agent.train import train, exploration
 from Agent.test import Test_and_Save_Video
 
-from environments.Reacher import ReacherPlane
+from environments.Reacher import Reacher3D
 from environments.reacher_envs import make_parallel_environments
 
 from Agent.vislogger import VisLogger
@@ -87,7 +87,6 @@ def get_args():
     args.vis = not args.no_vis
     return args
 
-
 '''
 Trains on ReacherPlane where the reacher has 2 DoF and two targets.
 
@@ -109,7 +108,7 @@ def main():
     vis = VisLogger(args)
 
     # === Environment ===
-    Env = ReacherPlane  # using Env as variable so I only need to change this line between experiments
+    Env = Reacher3D  # using Env as variable so I only need to change this line between experiments
     env = make_parallel_environments(Env,args)
 
     tmp_rgb = args.RGB # reset rgb flag
