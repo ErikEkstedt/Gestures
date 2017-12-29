@@ -42,6 +42,7 @@ def sphere_target(r0, r1, x0=0, y0=0, z0=0.41):
     z1 = z + r1*np.cos(theta)
     return [x, y, z, x1, y1, z1]
 
+
 # Reward functions
 def calc_reward(self, a):
     ''' Reward function '''
@@ -246,6 +247,7 @@ class Reacher3D(ReacherCommon, Base):
         self.potential = self.calc_potential()
         r1 = self.reward_constant1 * float(self.potential[0] - potential_old[0]) # elbow
         r2 = self.reward_constant2 * float(self.potential[1] - potential_old[1]) # hand
+        self.rewards = [r1,r2]
         return sum(self.rewards)
 
 
@@ -285,8 +287,8 @@ def single_episodes(Env, args):
 def test():
     from Agent.arguments import get_args
     args = get_args()
-    single_episodes(ReacherPlane, args)
-    # single_episodes(Reacher, args)
+    # single_episodes(ReacherPlane, args)
+    single_episodes(Reacher3D, args)
 
 if __name__ == '__main__':
         test()

@@ -56,9 +56,9 @@ def get_args():
     parser.add_argument('--max-grad-norm', type=float, default=5, help='ppo clip parameter (default: 5)')
 
     # PPO Training
-    parser.add_argument('--num-frames', type=int, default=int(10e6), help='number of frames to train (default: 10e6)')
+    parser.add_argument('--num-frames', type=int, default=int(5e6), help='number of frames to train (default: 5e6)')
     parser.add_argument('--num-steps', type=int, default=2048, help='number of exploration steps in ppo (default: ?)')
-    parser.add_argument('--batch-size', type=int, default=256, help='ppo batch size (default: 256)')
+    parser.add_argument('--batch-size', type=int, default=512, help='ppo batch size (default: 512)')
     parser.add_argument('--max-episode-length', type=int, default=100000, help='maximum steps in one episode (default: 10000)')
     parser.add_argument('--ppo-epoch', type=int, default=8, help='number of ppo epochs, K in paper (default: 8)')
     parser.add_argument('--num-stack', type=int, default=1, help='number of frames to stack (default: 1)')
