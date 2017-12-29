@@ -1,4 +1,4 @@
-<mujoco model="humanoid">
+<mujoco model="humanoidNoTarget">
     <compiler angle="degree" inertiafromgeom="true"/>
     <default>
         <joint armature="1" damping="1" limited="true"/>
@@ -9,9 +9,6 @@
         <!-- <flags solverstat="enable" energy="enable"/>-->
     </option>
     <size nkey="5" nuser_geom="1"/>
-    <visual>
-        <map fogend="5" fogstart="3"/>
-    </visual>
     <worldbody>
 		<geom conaffinity="1" contype="1" fromto="0 0 0 0 0 0.4" name="base" rgba="0.9 0.4 0.6 1" size=".02" type="cylinder"/>
         <geom fromto="0 -0.17 0.4 0 0.17 0.4" name="robot" rgba="0.9 0.4 0.6 1" size=".02" type="cylinder"/>
@@ -49,21 +46,6 @@
                 </body>
             </body>
         </body>
-        <!-- Target -->
-        <body name="target0" pos="0 0 .01">
-            <joint armature="0" axis="1 0 0" damping="0" name="target_x0" pos="0 0 0" range="-.27 .27" stiffness="0" type="slide"/>
-            <joint armature="0" axis="0 1 0" damping="0" name="target_y0" pos="0 0 0" range="-.27 .27" stiffness="0" type="slide"/>
-            <joint armature="0" axis="0 0 1" damping="0" name="target_z0" pos="0 0 0" range="-.27 .27" stiffness="0" type="slide"/>
-            <geom conaffinity="0" contype="0" name="target0" pos="0 0 0" rgba="0 1 0 1" size=".025" type="sphere" mass="0"/>
-        </body>
-        <!-- Target -->
-        <body name="target1" pos="0 0 .01">
-            <joint armature="0" axis="1 0 0" damping="0" name="target_x1" pos="0 0 0" range="-.27 .27" stiffness="0" type="slide"/>
-            <joint armature="0" axis="0 1 0" damping="0" name="target_y1" pos="0 0 0" range="-.27 .27" stiffness="0" type="slide"/>
-            <joint armature="0" axis="0 0 1" damping="0" name="target_z1" pos="0 0 0" range="-.27 .27" stiffness="0" type="slide"/>
-            <geom conaffinity="0" contype="0" name="target1" pos="0 0 0" rgba="1 0 0 1" size=".025" type="sphere" mass="0"/>
-        </body>
-
     </worldbody>
     <actuator><!-- this section is not supported, same constants in code -->
         <motor gear="100" joint="robot_right_shoulder1" name="robot_right_shoulder1"/>

@@ -8,9 +8,9 @@ from itertools import count
 from OpenGL import GLE # fix for opengl issues on desktop  / nvidia
 
 try:
-    from environments.gym_env import MyGymEnv
+    from environments.my_gym_env import MyGymEnv
 except:
-    from gym_env import MyGymEnv
+    from my_gym_env import MyGymEnv
 
 
 PATH_TO_CUSTOM_XML = "/home/erik/com_sci/Master_code/Project/environments/xml_files"

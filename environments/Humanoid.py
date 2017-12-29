@@ -7,9 +7,9 @@ from itertools import count
 from OpenGL import GLE # fix for opengl issues on desktop  / nvidia
 
 try:
-    from environments.gym_env import MyGymEnv
+    from environments.my_gym_env import MyGymEnv
 except:
-    from gym_env import MyGymEnv
+    from my_gym_env import MyGymEnv
 
 
 PATH_TO_CUSTOM_XML = "/home/erik/com_sci/Master_code/Project/environments/xml_files"
@@ -41,63 +41,7 @@ def sphere_target(r0, r1, x0=0, y0=0, z0=0.41):
     z1 = z + r1*np.cos(theta)
     return [x, y, z, x1, y1, z1]
 
-# Reward functions
-def calc_reward(self, a):
-    ''' Reward function '''
-    # Distance Reward
-    potential_old = self.potential
-    self.potential = self.calc_potential()
-    r1 = self.reward_constant1 * float(self.potential[0] - potential_old[0]) # elbow
-    r2 = self.reward_constant2 * float(self.potential[1] - potential_old[1]) # hand
-
-    # Cost
-    electricity_cost  = self.electricity_cost * float(np.abs(a*self.joint_speeds).mean())  # let's assume we have DC motor with controller, and reverse current braking
-    electricity_cost += self.stall_torque_cost * float(np.square(a).mean())
-    joints_at_limit_cost = float(self.joints_at_limit_cost * self.joints_at_limit)
-
-    # Save rewards ?
-    self.rewards = [r1, r2, electricity_cost, joints_at_limit_cost]
-    return sum(self.rewards)
-
-def calc_reward(self, a):
-    ''' Absolute potential as reward '''
-    self.potential = self.calc_potential()
-    r1 = self.reward_constant1 * float(self.potential[0])
-    r2 = self.reward_constant2 * float(self.potential[1])
-    return r1 + r2
-
-def calc_reward(self, a):
-    ''' Difference potential as reward '''
-    potential_old = self.potential
-    self.potential = self.calc_potential()
-    r1 = self.reward_constant1 * float(self.potential[0] - potential_old[0]) # elbow
-    r2 = self.reward_constant2 * float(self.potential[1] - potential_old[1]) # hand
-    return r1 + r2
-
-def calc_reward(self, a):
-    ''' Hierarchical Difference potential as reward '''
-    potential_old = self.potential
-    self.potential = self.calc_potential()
-    r1 = 10 * float(self.potential[0] - potential_old[0]) # elbow
-    r2 = 1 * float(self.potential[1] - potential_old[1]) # hand
-    return r1 + r2
-
-def calc_reward(self, a):
-    ''' Hierarchical Difference potential as reward '''
-    potential_old = self.potential
-    self.potential = self.calc_potential()
-    r1 = 1 * float(self.potential[0] - potential_old[0]) # elbow
-    r2 = 10 * float(self.potential[1] - potential_old[1]) # hand
-    return r1 + r2
-
-def calc_reward(self, a):
-    ''' IN PROGRESS Difference potential as reward '''
-    potential_old = self.potential
-    self.potential = self.calc_potential()
-    r1 = float(self.potential[0] - potential_old[0]) # elbow
-    r2 = float(self.potential[1] - potential_old[1]) # hand
-    return r1 + r2
-
+# --------------------------
 
 class Base(MyGymEnv):
     def __init__(self, XML_PATH=PATH_TO_CUSTOM_XML,
@@ -151,6 +95,7 @@ class Base(MyGymEnv):
 
             # Robot
             self.power                = args.power # 0.5
+
     def print_relevant_information(self):
         print('Robot name: {}, Target name={}'.format(self.robot_name, self.target_name))
         print('XML fileme: {}, Path={}'.format(self.model_xml, self.XML_PATH))
@@ -171,8 +116,6 @@ class Base(MyGymEnv):
 
     def load_xml_get_robot(self, verbose=False):
         xmlPath = os.path.join(self.XML_PATH, self.model_xml)
-        print(xmlPath)
-        input()
         self.mjcf = self.scene.cpp_world.load_mjcf(xmlPath)
         self.ordered_joints = []
         self.jdict = {}
@@ -256,12 +199,12 @@ class HumanoidCommon():
         ''' gets hand position, target position and the vector in bewteen'''
         # Elbow target
         target_position1 = np.array(self.target_parts['target0'].pose().xyz())
-        elbow_position = np.array(self.parts['robot_elbow'].pose().xyz())
+        elbow_position = np.array(self.parts['robot_right_elbow'].pose().xyz())
         self.totarget1 = elbow_position - target_position1
 
         # Hand target
         target_position2 = np.array(self.target_parts['target1'].pose().xyz())
-        hand_position = np.array(self.parts['robot_hand'].pose().xyz())
+        hand_position = np.array(self.parts['robot_right_hand'].pose().xyz())
         self.totarget2 = hand_position - target_position2
 
         self.target_position = np.concatenate((target_position1, target_position2))
@@ -298,20 +241,27 @@ class HumanoidCommon():
 
 
 class Humanoid(HumanoidCommon, Base):
+    ''' Humanoid with two targets.
+    TODO:
+        Write a target functions in a domain for arms.
+    '''
     def __init__(self, args=None):
         Base.__init__(self,XML_PATH=PATH_TO_CUSTOM_XML,
-                        robot_name='robot_arm',
+                        robot_name='robot',
                         target_name='target0',
-                        model_xml='reacher/ReacherHumanoid.xml',
-                        ac=3, obs=24,
+                        model_xml='humanoid/humanoid.xml',
+                        ac=6, obs=24,
                         args=args)
         print('I am', self.model_xml)
 
     def robot_specific_reset(self):
-        self.motor_names = ["robot_shoulder_joint_z",
-                            "robot_shoulder_joint_y",
-                            "robot_elbow_joint"]
-        self.motor_power = [100, 100, 100]
+        self.motor_names = ["robot_right_shoulder1",
+                            "robot_right_shoulder2",
+                            "robot_right_elbow",
+                            "robot_left_shoulder1",
+                            "robot_left_shoulder2",
+                            "robot_left_elbow"]
+        self.motor_power = [10000]*len(self.motor_names)
         self.motors = [self.jdict[n] for n in self.motor_names]
 
         # target and potential
@@ -337,41 +287,82 @@ class Humanoid(HumanoidCommon, Base):
         return sum(self.rewards)
 
 
-def single_episodes(Env, args):
-    env = Env(args)
-    print('RGB: {}\tGravity: {}\tMAX: {}\t'.format(env.RGB, env.gravity, env.MAX_TIME))
-    if args.RGB:
-        s, obs = env.reset()
-        print(s.shape)
-        print(obs.shape)
-        print(obs.dtype)
-        input('Press Enter to start')
-        while True:
-            s, obs, r, d, _ = env.step(env.action_space.sample())
-            R += r
-            if d:
-                s=env.reset()
-    else:
-        s = env.reset()
-        print("jdict", env.jdict)
-        print("robot_joints", env.robot_joints)
-        print("motor_names" , env.motor_names)
-        print("motor_power" , env.motor_power)
-        print(s.shape)
-        input()
-        while True:
-            a = env.action_space.sample()
-            s, r, d, _ = env.step(a)
-            print('Reward: ', r)
-            if args.render: env.render()
-            if d:
-                s=env.reset()
-                print('Target pos: ',env.target_position)
+class LoneHumanoid(HumanoidCommon, Base):
+    ''' Humanoid with no targets.  '''
+    def __init__(self, args=None):
+        Base.__init__(self,XML_PATH=PATH_TO_CUSTOM_XML,
+                        robot_name='robot',
+                        model_xml='humanoid/HumanoidNoTarget.xml',
+                        ac=6, obs=24,
+                        args=args)
+        print('I am', self.model_xml)
 
-def test():
-    from Agent.arguments import get_args
-    args = get_args()
-    single_episodes(Humanoid, args)
+    def robot_specific_reset(self):
+        self.motor_names = ["robot_right_shoulder1",
+                            "robot_right_shoulder2",
+                            "robot_right_elbow",
+                            "robot_left_shoulder1",
+                            "robot_left_shoulder2",
+                            "robot_left_elbow"]
+
+        self.motor_power = [10000]*len(self.motor_names)
+        self.motors = [self.jdict[n] for n in self.motor_names]
+        self.robot_reset()
+        for j in self.target_joints.values():
+            j.reset_current_position(np.random.uniform(low=-3.01, high=3.01 ), 0)
+            j.set_motor_torque(0)
+
+    def calc_reward(self, a):
+        ''' Reward function '''
+        return 1
+
+    def calc_to_target_vec(self):
+        pass
+
+    def calc_state(self):
+        j = np.array([j.current_relative_position()
+                    for j in self.robot_joints.values()],
+                    dtype=np.float32).flatten()
+        return np.array([1, 1, 1, 1, 1])
+
+    def calc_potential(self):
+        return 1, 1
+
+def DataGenerator(dpoints=1000, prob=0.3):
+    """ DataGenerator runs some episodes and randomly saves rgb, state pairs
+    Kwargs:
+        :dpoints : Number of data points to collect
+        :prob    : probability of chosing a state/obs pair
+
+    Returns:
+        dict
+    """
+    from numpy.random import uniform
+    args.RGB = True  # to be safe
+    env = Env(args)
+    s, obs = env.reset()
+    t = 0
+    states, obs_list = [], []
+    while len(states) < dpoints:
+        s, obs, _, d, _ = env.step(env.action_space.sample())
+        t += 1
+        if uniform() < prob:
+            states.append(s)
+            obs_list.append(obs)
+        if d:
+            s=env.reset()
+            t=0
+    return {'states': states, 'obs':obs_list}
+
 
 if __name__ == '__main__':
-    test()
+    from Agent.arguments import get_args
+    from utils import single_episodes
+    args = get_args()
+    Env = LoneHumanoid
+    # Env = Humanoid
+    # single_episodes(Env, args, verbose=False)
+    d = DataGenerator(10)
+    for i, v in d.items():
+        print(i)
+        print(v)

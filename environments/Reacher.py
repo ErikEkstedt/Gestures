@@ -6,10 +6,6 @@ from itertools import count
 
 # from OpenGL import GL # fix for opengl issues on desktop  / nvidia
 from OpenGL import GLE # fix for opengl issues on desktop  / nvidia
-try:
-    from environments.reacher_envs import Base
-except:
-    from reacher_envs import Base
 
 PATH_TO_CUSTOM_XML = "/home/erik/com_sci/Master_code/Project/environments/xml_files"
 
@@ -41,65 +37,135 @@ def sphere_target(r0, r1, x0=0, y0=0, z0=0.41):
     return [x, y, z, x1, y1, z1]
 
 
-# Reward functions
-def calc_reward(self, a):
-    ''' Reward function '''
-    # Distance Reward
-    potential_old = self.potential
-    self.potential = self.calc_potential()
-    r1 = self.reward_constant1 * float(self.potential[0] - potential_old[0]) # elbow
-    r2 = self.reward_constant2 * float(self.potential[1] - potential_old[1]) # hand
-
-    # Cost
-    electricity_cost  = self.electricity_cost * float(np.abs(a*self.joint_speeds).mean())  # let's assume we have DC motor with controller, and reverse current braking
-    electricity_cost += self.stall_torque_cost * float(np.square(a).mean())
-    joints_at_limit_cost = float(self.joints_at_limit_cost * self.joints_at_limit)
-
-    # Save rewards ?
-    self.rewards = [r1, r2, electricity_cost, joints_at_limit_cost]
-    return sum(self.rewards)
-
-def calc_reward(self, a):
-    ''' Absolute potential as reward '''
-    self.potential = self.calc_potential()
-    r1 = self.reward_constant1 * float(self.potential[0])
-    r2 = self.reward_constant2 * float(self.potential[1])
-    return r1 + r2
-
-def calc_reward(self, a):
-    ''' Difference potential as reward '''
-    potential_old = self.potential
-    self.potential = self.calc_potential()
-    r1 = self.reward_constant1 * float(self.potential[0] - potential_old[0]) # elbow
-    r2 = self.reward_constant2 * float(self.potential[1] - potential_old[1]) # hand
-    return r1 + r2
-
-def calc_reward(self, a):
-    ''' Hierarchical Difference potential as reward '''
-    potential_old = self.potential
-    self.potential = self.calc_potential()
-    r1 = 10 * float(self.potential[0] - potential_old[0]) # elbow
-    r2 = 1 * float(self.potential[1] - potential_old[1]) # hand
-    return r1 + r2
-
-def calc_reward(self, a):
-    ''' Hierarchical Difference potential as reward '''
-    potential_old = self.potential
-    self.potential = self.calc_potential()
-    r1 = 1 * float(self.potential[0] - potential_old[0]) # elbow
-    r2 = 10 * float(self.potential[1] - potential_old[1]) # hand
-    return r1 + r2
-
-def calc_reward(self, a):
-    ''' IN PROGRESS Difference potential as reward '''
-    potential_old = self.potential
-    self.potential = self.calc_potential()
-    r1 = float(self.potential[0] - potential_old[0]) # elbow
-    r2 = float(self.potential[1] - potential_old[1]) # hand
-    return r1 + r2
-
-
 # Environments
+
+class Base(MyGymEnv):
+    def __init__(self, XML_PATH=PATH_TO_CUSTOM_XML,
+                 robot_name='robot',
+                 target_name='target',
+                 model_xml='NOT/A/FILE.xml',
+                 ac=6, obs=18,
+                 args = None):
+        self.XML_PATH    = XML_PATH
+        self.model_xml   = model_xml
+        self.robot_name  = robot_name
+        self.target_name = target_name
+        if args is None:
+            ''' Defaults '''
+            MyGymEnv.__init__(self, action_dim=ac, obs_dim=obs, RGB=False)
+
+            # Env (xml forward walkers)
+            self.MAX_TIME=300
+            self.potential_constant   = 100
+            self.electricity_cost     = -2.0  # cost for using motors -- this parameter should be carefully tuned against reward for making progress, other values less improtant
+            self.stall_torque_cost    = -0.1  # cost for running electric current through a motor even at zero rotational speed, small
+            self.joints_at_limit_cost = -0.2  # discourage stuck joints
+
+            self.reward_constant1     = 1
+            self.reward_constant2     = 1
+
+            # Scene
+            self.gravity = 9.81
+            self.timestep=0.0165/4
+            self.frame_skip = 1
+
+            # Robot
+            self.power = 0.8
+        else:
+            MyGymEnv.__init__(self, action_dim=ac, obs_dim=obs, RGB=args.RGB)
+            self.MAX_TIME=args.MAX_TIME
+
+            # Reward penalties/values
+            self.potential_constant   = args.potential_constant
+            self.electricity_cost     = args.electricity_cost
+            self.stall_torque_cost    = args.stall_torque_cost
+            self.joints_at_limit_cost = args.joints_at_limit_cost
+            self.MAX_TIME             = args.MAX_TIME
+            self.reward_constant1     = args.r1
+            self.reward_constant2     = args.r2
+
+            # Scene
+            self.gravity              = args.gravity
+            self.timestep             = 0.0165/4
+            self.frame_skip           = 1
+
+            # Robot
+            self.power                = args.power # 0.5
+    def print_relevant_information(self):
+        print('Robot name: {}, Target name={}'.format(self.robot_name, self.target_name))
+        print('XML fileme: {}, Path={}'.format(self.model_xml, self.XML_PATH))
+
+    def initialize_scene(self):
+        return Scene(self.gravity, self.timestep, self.frame_skip)
+
+    def apply_action(self, a):
+        assert( np.isfinite(a).all() )
+        for i, m, power in zip(range(len(self.motors)), self.motors, self.motor_power):
+            m.set_motor_torque( 0.05*float(power*self.power*np.clip(a[i], -1, +1)) )
+
+    def stop_condition(self):
+        max_time = False
+        if self.frame>=self.MAX_TIME:
+            max_time = True
+        return max_time
+
+    def load_xml_get_robot(self, verbose=False):
+        self.mjcf = self.scene.cpp_world.load_mjcf(
+            os.path.join(os.path.dirname(__file__),
+                         "xml_files/",
+                         self.model_xml))
+        self.ordered_joints = []
+        self.jdict = {}
+        self.parts = {}
+        self.frame = 0
+        self.done = 0
+        self.reward = 0
+        for r in self.mjcf:
+            if verbose:
+                print('Load XML Model')
+                print('Path:', os.path.join(self.XML_PATH, self.model_xml))
+                print("ROBOT '%s'" % r.root_part.name)
+            # store important parts
+            if r.root_part.name==self.robot_name:
+                self.cpp_robot = r
+                self.robot_body = r.root_part
+
+            for part in r.parts:
+                if verbose: print("\tPART '%s'" % part.name)
+                self.parts[part.name] = part
+                if part.name==self.robot_name:
+                    self.cpp_robot = r
+                    self.robot_body = part
+
+            for j in r.joints:
+                if verbose:
+                    print("\tALL JOINTS '%s' limits = %+0.2f..%+0.2f \
+                          effort=%0.3f speed=%0.3f" % ((j.name,) + j.limits()))
+                j.power_coef = 100.0
+                self.ordered_joints.append(j)
+                self.jdict[j.name] = j
+
+    def get_joint_dicts(self, verbose=False):
+        ''' This function separates all parts/joints by containing `robot` or `target`.'''
+        self.target_joints, self.target_parts = self.get_joints_parts_by_name('target')
+        self.robot_joints, self.robot_parts = self.get_joints_parts_by_name('robot')
+        if verbose:
+            print('{}\n'.format(self.robot_joints))
+            print('{}\n'.format(self.robot_parts))
+            print('{}\n'.format(self.target_joints))
+        assert(self.cpp_robot)
+
+    def get_joints_parts_by_name(self, name):
+        joints, parts =  {}, {}
+        for jname, joint in self.jdict.items():
+            if name in jname:
+                joints[jname] = joint
+        for jname, part in self.parts.items():
+            if name in jname:
+                parts[jname] = part
+        return joints, parts
+
+
 class ReacherCommon():
     def robot_reset(self):
         ''' np.random for correct seed. '''
@@ -249,44 +315,10 @@ class Reacher3D(ReacherCommon, Base):
         return sum(self.rewards)
 
 
-# test functions
-def single_episodes(Env, args):
-    env = Env(args)
-    print('RGB: {}\tGravity: {}\tMAX: {}\t'.format(env.RGB, env.gravity, env.MAX_TIME))
-    if args.RGB:
-        s, obs = env.reset()
-        print(s.shape)
-        print(obs.shape)
-        print(obs.dtype)
-        input('Press Enter to start')
-        while True:
-            s, obs, r, d, _ = env.step(env.action_space.sample())
-            R += r
-            if d:
-                s=env.reset()
-    else:
-        s = env.reset()
-        print("jdict", env.jdict)
-        print("robot_joints", env.robot_joints)
-        print("motor_names" , env.motor_names)
-        print("motor_power" , env.motor_power)
-        print(s.shape)
-        input()
-        while True:
-            a = env.action_space.sample()
-            s, r, d, _ = env.step(a)
-            print('Reward: ', r)
-            if args.render: env.render()
-            if d:
-                s=env.reset()
-                print('Target pos: ',env.target_position)
-
-
-def test():
-    from Agent.arguments import get_args
-    args = get_args()
-    # single_episodes(ReacherPlane, args)
-    single_episodes(Reacher3D, args)
-
 if __name__ == '__main__':
-        test()
+    from Agent.arguments import get_args
+    from utils import single_episodes
+    args = get_args()
+    # Env = ReacherPlane
+    Env = Reacher3D
+    single_episodes(Env, args, verbose=False)
