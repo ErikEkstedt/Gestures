@@ -26,7 +26,6 @@
 
 				<joint axis="0 1 0" limited="false" name="robot_elbow_joint" pos="0 0 0" type="hinge"/>
 				<geom contype="0" conaffinity="0" fromto="0 0 0 0.2 0 0" name="robot_arm1" rgba="0.0 0.4 0.8 0.9" size=".01" type="capsule"/>
-
 				<!-- Hand -->
 				<body name="robot_hand" pos="0.2 0 0">
 					<geom conaffinity="0" contype="0" pos="0 0 0" name="robot_hand" rgba="0.1 0.9 0.2 0.9" size=".025" type="sphere"/>

@@ -89,7 +89,7 @@ class Base(MyGymEnv):
 
     def load_xml_get_robot(self, verbose=False):
         # os.path.join(os.path.dirname(__file__), "xml_files/", self.model_xml))
-        self.mjcf = self.scene.cpp_world.load_mjcf( os.path.join(PATH_TO_CUSTOM_XML, self.xml_model))
+        self.mjcf = self.scene.cpp_world.load_mjcf( os.path.join(PATH_TO_CUSTOM_XML, self.model_xml))
         self.ordered_joints = []
         self.jdict = {}
         self.parts = {}
@@ -521,44 +521,35 @@ def parallel_episodes(Env, args):
 
 
 def single_episodes(Env, args):
-    env = make_parallel_environments(Env, args)
+    env = Env(args)
+    print('RGB: {}\tGravity: {}\tMAX: {}\t'.format(env.RGB, env.gravity, env.MAX_TIME))
     if args.RGB:
-        (s, obs) = env.reset()
+        s, obs = env.reset()
+        print(s.shape)
+        print(obs.shape)
+        print(obs.dtype)
+        input('Press Enter to start')
+        while True:
+            s, obs, r, d, _ = env.step(env.action_space.sample())
+            R += r
+            if d:
+                s=env.reset()
     else:
         s = env.reset()
-    R = 0
-    for i in count(1):
-        env = Env(args)
-        print('RGB: {}\tGravity: {}\tMAX: {}\t'.format(env.RGB,
-                                                       env.gravity,
-                                                       env.MAX_TIME))
-        if args.RGB:
-            s = env.reset()
-            s, obs = s
-            print(s.shape)
-            print(obs.shape)
-            while True:
-                (s, obs), r, d, _ = env.step(env.action_space.sample())
-                R += r
-                if d:
-                    s=env.reset()
-        else:
-            s = env.reset()
-            print("jdict", env.jdict)
-            print("robot_joints", env.robot_joints)
-            print("motor_names" , env.motor_names)
-            print("motor_power" , env.motor_power)
-            print(s.shape)
-            input()
-            while True:
-                a = env.action_space.sample()
-                s, r, d, _ = env.step(a)
-                # print(r)
-                if args.render:
-                    env.render()
-                if d:
-                    s=env.reset()
-                    print('Target pos: ',env.target_position)
+        print("jdict", env.jdict)
+        print("robot_joints", env.robot_joints)
+        print("motor_names" , env.motor_names)
+        print("motor_power" , env.motor_power)
+        print(s.shape)
+        input()
+        while True:
+            a = env.action_space.sample()
+            s, r, d, _ = env.step(a)
+            print('Reward: ', r)
+            if args.render: env.render()
+            if d:
+                s=env.reset()
+                print('Target pos: ',env.target_position)
 
 
 def test():
@@ -570,10 +561,7 @@ def test():
     args = get_args()
     Env = get_env(args)
 
-    if args.num_processes > 1:
-        parallel_episodes(Env, args)
-    else:
-        single_episodes(Env, args)
+    single_episodes(Env, args)
 
 
 if __name__ == '__main__':
