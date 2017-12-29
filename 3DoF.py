@@ -87,18 +87,6 @@ def get_args():
     args.vis = not args.no_vis
     return args
 
-'''
-Trains on ReacherPlane where the reacher has 2 DoF and two targets.
-
-The reward is the sum of the two absolute potentials
-(the p2-norm of the difference vector multiplied by a reward_constant)
-constant = 100
-r1, r2 = 1, 1
-
-The absolute potential is wuite large and results in huge values for the value
-loss. (starting at 38M). The best result got -9797. as test average.
-
-'''
 
 def main():
     # === Settings ===

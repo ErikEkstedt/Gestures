@@ -4,12 +4,11 @@ import numpy as np
 import gym
 from itertools import count
 
-# from OpenGL import GL # fix for opengl issues on desktop  / nvidia
 from OpenGL import GLE # fix for opengl issues on desktop  / nvidia
 try:
-    from environments.reacher_envs import Base
+    from environments.humanoid_envs import Base
 except:
-    from reacher_envs import Base
+    from humanoid_envs import Base
 
 PATH_TO_CUSTOM_XML = "/home/erik/com_sci/Master_code/Project/environments/xml_files"
 
@@ -39,7 +38,6 @@ def sphere_target(r0, r1, x0=0, y0=0, z0=0.41):
     y1 = y + r1*np.sin(theta)*np.sin(phi)
     z1 = z + r1*np.cos(theta)
     return [x, y, z, x1, y1, z1]
-
 
 # Reward functions
 def calc_reward(self, a):
@@ -99,8 +97,7 @@ def calc_reward(self, a):
     return r1 + r2
 
 
-# Environments
-class ReacherCommon():
+class HumanoidCommon():
     def robot_reset(self):
         ''' np.random for correct seed. '''
         for j in self.robot_joints.values():
@@ -170,60 +167,27 @@ class ReacherCommon():
     def camera_adjust(self):
         self.camera.move_and_look_at( 0.5, 0, 1, 0, 0, 0.4)
 
-
-class ReacherPlane(ReacherCommon, Base):
-    def __init__(self, args=None):
+class Humanoid3D(HumanoidCommon, Base):
+    def __init__(self,  args=None):
         Base.__init__(self,XML_PATH=PATH_TO_CUSTOM_XML,
-                        robot_name='robot_arm',
-                        target_name='target0',
-                        model_xml='reacher/reacher_plane.xml',
-                        ac=2, obs=22,
-                        args=args)
+                      robot_name='robot',
+                      target_name='target',
+                      model_xml='humanoid/humanoid.xml',
+                      ac=17, obs=43,
+                      args = args)
         print('I am', self.model_xml)
 
     def robot_specific_reset(self):
-        self.motor_names = ["robot_shoulder_joint_z",
-                            "robot_elbow_joint"]
-        self.motor_power = [100, 100]
-        self.motors = [self.jdict[n] for n in self.motor_names]
-
-        # target and potential
-        self.robot_reset()
-        self.target_reset()
-        self.calc_to_target_vec()
-        self.potential = self.calc_potential()
-
-    def target_reset(self):
-        r0, r1 = 0.2, 0.2
-        x0, y0, z0 = 0, 0, 0.41
-        coords = sphere_target(r0, r1, x0, y0, z0)
-        coords = plane_target(r0, r1, x0, y0, z0)
-        self.set_custom_target(coords)
-
-    def calc_reward(self, a):
-        ''' Hierarchical Difference potential as reward '''
-        potential_old = self.potential
-        self.potential = self.calc_potential()
-        r1 = 1 * float(self.potential[0] - potential_old[0]) # elbow
-        r2 = 10 * float(self.potential[1] - potential_old[1]) # hand
-        return r1 + r2
-
-
-class Reacher3D(ReacherCommon, Base):
-    def __init__(self, args=None):
-        Base.__init__(self,XML_PATH=PATH_TO_CUSTOM_XML,
-                        robot_name='robot_arm',
-                        target_name='target0',
-                        model_xml='reacher/reacher_base.xml',
-                        ac=3, obs=24,
-                        args=args)
-        print('I am', self.model_xml)
-
-    def robot_specific_reset(self):
-        self.motor_names = ["robot_shoulder_joint_z",
-                            "robot_shoulder_joint_y",
-                            "robot_elbow_joint"]
-        self.motor_power = [100, 100, 100]
+        self.motor_names  = ["robot_abdomen_z", "robot_abdomen_y", "robot_abdomen_x"]
+        self.motor_power  = [100, 100, 100]
+        self.motor_names += ["robot_right_hip_x", "robot_right_hip_z", "robot_right_hip_y", "robot_right_knee"]
+        self.motor_power += [100, 100, 300, 200]
+        self.motor_names += ["robot_left_hip_x", "robot_left_hip_z", "robot_left_hip_y", "robot_left_knee"]
+        self.motor_power += [100, 100, 300, 200]
+        self.motor_names += ["robot_right_shoulder1", "robot_right_shoulder2", "robot_right_elbow"]
+        self.motor_power += [75, 75, 75]
+        self.motor_names += ["robot_left_shoulder1", "robot_left_shoulder2", "robot_left_elbow"]
+        self.motor_power += [75, 75, 75]
         self.motors = [self.jdict[n] for n in self.motor_names]
 
         # target and potential
@@ -239,17 +203,14 @@ class Reacher3D(ReacherCommon, Base):
         self.set_custom_target(coords)
 
     def calc_reward(self, a):
-        ''' Reward function '''
-        # Distance Reward
+        ''' Difference potential as reward '''
         potential_old = self.potential
         self.potential = self.calc_potential()
         r1 = self.reward_constant1 * float(self.potential[0] - potential_old[0]) # elbow
         r2 = self.reward_constant2 * float(self.potential[1] - potential_old[1]) # hand
-        self.rewards = [r1,r2]
-        return sum(self.rewards)
+        return r1 + r2
 
 
-# test functions
 def single_episodes(Env, args):
     env = Env(args)
     print('RGB: {}\tGravity: {}\tMAX: {}\t'.format(env.RGB, env.gravity, env.MAX_TIME))
@@ -281,12 +242,10 @@ def single_episodes(Env, args):
                 s=env.reset()
                 print('Target pos: ',env.target_position)
 
-
 def test():
     from Agent.arguments import get_args
     args = get_args()
-    # single_episodes(ReacherPlane, args)
-    single_episodes(Reacher3D, args)
+    single_episodes(Humanoid3D, args)
 
 if __name__ == '__main__':
-        test()
+    test()

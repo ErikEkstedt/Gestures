@@ -130,6 +130,7 @@ def main():
     # ==== Training ====
     print('Learning {}(ac: {}, ob: {})'.format( args.env_id, ac_shape, ob_shape))
     print('\nTraining for %d Updates' % args.num_updates)
+    print0
     s = env.reset()
     CurrentState.update(s)
     rollouts.states[0].copy_(CurrentState())

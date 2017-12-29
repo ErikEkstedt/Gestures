@@ -22,9 +22,9 @@ class Base(MyGymEnv):
                  model_xml='NOT/A/FILE.xml',
                  ac=6, obs=15,
                  args = None):
-        self.XML_PATH    = XML_PATH
-        self.model_xml   = model_xml
-        self.robot_name  = robot_name
+        self.XML_PATH = XML_PATH
+        self.model_xml = model_xml
+        self.robot_name = robot_name
         self.target_name = target_name
 
         if args is None:
@@ -232,7 +232,6 @@ class Humanoid6DoF_2target(Base):
                         model_xml='humanoid/humanoid6DoF.xml',
                         ac=6, obs=21,
                         args = args)
-
         print('I am', self.model_xml)
         # rewards constant for targets
     def robot_specific_reset(self):
