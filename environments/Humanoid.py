@@ -3,8 +3,8 @@ import os
 import numpy as np
 import gym
 from itertools import count
-from OpenGL import GLE  # fix for opengl issues on desktop  / nvidia
 
+from OpenGL import GL  # fix for opengl issues on desktop  / nvidia
 
 PATH_TO_CUSTOM_XML = "/home/erik/com_sci/Master_code/Project/environments/xml_files"
 
@@ -77,7 +77,7 @@ class MyGymEnv(gym.Env):
         self.scene.global_step()
         self.frame  += 1
 
-        state = self.calc_state()  # also calculates self.joints_at_limit
+        state = self.calc_state()
         reward = self.calc_reward(a)
         done = self.stop_condition() # max frame reached?
         self.done = done
@@ -116,8 +116,8 @@ class Base(MyGymEnv):
             self.stall_torque_cost    = 5.1  # cost for running electric current through a motor even at zero rotational speed, small
             self.joints_at_limit_cost = 6.2  # discourage stuck joints
 
-            self.reward_constant8     = 1
-            self.reward_constant10     = 1
+            self.reward_constant1     = 1
+            self.reward_constant2     = 1
 
             # Scene
             self.gravity = 18.81
@@ -140,8 +140,8 @@ class Base(MyGymEnv):
             self.stall_torque_cost    = args.stall_torque_cost
             self.joints_at_limit_cost = args.joints_at_limit_cost
             self.MAX_TIME             = args.MAX_TIME
-            self.reward_constant14     = args.r1
-            self.reward_constant16     = args.r2
+            self.reward_constant1     = args.r1
+            self.reward_constant2     = args.r2
 
             # Scene
             self.gravity              = args.gravity
@@ -224,131 +224,13 @@ class Base(MyGymEnv):
         return joints, parts
 
 
-class HumanoidCommon():
-    def robot_reset(self):
-        ''' np.random for correct seed. '''
-        for j in self.robot_joints.values():
-            j.reset_current_position(np.random.uniform(low=-0.01, high=0.01 ), 0)
-            j.set_motor_torque(0)
-
-    def set_custom_target(self, coords):
-        x, y, z, x1, y1, z1 = coords
-        verbose = False
-        for name, j in self.target_joints.items():
-            if "0" in name:
-                if "z" in name:
-                    j.reset_current_position(z, 0)
-                elif "x" in name:
-                    j.reset_current_position(x,0)
-                else:
-                    j.reset_current_position(y, 0)
-            else:
-                if "z" in name:
-                    j.reset_current_position(z1, 0)
-                elif "x" in name:
-                    j.reset_current_position(x1,0)
-                else:
-                    j.reset_current_position(y1, 0)
-
-    def calc_to_target_vec(self):
-        ''' gets hand position, target position and the vector in bewteen'''
-        # Elbow target
-        target_position1 = np.array(self.target_parts['target0'].pose().xyz())
-        elbow_position = np.array(self.parts['robot_right_elbow'].pose().xyz())
-        self.totarget1 = elbow_position - target_position1
-
-        # Hand target
-        target_position2 = np.array(self.target_parts['target1'].pose().xyz())
-        hand_position = np.array(self.parts['robot_right_hand'].pose().xyz())
-        self.totarget2 = hand_position - target_position2
-
-        self.target_position = np.concatenate((target_position1, target_position2))
-        self.important_positions = np.concatenate((elbow_position, hand_position))
-        self.to_target_vec = np.concatenate((self.totarget1, self.totarget2),)
-
-    def calc_state(self):
-        j = np.array([j.current_relative_position()
-                    for j in self.robot_joints.values()],
-                    dtype=np.float32).flatten()
-        self.joints_at_limit = np.count_nonzero(np.abs(j[0::2]) > 0.99)
-        self.joint_positions = j[0::2]
-        self.joint_speeds = j[1::2]
-        self.calc_to_target_vec()  # calcs target_position, important_pos, to_target_vec
-        return np.concatenate((self.target_position,
-                            self.important_positions,
-                            self.to_target_vec,
-                            self.joint_positions,
-                            self.joint_speeds),)
-
-    def calc_potential(self):
-        p1 = -self.potential_constant*np.linalg.norm(self.totarget1)
-        p2 = -self.potential_constant*np.linalg.norm(self.totarget2)
-        return p1, p2
-
-    def get_rgb(self):
-        self.camera_adjust()
-        rgb, _, _, _, _ = self.camera.render(False, False, False) # render_depth, render_labeling, print_timing)
-        rendered_rgb = np.fromstring(rgb, dtype=np.uint8).reshape( (self.VIDEO_H,self.VIDEO_W,3) )
-        return rendered_rgb
-
-    def camera_adjust(self):
-        self.camera.move_and_look_at( 0.5, 0, 1, 0, 0, 0.4)
-
-
-class Humanoid6DoF2Target(HumanoidCommon, Base):
-    ''' Humanoid with two targets.
-    TODO:
-        Write a target functions in a domain for arms.
-    '''
-    def __init__(self, args=None):
-        Base.__init__(self,XML_PATH=PATH_TO_CUSTOM_XML,
-                        robot_name='robot',
-                        target_name='target0',
-                        model_xml='humanoid/humanoid.xml',
-                        ac=6, obs=24,
-                        args=args)
-        print('I am', self.model_xml)
-
-    def robot_specific_reset(self):
-        self.motor_names = ["robot_right_shoulder1",
-                            "robot_right_shoulder2",
-                            "robot_right_elbow",
-                            "robot_left_shoulder1",
-                            "robot_left_shoulder2",
-                            "robot_left_elbow"]
-        self.motor_power = [10000]*len(self.motor_names)
-        self.motors = [self.jdict[n] for n in self.motor_names]
-
-        # target and potential
-        self.robot_reset()
-        self.target_reset()
-        self.calc_to_target_vec()
-        self.potential = self.calc_potential()
-
-    def target_reset(self):
-        r0, r1 = 0.2, 0.2
-        x0, y0, z0 = 0, 0, 0.41
-        coords = sphere_target(r0, r1, x0, y0, z0)
-        self.set_custom_target(coords)
-
-    def calc_reward(self, a):
-        ''' Reward function '''
-        # Distance Reward
-        potential_old = self.potential
-        self.potential = self.calc_potential()
-        r1 = self.reward_constant1 * float(self.potential[0] - potential_old[0]) # elbow
-        r2 = self.reward_constant2 * float(self.potential[1] - potential_old[1]) # hand
-        self.rewards = [r1,r2]
-        return sum(self.rewards)
-
-
 class TargetHumanoid(Base):
     ''' Humanoid with no targets.  '''
     def __init__(self, args=None):
         Base.__init__(self,XML_PATH=PATH_TO_CUSTOM_XML,
                         robot_name='robot',
                         model_xml='humanoid/HumanoidNoTarget.xml',
-                        ac=6, obs=24,
+                        ac=6, obs=18,
                         args=args)
         print('I am', self.model_xml)
 
@@ -403,16 +285,27 @@ class TargetHumanoid(Base):
 
 
 class Humanoid(Base):
-    ''' Humanoid with no targets.  '''
-    def __init__(self, args=None):
+    ''' Humanoid
+    TODO:
+        1. [x] init with list of predefined targets.
+        2. [x] robot_specific_reset
+        3. [x] calc_reward, calc_state
+    '''
+    def __init__(self, args=None, Targets=None):
         Base.__init__(self,XML_PATH=PATH_TO_CUSTOM_XML,
                       robot_name='robot',
                       model_xml='humanoid/HumanoidNoTarget.xml',
                       ac=6, obs=24,
-                      args=args,
-                      Targets = None)
+                      args=args)
         print('I am', self.model_xml)
         self.Targets = Targets
+        self.len_targets = len(Targets)
+
+    def robot_reset(self):
+        ''' np.random for correct seed. '''
+        for j in self.robot_joints.values():
+            j.reset_current_position(np.random.uniform(low=-3.01, high=3.01 ), 0)
+            j.set_motor_torque(0)
 
     def robot_specific_reset(self):
         self.motor_names = ["robot_right_shoulder1",
@@ -421,31 +314,22 @@ class Humanoid(Base):
                             "robot_left_shoulder1",
                             "robot_left_shoulder2",
                             "robot_left_elbow"]
-        self.motor_power = [10000]*len(self.motor_names)
+        self.motor_power = [5000]*len(self.motor_names)
         self.motors = [self.jdict[n] for n in self.motor_names]
-
-        # target and potential
         self.robot_reset()
-        self.get_target()
+        self.target_reset()
 
-    def get_target(self):
-        self.Targets
+        self.calc_important_parts()
+        self.calc_to_target_vec()
+        self.potential = self.calc_potential()
 
+    def target_reset(self):
+        idx = np.random.randint(0,self.len_targets)
+        self.target = self.Targets['states'][idx]
+        self.target_obs = self.Targets['obs'][idx]
+        self.target_position = self.target[:12]
 
-    def robot_reset(self):
-        ''' np.random for correct seed. '''
-        for j in self.robot_joints.values():
-            j.reset_current_position(np.random.uniform(low=-3.01, high=3.01 ), 0)
-            j.set_motor_torque(0)
-
-    def calc_state(self):
-        j = np.array([j.current_relative_position()
-                    for j in self.robot_joints.values()],
-                    dtype=np.float32).flatten()
-
-        self.joints_at_limit      = np.count_nonzero(np.abs(j[0::2]) > 0.99)
-        self.joint_positions      = j[0::2]
-        self.joint_speeds         = j[1::2]
+    def calc_important_parts(self):
         self.right_elbow_position = np.array(self.parts['robot_right_elbow'].pose().xyz())
         self.right_hand_position  = np.array(self.parts['robot_right_hand'].pose().xyz())
         self.left_elbow_position  = np.array(self.parts['robot_left_elbow'].pose().xyz())
@@ -454,12 +338,36 @@ class Humanoid(Base):
                                                     self.right_hand_position,
                                                     self.left_elbow_position,
                                                     self.left_hand_position))
-        return np.concatenate((self.important_positions,
+
+    def calc_to_target_vec(self):
+        ''' gets hand position, target position and the vector in bewteen'''
+        self.to_target_vec = self.important_positions - self.target_position
+
+    def calc_potential(self):
+        return -self.potential_constant*np.linalg.norm(self.to_target_vec)
+
+    def calc_state(self):
+        j = np.array([j.current_relative_position()
+                    for j in self.robot_joints.values()],
+                    dtype=np.float32).flatten()
+        self.joints_at_limit = np.count_nonzero(np.abs(j[0::2]) > 0.99)
+        self.joint_positions = j[0::2]
+        self.joint_speeds    = j[1::2]
+
+        self.calc_important_parts()
+        return np.concatenate((self.target_position,
+                               self.important_positions,
                                self.joint_positions,
                                self.joint_speeds),)
 
     def calc_reward(self, a):
-        return 0
+        ''' Reward function '''
+        self.calc_to_target_vec()
+        potential_old = self.potential
+        self.potential = self.calc_potential()
+        r1 = self.reward_constant1 * float(self.potential - potential_old) # elbow
+        self.rewards = [r1]
+        return sum(self.rewards)
 
     def get_rgb(self):
         self.camera_adjust()
@@ -497,10 +405,14 @@ def DataGenerator(dpoints=1000, prob=0.03):
             t=0
     return {'states': states, 'obs':obs_list}
 
+def save_data(dpoints):
+    import torch
+    data = DataGenerator(dpoints)
+    name = '/home/erik/DATA/humanoid/test.pt'
+    torch.save(data, name)
 
 def show_obs_state(datadict):
     """Prints out state and previews corresponding observation
-
     Args:
         datadict : dict containing states and obs
     """
@@ -513,15 +425,18 @@ def show_obs_state(datadict):
         plt.pause(0.1)
         input('Enter when done')
 
-
 if __name__ == '__main__':
     from Agent.arguments import get_args
     from utils import single_episodes
+    from utils import parallel_episodes
+
     args = get_args()
     args.video_W = 100
     args.video_H = 100
     Env = TargetHumanoid
     # Env = Humanoid
-    single_episodes(Env, args, verbose=args.verbose)
+    # single_episodes(Env, args, verbose=args.verbose)
+    parallel_episodes(Env, args, args.verbose)
     # d = DataGenerator(10)
     # show_obs_state(d)
+    # save_data(500)

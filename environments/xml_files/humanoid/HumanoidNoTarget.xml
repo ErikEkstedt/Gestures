@@ -41,7 +41,7 @@
                     <geom fromto="0.01 -0.01 0.01 .17 -.17 .17" name="robot_left_larm" size="0.031" type="capsule"/>
                     <!-- Hand -->
                     <body name="robot_left_hand" pos=".18 -.18 .18">
-                        <geom name="robot_left_hand" pos="0 0 0" size="0.04" type="sphere" rgba="1 0 0 1"/>
+                        <geom name="robot_left_hand" pos="0 0 0" size="0.04" type="sphere" rgba="0 1 0 1"/>
                     </body>
                 </body>
             </body>

@@ -4,18 +4,18 @@ The experiments that I run I make a script that does just that experiment.
 Easy to rerun experiments and all hyperparameters will be the same easily.
 
 ## Environment
-1. [ ] 2 Dof
-	* [ ] Plane
-	* [ ] 3D 
-2. [ ] 3 Dof
-	* [ ] Plane
-	* [ ] 3D 
+1. [x] 2 Dof
+	* [x] Plane
+	* [x] 3D 
+2. [x] 3 Dof
+	* [x] Plane
+	* [x] 3D 
 	* [ ] two networks for each arm.
 3. [ ] 2-3-DoF = 6 DoF
 	* [ ] Plane
 	* [ ] 3D 
-4. [ ] 2 Dof
-	* [ ] Plane
+
+4. [x] 6 Dof Humanoid and rgb
 	* [ ] 3D 
 
 ## Reward
@@ -40,31 +40,22 @@ Stacking of frames
 * [ ] 4-stack
 
 ## Observation
-
 1. Define simple CNN
 	* rgb -> state
 	* rgb -> action
 	* clstm -> action
 2. Combination of understanding and coordination
 	
-	
 ## Experiment to run
-
-1. 2DoF
+1. [x] 2DoF
 	* target: plane
 	* reward
 		* abs. dist
 		* diff. dist 
 		* regular costs
 
-2. 3DoF
-	* target: 
-		* plane
-		* one octagon
-		* quart
-		* all reachable 3D
+2. [x] 3DoF
 	* reward
-		* abs. dist
 		* diff. dist 
 		* regular costs
 
@@ -74,7 +65,6 @@ Stacking of frames
 		* one octagon
 		* quart
 		* all reachable 3D
-
 	* two targets:
 		* plane
 		* one octagon
