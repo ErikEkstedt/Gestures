@@ -378,7 +378,7 @@ class TargetHumanoid(Base):
 
         self.joints_at_limit      = np.count_nonzero(np.abs(j[0::2]) > 0.99)
         self.joint_positions      = j[0::2]
-        self.joint_speeds         = j[1::2]
+        # self.joint_speeds         = j[1::2]
         self.right_elbow_position = np.array(self.parts['robot_right_elbow'].pose().xyz())
         self.right_hand_position  = np.array(self.parts['robot_right_hand'].pose().xyz())
         self.left_elbow_position  = np.array(self.parts['robot_left_elbow'].pose().xyz())
@@ -387,9 +387,7 @@ class TargetHumanoid(Base):
                                                     self.right_hand_position,
                                                     self.left_elbow_position,
                                                     self.left_hand_position))
-        return np.concatenate((self.important_positions,
-                               self.joint_positions,
-                               self.joint_speeds),)
+        return np.concatenate((self.important_positions, self.joint_positions))
 
     def calc_reward(self, a):
         return 0
@@ -522,8 +520,8 @@ if __name__ == '__main__':
     args = get_args()
     args.video_W = 100
     args.video_H = 100
-    Env = DataHumanoid
+    Env = TargetHumanoid
     # Env = Humanoid
-    # single_episodes(Env, args, verbose=False)
-    d = DataGenerator(10)
-    show_obs_state(d)
+    single_episodes(Env, args, verbose=args.verbose)
+    # d = DataGenerator(10)
+    # show_obs_state(d)
