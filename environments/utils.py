@@ -41,6 +41,44 @@ def single_episodes(Env, args, verbose=True):
                 s=env.reset()
                 if verbose: print('Target pos: ',env.target_position)
 
+def parallel_episodes(Env, args):
+    env = make_parallel_environments(Env, args)
+    if args.RGB: (s, obs) = env.reset()
+    else: s = env.reset()
+    R = 0
+    for i in count(1):
+        if args.RGB: s, obs, r, d, _ = env.step([env.action_space.sample()] * args.num_processes)
+        else: s, r, d, _ = env.step([env.action_space.sample()] * args.num_processes)
+        R += r
+        if sum(d) > 0:
+            print('Step: {}, Reward: {}, mean: {}'.format(i, R, R.mean(axis=0)))
+            R = 0
+            env.reset()
+
+def make_parallel_environments(Env, args):
+    ''' imports SubprocVecEnv from baselines.
+    :param seed                 int
+    :param num_processes        int, # env
+    '''
+    if args.RGB:
+        try:
+            from envs import SubprocVecEnv_RGB as SubprocVecEnv
+        except:
+            from environments.envs import SubprocVecEnv_RGB as SubprocVecEnv
+    else:
+        try:
+            from envs import SubprocVecEnv
+        except:
+            from environments.envs import SubprocVecEnv
+
+    def multiple_envs(Env, args, rank):
+        def _thunk():
+            env = Env(args)
+            env.seed(args.seed+rank*1000)
+            return env
+        return _thunk
+    return SubprocVecEnv([multiple_envs(Env, args, i) for i in range(args.num_processes)])
+
 # Example Reward functions
 def calc_reward(self, a):
     ''' Reward function '''
