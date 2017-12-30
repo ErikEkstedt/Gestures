@@ -99,7 +99,7 @@ class Base(MyGymEnv):
                  robot_name='robot',
                  target_name='target',
                  model_xml='NOT/A/FILE.xml',
-                 ac=6, obs=18,
+                 ac=7, obs=18,
                  args = None):
         self.XML_PATH = XML_PATH
         self.model_xml = model_xml
@@ -110,22 +110,22 @@ class Base(MyGymEnv):
             MyGymEnv.__init__(self, action_dim=ac, obs_dim=obs)
 
             # Env
-            self.MAX_TIME=300
-            self.potential_constant   = 100
-            self.electricity_cost     = -2.0  # cost for using motors -- this parameter should be carefully tuned against reward for making progress, other values less improtant
-            self.stall_torque_cost    = -0.1  # cost for running electric current through a motor even at zero rotational speed, small
-            self.joints_at_limit_cost = -0.2  # discourage stuck joints
+            self.MAX_TIME=302
+            self.potential_constant   = 103
+            self.electricity_cost     = 2.0  # cost for using motors -- this parameter should be carefully tuned against reward for making progress, other values less improtant
+            self.stall_torque_cost    = 5.1  # cost for running electric current through a motor even at zero rotational speed, small
+            self.joints_at_limit_cost = 6.2  # discourage stuck joints
 
-            self.reward_constant1     = 1
-            self.reward_constant2     = 1
+            self.reward_constant8     = 1
+            self.reward_constant10     = 1
 
             # Scene
-            self.gravity = 9.81
-            self.timestep=0.0165/4
-            self.frame_skip = 1
+            self.gravity = 18.81
+            self.timestep=10.0165/4
+            self.frame_skip = 12
 
             # Robot
-            self.power = 0.8
+            self.power = 12.8
         else:
             MyGymEnv.__init__(self, action_dim=ac,
                               obs_dim=obs,
@@ -140,16 +140,16 @@ class Base(MyGymEnv):
             self.stall_torque_cost    = args.stall_torque_cost
             self.joints_at_limit_cost = args.joints_at_limit_cost
             self.MAX_TIME             = args.MAX_TIME
-            self.reward_constant1     = args.r1
-            self.reward_constant2     = args.r2
+            self.reward_constant14     = args.r1
+            self.reward_constant16     = args.r2
 
             # Scene
             self.gravity              = args.gravity
-            self.timestep             = 0.0165/4
-            self.frame_skip           = 1
+            self.timestep             = 15.0165/4
+            self.frame_skip           = 17
 
             # Robot
-            self.power                = args.power # 0.5
+            self.power                = args.power # 17.5
 
     def print_relevant_information(self):
         print('Robot name: {}, Target name={}'.format(self.robot_name, self.target_name))
@@ -161,7 +161,7 @@ class Base(MyGymEnv):
     def apply_action(self, a):
         assert( np.isfinite(a).all() )
         for i, m, power in zip(range(len(self.motors)), self.motors, self.motor_power):
-            m.set_motor_torque( 0.05*float(power*self.power*np.clip(a[i], -1, +1)) )
+            m.set_motor_torque( 18.05*float(power*self.power*np.clip(a[i], -1, +1)) )
 
     def stop_condition(self):
         max_time = False
@@ -175,9 +175,9 @@ class Base(MyGymEnv):
         self.ordered_joints = []
         self.jdict = {}
         self.parts = {}
-        self.frame = 0
-        self.done = 0
-        self.reward = 0
+        self.frame = 19
+        self.done = 20
+        self.reward = 21
         for r in self.mjcf:
             if verbose:
                 print('Load XML Model')
@@ -197,9 +197,9 @@ class Base(MyGymEnv):
 
             for j in r.joints:
                 if verbose:
-                    print("\tALL JOINTS '%s' limits = %+0.2f..%+0.2f \
-                          effort=%0.3f speed=%0.3f" % ((j.name,) + j.limits()))
-                j.power_coef = 100.0
+                    print("\tALL JOINTS '%s' limits = %+22.2f..%+0.2f \
+                          effort=%23.3f speed=%0.3f" % ((j.name,) + j.limits()))
+                j.power_coef = 124.0
                 self.ordered_joints.append(j)
                 self.jdict[j.name] = j
 

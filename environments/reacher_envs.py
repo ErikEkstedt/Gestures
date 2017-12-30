@@ -3,8 +3,6 @@ import os
 import numpy as np
 import gym
 from itertools import count
-
-# from OpenGL import GL # fix for opengl issues on desktop  / nvidia
 from OpenGL import GLE # fix for opengl issues on desktop  / nvidia
 
 try:
@@ -635,107 +633,29 @@ class Reacher3DoF_2Target(Base):
         # self.camera.move_and_look_at(1.0, 0, 0.5, 0, 0, 0)
         self.camera.move_and_look_at( 0.5, 0, 1, 0, 0, 0.4)
 
-# ===== Test Helpers =====
-def make_parallel_environments(Env, args):
-    ''' imports SubprocVecEnv from baselines.
-    :param seed                 int
-    :param num_processes        int, # env
-    '''
-    if args.RGB:
-        try:
-            from envs import SubprocVecEnv_RGB as SubprocVecEnv
-        except:
-            from environments.envs import SubprocVecEnv_RGB as SubprocVecEnv
-    else:
-        try:
-            from envs import SubprocVecEnv
-        except:
-            from environments.envs import SubprocVecEnv
 
-    def multiple_envs(Env, args, rank):
-        def _thunk():
-            env = Env(args)
-            env.seed(args.seed+rank*1000)
-            return env
-        return _thunk
-    return SubprocVecEnv([multiple_envs(Env, args, i) for i in range(args.num_processes)])
-
-def get_env(args):
-    if args.dof == 2:
-        return Reacher2DoF
-    elif args.dof == 3:
-        return Reacher3DoF
-    elif args.dof == 32:
-        return Reacher3DoF_2Target
-    elif args.dof == 6:
-        return Reacher6DoF
-    elif args.dof == 1:
-        return Reacher_plane
-    else:
-        return ReacherHumanoid
-
-def parallel_episodes(Env, args):
-    env = make_parallel_environments(Env, args)
-    if args.RGB:
-        (s, obs) = env.reset()
-    else:
-        s = env.reset()
-    R = 0
-    for i in count(1):
-        if args.RGB:
-            s, obs, r, d, _ = env.step([env.action_space.sample()] * args.num_processes)
+if __name__ == '__main__':
+    from Agent.arguments import get_args
+    def get_env(args):
+        if args.dof == 2:
+            return Reacher2DoF
+        elif args.dof == 3:
+            return Reacher3DoF
+        elif args.dof == 32:
+            return Reacher3DoF_2Target
+        elif args.dof == 6:
+            return Reacher6DoF
+        elif args.dof == 1:
+            return Reacher_plane
         else:
-            s, r, d, _ = env.step([env.action_space.sample()] * args.num_processes)
-        R += r
-        if sum(d) > 0:
-            print('Step: {}, Reward: {}, mean: {}'.format(i, R, R.mean(axis=0)))
-            R = 0
-            env.reset()
+            return ReacherHumanoid
 
-def single_episodes(Env, args):
-    env = Env(args)
-    print('RGB: {}\tGravity: {}\tMAX: {}\t'.format(env.RGB, env.gravity, env.MAX_TIME))
-    if args.RGB:
-        s = env.reset()
-        s, obs = s
-        print(s.shape)
-        print(obs.shape)
-        while True:
-            (s, obs), r, d, _ = env.step(env.action_space.sample())
-            R += r
-            if d:
-                s=env.reset()
-    else:
-        s = env.reset()
-        print("jdict", env.jdict)
-        print("robot_joints", env.robot_joints)
-        print("motor_names" , env.motor_names)
-        print("motor_power" , env.motor_power)
-        print(s.shape)
-        while True:
-            a = env.action_space.sample()
-            s, r, d, _ = env.step(a)
-            print('Reward: ', r)
-            if args.render: env.render()
-            if d:
-                s=env.reset()
-                print('Target pos: ',env.target_position)
-
-
-def test():
-    try:
-        from Agent.arguments import get_args
-    except:
-        pass
 
     args = get_args()
     Env = get_env(args)
-
     if args.num_processes > 1:
+        from utils import parallel_episodes
         parallel_episodes(Env, args)
     else:
-        single_episodes(Env, args)
-
-
-if __name__ == '__main__':
-        test()
+        from utils import single_episodes
+        single_episodes(Env,
