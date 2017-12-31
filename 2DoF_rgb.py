@@ -10,7 +10,7 @@ import torch.optim as optim
 from Agent.utils import log_print, make_log_dirs
 from Agent.arguments import FakeArgs, get_args
 from Agent.model import MLPPolicy
-from Agent.memory import RolloutStorage, StackedState, Results
+from Agent.memory import RolloutStorageObs, StackedObs, Results
 
 from Agent.train import trainRGB as train
 from Agent.train import explorationRGB as exploration
@@ -39,16 +39,17 @@ def main():
     test_env = Env(args)
     args.RGB = tmp_rgb # reset rgb flag
 
-    ob_shape = env.observation_space.shape[0]
-    ac_shape = env.action_space.shape[0]
+    obs_shape = env.rgb_space.shape[0]
+    st_shape  = env.observation_space.shape[0]
+    ac_shape  = env.action_space.shape[0]
 
     # === Memory ===
     result = Results(max_n=200, max_u=10)
-    CurrentState = StackedState(args.num_processes,
+    CurrentState = StackedObs(args.num_processes,
                                 args.num_stack,
                                 ob_shape)
 
-    rollouts = RolloutStorage(args.num_steps,
+    rollouts = RolloutStorageObs(args.num_steps,
                               args.num_processes,
                               CurrentState.size()[1],
                               ac_shape)

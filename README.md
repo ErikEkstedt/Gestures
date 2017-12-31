@@ -16,6 +16,8 @@
 	* show image, coords
 
 # Day 3
+StackedState and RolloutStorage
+
 1. [ ] Make RGB training results. Same rewards but just pixel info.
 	* [ ] Make 2dof plane viewd from above take actions from pixels alone
 	* [ ] Combin state and pixels

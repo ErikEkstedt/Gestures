@@ -3,11 +3,15 @@ import os
 import numpy as np
 import gym
 from itertools import count
-
-# from OpenGL import GL # fix for opengl issues on desktop  / nvidia
 from OpenGL import GLE # fix for opengl issues on desktop  / nvidia
 
 PATH_TO_CUSTOM_XML = "/home/erik/com_sci/Master_code/Project/environments/xml_files"
+
+# Environments
+try:
+    from environments.my_gym_env import MyGymEnv
+except:
+    from my_gym_env import MyGymEnv
 
 # Target functions
 def plane_target(r0, r1, x0=0, y0=0, z0=0.41):
@@ -35,14 +39,6 @@ def sphere_target(r0, r1, x0=0, y0=0, z0=0.41):
     y1 = y + r1*np.sin(theta)*np.sin(phi)
     z1 = z + r1*np.cos(theta)
     return [x, y, z, x1, y1, z1]
-
-
-# Environments
-
-try:
-    from environments.my_gym_env import MyGymEnv
-except:
-    from my_gym_env import MyGymEnv
 
 class Base(MyGymEnv):
     def __init__(self, XML_PATH=PATH_TO_CUSTOM_XML,

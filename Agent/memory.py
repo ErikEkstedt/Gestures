@@ -1,6 +1,6 @@
 import torch
-import numpy as np
 from torch.utils.data.sampler import BatchSampler, SubsetRandomSampler
+import numpy as np
 import time
 
 class Results_single(object):
@@ -133,23 +133,31 @@ class StackedObs(object):
     ''' stacked obs for Roboschool
 
     state: np.array, shape: (num_proc, W, H, 3) (roboschoolhumanoid)
+    state: np.array, shape: (num_proc, 3, W, H) (roboschoolhumanoid)
 
     Thus with defaults:
-    current_state.size: (num_proc, 4, 44)
+    current_state.size: (num_proc, 1, 3, 100, 100)
 
-    update: push out the oldest 44 numbers for all procs.
-    call:   return current_state.view(4,-1), concat stacked states for each proc.
+    update: push out the oldest 1*3*100*100 numbers for all processors.
+    call:   return current_state.view(4, 1, 3, 100, 100), concat stacked states for each proc.
 
     :param state_shape      int/tuple shape
     :param num_stack        int
     :param num_proc         int
     :param use_cuda         bool
     '''
-    def __init__(self, num_processes=4, num_stack=1, obs_shape=(100,100,3), use_cuda=False):
-        self.current_state = torch.zeros(num_processes, num_stack, *obs_shape)
+    def __init__(self, num_processes=4, num_stack=1, obs_shape=(100, 100, 3), use_cuda=False):
+        if obs_shape[0] > obs_shape[2]:
+            ''' Change Dims (H,W,C) ->  (C,H,W) '''
+            obs_shape = (obs_shape[2], obs_shape[0],obs_shape[1])
 
         self.num_stack = num_stack
-        self.obs_shape = (num_stack, *obs_shape)
+        if num_stack > 1:
+            self.obs_shape = (num_stack, *obs_shape)
+        else:
+            self.obs_shape = obs_shape
+
+        self.current_state = torch.zeros(num_processes, *self.obs_shape)
         self.num_processes = num_processes
         self.use_cuda = use_cuda
         if use_cuda:
@@ -176,7 +184,9 @@ class StackedObs(object):
         '''
         tmp = self.current_state.view(self.num_processes, -1)
         tmp *= mask
-        self.current_state = tmp.view(self.num_processes, self.num_stack, -1)
+        self.current_state = tmp.view(self.num_processes,
+                                      self.num_stack,
+                                      *self.obs_shape)
 
     def reset(self):
         self.current_state = torch.zeros(self.current_state.size())
@@ -188,11 +198,11 @@ class StackedObs(object):
 
     def __call__(self):
         ''' Returns the flatten state (num_processes, -1)'''
-        return self.current_state.view(self.num_processes, -1)
+        return self.current_state.view(self.num_processes, *self.obs_shape)
 
     def size(self):
         ''' Returns torch.Size '''
-        return self.current_state.view(self.num_processes, -1).size()
+        return self.current_state.view(self.num_processes, *self.obs_shape).size()
 
     def cuda(self):
         self.current_state = self.current_state.cuda()
@@ -399,46 +409,261 @@ class RolloutStorage(object):
             yield states_batch, actions_batch, return_batch, masks_batch, old_action_log_probs_batch, adv_targ
 
 
+class RolloutStorageObs(object):
+    ''' Usage Description
+    First manually make the first state be the reset state
+    from env (state[0] = env.reset).
+
+    Then gather samples and use self.insert(step, s, a, v, r, mask).
+
+    Then after `num_steps` samples have been gathered manually add the value
+    calculated from the last state.
+
+    example:
+
+        RolloutStorage.states[0].copy_(s)
+        for step in num_steps:
+            self.insert(step, s, a, v, r, mask).
+        RolloutStorage.compute_returns(next_value, *args)
+
+    then samples batches from self.state, self.rewards,
+    self.value_pred, self.returns, self.masks
+
+    states and values has one extra data point for `next value` when computing
+    returns.
+    '''
+    def __init__(self, num_steps, num_processes, stacked_state_shape, stacked_obs_shape, action_shape):
+        self.observations     = torch.zeros(num_steps+1, num_processes, *stacked_obs_shape)
+        self.states           = torch.zeros(num_steps+1, num_processes, stacked_state_shape)
+        self.value_preds      = torch.zeros(num_steps+1, num_processes, 1)
+        self.returns          = torch.zeros(num_steps+1, num_processes, 1)
+        self.masks            = torch.ones(num_steps+1, num_processes, 1)
+        self.actions          = torch.zeros(num_steps, num_processes, action_shape)
+        self.action_log_probs = torch.zeros(num_steps, num_processes, 1)
+        self.rewards          = torch.zeros(num_steps, num_processes, 1)
+        self.num_processes    = num_processes
+        self.num_steps        = num_steps
+        self.obs_size = stacked_obs_shape
+
+    def cuda(self):
+        self.observations     = self.observations.cuda()
+        self.states           = self.states.cuda()
+        self.rewards          = self.rewards.cuda()
+        self.value_preds      = self.value_preds.cuda()
+        self.returns          = self.returns.cuda()
+        self.actions          = self.actions.cuda()
+        self.masks            = self.masks.cuda()
+        self.action_log_probs = self.action_log_probs.cuda()
+
+    def insert(self, step, state, obs, action, action_log_prob, value_pred, reward, mask):
+        self.observations[step + 1].copy_(obs)
+        self.states[step + 1].copy_(state)
+        self.masks[step + 1].copy_(mask)
+        self.actions[step].copy_(action)
+        self.action_log_probs[step].copy_(action_log_prob)
+        self.value_preds[step].copy_(value_pred)
+        self.rewards[step].copy_(reward)
+
+    def last_to_first(self):
+        self.observations[0].copy_(self.observations[-1])
+        self.states[0].copy_(self.states[-1])
+        self.masks[0].copy_(self.masks[-1])
+
+    def get_last_state(self):
+        '''
+        Mostly used for calculating `next value_prediction` before training.
+        use `view(num_proc, -1)` to get correct dims for policy.
+        '''
+        return self.states[-1].view(self.num_processes, -1)
+
+    def get_last_obs(self):
+        '''
+        Mostly used for calculating `next value_prediction` before training.
+        use `view(num_proc, -1)` to get correct dims for policy.
+        '''
+        return self.observations[-1].view(self.num_processes, -1)
+
+    def compute_returns(self, next_value, no_gae, gamma, tau):
+        if not no_gae:
+            self.value_preds[-1] = next_value
+            gae = 0
+            for step in reversed(range(self.rewards.size(0))):
+                delta = self.rewards[step] + gamma * self.value_preds[step + 1] * self.masks[step + 1] - self.value_preds[step]
+                gae = delta + gamma * tau * self.masks[step + 1] * gae
+                self.returns[step] = gae + self.value_preds[step]
+        else:
+            self.returns[-1] = next_value
+            for step in reversed(range(self.rewards.size(0))):
+                self.returns[step] = self.returns[step + 1] * \
+                    gamma * self.masks[step + 1] + self.rewards[step]
+
+
+    def Batch(self, advantages, mini_batch):
+        '''
+        Batch the data.
+        Grab `indices` datapoints from states, rewards, etc...
+        Reshape into correct shape such that everything migth be passed through a network
+        in one forward pass.
+
+        :param advantages       torch.Tensor
+        :param mini_batch       int, size of batch (64, 128 etc)
+        '''
+        data_size = self.num_processes * self.num_steps  # total data size is steps*processsors
+
+        # Choose `mini_batch` indices from total `data_size`.
+        # Choose `64` indices from total `2048`.
+        sampler = BatchSampler(SubsetRandomSampler(range(data_size)),
+                               mini_batch, drop_last=False)
+
+        for indices in sampler:
+            indices = torch.LongTensor(indices)
+
+            if advantages.is_cuda:
+                indices = indices.cuda()
+
+            # all but last entry
+            obs_batch = self.observations[:-1].view(-1, *self.obs_size)[indices]
+            states_batch       = self.states[:-1].view(-1, self.states.size(-1))[indices]
+            return_batch       = self.returns[:-1].view(-1, 1)[indices]
+            masks_batch        = self.masks[:-1].view(-1, 1)[indices]
+
+            # all entries
+            actions_batch = self.actions.view(-1, self.actions.size(-1))[indices]
+            old_action_log_probs_batch = self.action_log_probs.view(-1, 1)[indices]
+            adv_targ = advantages.view(-1, 1)[indices]
+            yield states_batch, obs_batch, actions_batch, return_batch, masks_batch, old_action_log_probs_batch, adv_targ
+
+def obs_process(obs):
+    ''' takes in (w, h, c) -> (c, w, h)'''
+    obs = obs.transpose(2,0,1)
+    return torch.from_numpy(obs).float()
+
+def obs_process_multi(obs):
+    ''' takes in (n, w, h, c) -> (n, c, w, h)'''
+    obs = obs.transpose(0, 3, 1, 2)
+    return torch.from_numpy(obs).float()
+
+def test_StackedObs(Env, args):
+    s_env = Env(args)
+    m_env = make_parallel_environments(Env, args)
+
+    m_st = m_env.observation_space.shape
+    m_ob = m_env.rgb_space.shape
+    m_ac = m_env.action_space.shape
+
+    s_st = s_env.observation_space.shape
+    s_ob = s_env.rgb_space.shape
+    s_ac = s_env.action_space.shape
+
+
+    # === StackedState ===
+    multstate = StackedState(args.num_processes, args.num_stack, m_st)
+    singlestate = StackedState(1, args.num_stack, s_st)
+
+    multstate_obs = StackedObs(args.num_processes, args.num_stack, m_ob)
+    singlestate_obs = StackedObs(1, args.num_stack, s_ob)
+
+    if False:
+        print('Mult:\nst: {}\nob: {}\nac: {}\n'.format(m_st, m_ob, m_ac))
+        print('Single:\nst: {}\nob: {}\nac: {}\n'.format(s_st, s_ob, s_ac))
+        print('Single:')
+        print('Num_stack:', args.num_stack)
+        print('MultState:\nsize:{}\n'.format(multstate.size()))
+        print('SingleState:\nsize:{}\n'.format(singlestate.size()))
+        print('Mult:')
+        print('Num_stack:', args.num_stack)
+        print('MultStateObs:\nsize:{}\n'.format(multstate_obs.size()))
+        print('SingleStateObs:\nsize:{}\n'.format(singlestate_obs.size()))
+        input('Press Enter to continue')
+
+    if True:
+        ''' Num_stack = 1 Works'''
+        ss, sobs = s_env.reset()  # sobs (100,100,3)
+        sobs_tensor = obs_process(sobs)  # 3, 100, 100
+        singlestate_obs.update(sobs_tensor)
+
+        if False:
+            print('Sing. Sobs'); rgb_render(sobs)
+            time.sleep(0.1)
+            print('Sing. Tensor'); rgb_tensor_render(sobs_tensor)
+            time.sleep(0.1)
+            print('Sing. StackedObs'); rgb_tensor_render(singlestate_obs()[0])
+            time.sleep(0.1)
+            input('Press Enter to continue')
+
+        ms, mobs = m_env.reset()
+        mobs_tensor = obs_process_multi(mobs)
+        multstate_obs.update(mobs_tensor)
+        print('Call Shape:', multstate_obs().shape)
+        for i in range(2):
+            ms, mobs, r, done, _ = m_env.step(
+                [m_env.action_space.sample()]*args.num_processes)
+            mobs_tensor = obs_process_multi(mobs)
+            masks = torch.FloatTensor([[0.0] if done_ else [1.0] for done_ in done])
+
+            if sum(done)>1:
+                print(masks)
+                input('Press Enter to continue')
+
+            masks[0] = 0
+            print(multstate_obs())
+            multstate_obs.check_and_reset(masks)
+            print(multstate_obs())
+            input('Press Enter to continue')
+            multstate_obs.update(mobs_tensor)
+
+        if False:
+            for i in range(args.num_processes):
+                print('Mult. Sobs'); rgb_render(mobs[i], 'Regular')
+                time.sleep(0.3)
+                print('Mult. Tensor'); rgb_tensor_render(mobs_tensor[i], 'Tensor')
+                time.sleep(0.3)
+                print('Mult. StackedObs'); rgb_tensor_render(multstate_obs()[i], 'SCALL')
+
+def test_RolloutStorage(Env, args):
+    s_env = Env(args)
+    m_env = make_parallel_environments(Env, args)
+
+    m_st = m_env.observation_space.shape
+    m_ob = m_env.rgb_space.shape
+    m_ac = m_env.action_space.shape
+
+    s_st = s_env.observation_space.shape
+    s_ob = s_env.rgb_space.shape
+    s_ac = s_env.action_space.shape
+
+    # === StackedState ===
+    CurrentState_m = StackedState(args.num_processes, args.num_stack, m_st)
+    CurrentState_s  = StackedState(1, args.num_stack, s_st)
+
+    CurrentObs_m = StackedObs(args.num_processes, args.num_stack, m_ob)
+    CurrentObs_s = StackedObs(1, args.num_stack, s_ob)
+
+    # === RolloutStorageObs ===
+
+    rollouts_m = RolloutStorageObs(args.num_steps,
+                                   args.num_processes,
+                                   CurrentObs_m.size()[1],
+                                   CurrentObs_m.size(),
+                                   m_ac)
+
+    rollouts_s = RolloutStorageObs(args.num_steps,
+                                   args.num_processes,
+                                   CurrentObs_s.size()[1],
+                                   CurrentObs_s.size(),
+                                   s_ac)
+
+
+
 if __name__ == '__main__':
     from arguments import get_args
     from environments.Reacher import ReacherPlane as Env
     from environments.utils import make_parallel_environments
+    from environments.utils import rgb_render, rgb_tensor_render
 
     args = get_args()
+    args.RGB = True
 
-    s_env = Env(args)
-    m_env = make_parallel_environments(Env, args)
-
-    m_ob = m_env.observation_space.shape[0]
-    m_ac = m_env.action_space.shape[0]
-    print('Mult:\nob: {}\nac: {}\n'.format(m_ob, m_ac))
-
-    s_ob = s_env.observation_space.shape[0]
-    s_ac = s_env.action_space.shape[0]
-    print('Single:\nob: {}\nac: {}\n'.format(s_ob, s_ac))
-
-    # === Memory ===
-    multstate = StackedState(args.num_processes, args.num_stack, m_ob)
-    singlestate = StackedState(1, args.num_stack, s_ob)
-
-    print('Num_stack:', args.num_stack)
-    print('MultState:\nsize:{}\n'.format(multstate.size()))
-    print('SingleState:\nsize:{}\n'.format(singlestate.size()))
-
-    m = m_env.reset()
-    multstate.update(m)
-
-    s = s_env.reset()
-    singlestate.update(s)
-
-    print('MultState:\nCall:{}\n'.format(multstate()))
-    print('SingleState:\nCall:{}\n'.format(singlestate()))
-
-    m = m_env.reset()
-    multstate.update(m)
-    s = s_env.reset()
-    singlestate.update(s)
-
-    print('MultState:\nCall:{}\n'.format(multstate()))
-    print('SingleState:\nCall:{}\n'.format(singlestate()))
+    # test_StackedObs(Env, args)
+    test_RolloutStorage(Env, args)
 

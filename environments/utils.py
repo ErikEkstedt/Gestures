@@ -1,9 +1,19 @@
-def rgb_render(obs, cv2):
+import cv2
+import torch
+
+def rgb_render(obs, title='obs'):
     ''' cv2 as argument such that import is not done redundantly'''
-    cv2.imshow('frame', cv2.cvtColor(obs, cv2.COLOR_RGB2BGR))
-    if cv2.waitKey(10) & 0xFF == ord('q'):
+    cv2.imshow(title, cv2.cvtColor(obs, cv2.COLOR_RGB2BGR))
+    if cv2.waitKey(20) & 0xFF == ord('q'):
         print('Stop')
         return
+
+def rgb_tensor_render(obs, title='tensor_obs'):
+    assert type(obs) is torch.Tensor
+    assert len(obs.shape) == 3
+    obs = obs.permute(1,2,0)
+    im = obs.numpy().astype('uint8')
+    rgb_render(im, title)
 
 def single_episodes(Env, args, verbose=True):
     ''' Runs episode in one single process

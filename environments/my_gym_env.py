@@ -22,8 +22,7 @@ class MyGymEnv(gym.Env):
         self.observation_space = gym.spaces.Box(-high, high)
 
         if self.RGB:
-            self.rgb_space = gym.spaces.Box(low=0,
-                                            high=255,
+            self.rgb_space = gym.spaces.Box(low=0, high=255,
                                             shape=(self.VIDEO_W,
                                                    self.VIDEO_H,
                                                    3))
