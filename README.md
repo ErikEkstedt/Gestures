@@ -1,23 +1,27 @@
 # Todo
 
-# Monday
+# Day 1 
 1. [x] Create 2 target 3 DoF env.
 	* get angles between elbow and upper arm.
 	* collect rgb from training
 3. [x] Start training with 2 targets.
-# Tuesday
 
-5. [ ] Torso
+# Day 2
+5. [x] Torso
 	* angles of shoulders?
 	* can it reach? what points?
 	* [x] train and record best
-
-6. [ ] grab random target positions.
+6. [x] Grab random target positions.
+	* Now just a script that makes random moves and chooses a datapoint by some probability. Stops when correct amount of samples has been gathered.
 	* show image, coords
-7. [ ] annealing lr
-8. [ ] CNN
-9. [ ] dynamics model 
 
+# Day 3
+1. [ ] Make RGB training results. Same rewards but just pixel info.
+	* [ ] Make 2dof plane viewd from above take actions from pixels alone
+	* [ ] Combin state and pixels
+	* [ ] Memory, include pixel observations.
+		* [ ] StackedState
+		* [ ] RolloutStorage
 
 ## ML:
 * [ ] Annealing learning rate
@@ -29,7 +33,7 @@
 
 
 ## Program:
-* [ ] Make target rgb-visible during rendering.
+* [x] Make target rgb-visible during rendering.
 * [ ] Think about mimic in practice
 	* [ ] Have rgb at certain intervals be the target.
 	* [ ] Update after one target is reached.
@@ -39,7 +43,7 @@
 
 ## Environment:
 * [ ] Create 2 target 3 DoF env.
-* [ ] Humanoid with appropriate limits.
+* [x] Humanoid with appropriate limits.
 
 
 ## Dynamics Model

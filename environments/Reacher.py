@@ -39,6 +39,11 @@ def sphere_target(r0, r1, x0=0, y0=0, z0=0.41):
 
 # Environments
 
+try:
+    from environments.my_gym_env import MyGymEnv
+except:
+    from my_gym_env import MyGymEnv
+
 class Base(MyGymEnv):
     def __init__(self, XML_PATH=PATH_TO_CUSTOM_XML,
                  robot_name='robot',
@@ -72,7 +77,11 @@ class Base(MyGymEnv):
             # Robot
             self.power = 0.8
         else:
-            MyGymEnv.__init__(self, action_dim=ac, obs_dim=obs, RGB=args.RGB)
+            MyGymEnv.__init__(self, action_dim=ac,
+                              obs_dim=obs,
+                              RGB=args.RGB,
+                              W = args.video_W,
+                              H = args.video_H)
             self.MAX_TIME=args.MAX_TIME
 
             # Reward penalties/values
@@ -233,9 +242,6 @@ class ReacherCommon():
         rendered_rgb = np.fromstring(rgb, dtype=np.uint8).reshape( (self.VIDEO_H,self.VIDEO_W,3) )
         return rendered_rgb
 
-    def camera_adjust(self):
-        self.camera.move_and_look_at( 0.5, 0, 1, 0, 0, 0.4)
-
 
 class ReacherPlane(ReacherCommon, Base):
     def __init__(self, args=None):
@@ -273,6 +279,9 @@ class ReacherPlane(ReacherCommon, Base):
         r1 = 1 * float(self.potential[0] - potential_old[0]) # elbow
         r2 = 10 * float(self.potential[1] - potential_old[1]) # hand
         return r1 + r2
+
+    def camera_adjust(self):
+        self.camera.move_and_look_at( 0, 0, 1, 0, 0, 0.4)
 
 
 class Reacher3D(ReacherCommon, Base):
@@ -314,11 +323,14 @@ class Reacher3D(ReacherCommon, Base):
         self.rewards = [r1,r2]
         return sum(self.rewards)
 
+    def camera_adjust(self):
+        self.camera.move_and_look_at( 0.5, 0, 1, 0, 0, 0.4)
+
 
 if __name__ == '__main__':
     from Agent.arguments import get_args
     from utils import single_episodes
     args = get_args()
-    # Env = ReacherPlane
-    Env = Reacher3D
-    single_episodes(Env, args, verbose=False)
+    Env = ReacherPlane
+    # Env = Reacher3D
+    single_episodes(Env, args, verbose=args.verbose)

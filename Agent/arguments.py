@@ -9,7 +9,7 @@ def get_args():
     parser.add_argument('--env-id', default='CustomReacher')
     parser.add_argument('--dof', type=int, default=2)
     parser.add_argument('--video-W', type=int, default=100)
-    parser.add_argument('--video-H', type=int, default=150)
+    parser.add_argument('--video-H', type=int, default=100)
 
     parser.add_argument('--MAX_TIME', type=int, default=300)
     parser.add_argument('--gravity', type=float, default=9.81)

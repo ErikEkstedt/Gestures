@@ -649,8 +649,6 @@ if __name__ == '__main__':
             return Reacher_plane
         else:
             return ReacherHumanoid
-
-
     args = get_args()
     Env = get_env(args)
     if args.num_processes > 1:
@@ -658,4 +656,4 @@ if __name__ == '__main__':
         parallel_episodes(Env, args)
     else:
         from utils import single_episodes
-        single_episodes(Env,
+        single_episodes(Env, args)

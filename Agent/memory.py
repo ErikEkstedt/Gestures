@@ -129,6 +129,79 @@ class Results(object):
         vis.line_update(Xdata=frame, Ydata=-e, name='Entropy')
 
 
+class StackedObs(object):
+    ''' stacked obs for Roboschool
+
+    state: np.array, shape: (num_proc, W, H, 3) (roboschoolhumanoid)
+
+    Thus with defaults:
+    current_state.size: (num_proc, 4, 44)
+
+    update: push out the oldest 44 numbers for all procs.
+    call:   return current_state.view(4,-1), concat stacked states for each proc.
+
+    :param state_shape      int/tuple shape
+    :param num_stack        int
+    :param num_proc         int
+    :param use_cuda         bool
+    '''
+    def __init__(self, num_processes=4, num_stack=1, obs_shape=(100,100,3), use_cuda=False):
+        self.current_state = torch.zeros(num_processes, num_stack, *obs_shape)
+
+        self.num_stack = num_stack
+        self.obs_shape = (num_stack, *obs_shape)
+        self.num_processes = num_processes
+        self.use_cuda = use_cuda
+        if use_cuda:
+            self.cuda()
+
+    def update(self, s):
+        if type(s) is np.ndarray:
+            s = torch.from_numpy(s).float()
+        assert type(s) is torch.Tensor
+        if self.use_cuda:
+            s = s.cuda()
+        if self.num_stack > 1:
+            self.current_state[:,:-1,:] = self.current_state[:,1:,:] # push out oldest
+            self.current_state[:,-1,:] = s  # add in newest
+        else:
+            self.current_state = s
+
+    def check_and_reset(self, mask):
+        '''
+        :param mask     torch.Tensor, size: (num_proc, 1), and contains 1 or 0.
+
+        If an element is zero it means that the env for that processor is `done`
+        and thus we need to reset the state.
+        '''
+        tmp = self.current_state.view(self.num_processes, -1)
+        tmp *= mask
+        self.current_state = tmp.view(self.num_processes, self.num_stack, -1)
+
+    def reset(self):
+        self.current_state = torch.zeros(self.current_state.size())
+        if self.use_cuda:
+            self.cuda()
+
+    def reset_to(self):
+        self.current_state.copy_(state)
+
+    def __call__(self):
+        ''' Returns the flatten state (num_processes, -1)'''
+        return self.current_state.view(self.num_processes, -1)
+
+    def size(self):
+        ''' Returns torch.Size '''
+        return self.current_state.view(self.num_processes, -1).size()
+
+    def cuda(self):
+        self.current_state = self.current_state.cuda()
+        self.use_cuda = True
+
+    def cpu(self):
+        self.state = self.state.cpu()
+        self.use_cuda = False
+
 class StackedState(object):
     ''' stacked state for Roboschool
 
@@ -168,7 +241,6 @@ class StackedState(object):
             self.current_state[:,:-1,:] = self.current_state[:,1:,:] # push out oldest
             self.current_state[:,-1,:] = s  # add in newest
         else:
-            #stack=1 is just to switch older with newer
             self.current_state = s
 
     def check_and_reset(self, mask):
@@ -327,26 +399,15 @@ class RolloutStorage(object):
             yield states_batch, actions_batch, return_batch, masks_batch, old_action_log_probs_batch, adv_targ
 
 
-def test():
+if __name__ == '__main__':
     from arguments import get_args
-    from environments.custom_reacher import CustomReacher2DoF, make_parallel_environments
+    from environments.Reacher import ReacherPlane as Env
+    from environments.utils import make_parallel_environments
 
     args = get_args()
 
-    s_env = CustomReacher2DoF(args.potential_constant,
-                                args.electricity_cost,
-                                args.stall_torque_cost,
-                                args.joints_at_limit_cost,
-                                args.episode_time)
-
-    m_env = make_parallel_environments(CustomReacher2DoF,
-                                        args.seed,
-                                        args.num_processes,
-                                        args.potential_constant,
-                                        args.electricity_cost,
-                                        args.stall_torque_cost,
-                                        args.joints_at_limit_cost,
-                                        args.episode_time)
+    s_env = Env(args)
+    m_env = make_parallel_environments(Env, args)
 
     m_ob = m_env.observation_space.shape[0]
     m_ac = m_env.action_space.shape[0]
@@ -381,6 +442,3 @@ def test():
     print('MultState:\nCall:{}\n'.format(multstate()))
     print('SingleState:\nCall:{}\n'.format(singlestate()))
 
-
-if __name__ == '__main__':
-    test()
