@@ -1,3 +1,7 @@
+''' Reacher2DoF
+Only pixelspace as input
+'''
+
 import argparse
 import numpy as np
 import os
@@ -10,7 +14,9 @@ import torch.optim as optim
 from Agent.utils import log_print, make_log_dirs
 from Agent.arguments import FakeArgs, get_args
 from Agent.model import MLPPolicy
-from Agent.memory import RolloutStorageObs, StackedObs, Results
+
+from Agent.memory import RolloutStorageObs, Results
+from Agent.memory import StackedObs, StackedState
 
 from Agent.train import trainRGB as train
 from Agent.train import explorationRGB as exploration
@@ -24,7 +30,6 @@ from Agent.arguments import get_args
 
 
 def main():
-    # === Settings ===
     args = get_args()
     make_log_dirs(args)
     args.num_updates   = int(args.num_frames) // args.num_steps // args.num_processes
@@ -39,48 +44,57 @@ def main():
     test_env = Env(args)
     args.RGB = tmp_rgb # reset rgb flag
 
-    obs_shape = env.rgb_space.shape[0]
+    ob_shape = env.rgb_space.shape
     st_shape  = env.observation_space.shape[0]
     ac_shape  = env.action_space.shape[0]
 
     # === Memory ===
-    result = Results(max_n=200, max_u=10)
-    CurrentState = StackedObs(args.num_processes,
-                                args.num_stack,
-                                ob_shape)
+    CurrentState = StackedState(args.num_processes, args.num_stack, st_shape)
+    CurrentObs = StackedObs(args.num_processes, args.num_stack, ob_shape)
 
+    # === RolloutStorageObs ===
     rollouts = RolloutStorageObs(args.num_steps,
-                              args.num_processes,
-                              CurrentState.size()[1],
-                              ac_shape)
+                                 args.num_processes,
+                                 CurrentState.size()[1],
+                                 CurrentObs.size()[1:],
+                                 ac_shape)
 
+    result = Results(max_n=200, max_u=10)
     # === Model ===
     pi = MLPPolicy(CurrentState.state_shape,
                    ac_shape,
                    hidden=args.hidden,
                    total_frames=args.num_frames)
-
     pi.train()
     optimizer_pi = optim.Adam(pi.parameters(), lr=args.pi_lr)
+
+    # TODO here
+    pi = CNNPolicy(CurrentObs.state_shape,
+                   ac_shape,
+                   hidden=args.hidden,
+                   total_frames=args.num_frames)
+
 
     # ==== Training ====
     print('Learning {}(ac: {}, ob: {})'.format( args.env_id, ac_shape, ob_shape))
     print('\nTraining for %d Updates' % args.num_updates)
     s, obs = env.reset()
-    print('s.shape', s.shape)
-    print('obs.shape', obs.shape)
-    input()
+    print('After env.reset | s.shape', s.shape)
+    print('After env.reset | obs.shape', obs.shape)
     CurrentState.update(s)
+    CurrentObs.update(obs)
     rollouts.states[0].copy_(CurrentState())
+    rollouts.observations[0].copy_(CurrentObs())
 
     if args.cuda:
         CurrentState.cuda()
+        CurrentObs.cuda()
         rollouts.cuda()
         pi.cuda()
 
     MAX_REWARD = -999999
     for j in range(args.num_updates):
-        exploration(pi, CurrentState, rollouts, args, result, env)
+        exploration(pi, CurrentState, CurrentObs, rollouts, args, result, env)
         vloss, ploss, ent = train(pi, args, rollouts, optimizer_pi)
 
         rollouts.last_to_first()

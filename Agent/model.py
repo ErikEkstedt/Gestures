@@ -120,6 +120,7 @@ class MLPPolicy(nn.Module):
         return v, action
 
 
+# TODO
 class CNNPolicy(nn.Module):
     def __init__(self, input_size, action_shape,
                     hidden=128,

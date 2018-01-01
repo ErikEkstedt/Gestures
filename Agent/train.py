@@ -7,24 +7,9 @@ from torchvision.utils import make_grid
 import matplotlib.pyplot as plt
 import cv2
 
-# === helper funtcions ===
-
-def rgb_render(obs, title='obs'):
-    ''' cv2 as argument such that import is not done redundantly'''
-    cv2.imshow(title, cv2.cvtColor(obs, cv2.COLOR_RGB2BGR))
-    if cv2.waitKey(15) & 0xFF == ord('q'):
-        print('Stop')
-        return
-
-def show_state(ob):
-    img = make_grid(ob, nrow=2)
-    npimg = img.numpy()
-    plt.imshow(np.transpose(npimg, (1,2,0)), interpolation='nearest')
-    plt.show()
-
+from environments.utils import rgb_render, rgb_tensor_render
 
 # === Training ===
-
 def exploration(pi, CurrentState, rollouts, args, result,  env):
     ''' Exploration part of PPO training:
     1. Sample actions and gather rewards trajectory for num_steps.
@@ -114,8 +99,7 @@ def train(pi, args, rollouts, optimizer_pi):
     return vloss, ploss, ent
 
 # === RGB ===
-
-def explorationRGB(pi, CurrentState, rollouts, args, result,  env):
+def explorationRGB(pi, CurrentState, CurrentObs, rollouts, args, result,  env):
     ''' Exploration part of PPO training:
     1. Sample actions and gather rewards trajectory for num_steps.
     2. Reset states and rewards if some environments are done.
@@ -156,11 +140,12 @@ def explorationRGB(pi, CurrentState, rollouts, args, result,  env):
         # reset current states for envs done
         CurrentState.check_and_reset(masks)
 
-        input('everything should break here')
         # Update current state and add data to rollouts
-        CurrentState.update(state, obs)
+        CurrentState.update(state)
+        CurrentObs.update(obs)
         rollouts.insert(step,
                         CurrentState(),
+                        CurrentObs(),
                         action.data,
                         action_log_prob.data,
                         value.data,
@@ -179,7 +164,7 @@ def trainRGB(pi, args, rollouts, optimizer_pi):
     for e in range(args.ppo_epoch):
         data_generator = rollouts.Batch(advantages, args.batch_size)
         for sample in data_generator:
-            states_batch, actions_batch, return_batch, \
+            states_batch, obs_batch, actions_batch, return_batch, \
                 masks_batch, old_action_log_probs_batch, adv_targ = sample
 
             # Reshape to do in a single forward pass for all steps
@@ -209,44 +194,3 @@ def trainRGB(pi, args, rollouts, optimizer_pi):
     ent /= args.ppo_epoch
     # return value_loss, action_loss, dist_entropy
     return vloss, ploss, ent
-
-
-
-
-
-
-        reward = torch.from_numpy(reward).view(args.num_processes, -1).float()
-        masks = torch.FloatTensor([[0.0] if done_ else [1.0] for done_ in done])
-
-        # If done then update final rewards and reset episode reward
-        result.episode_rewards += reward
-
-        if sum(done) > 0:
-            # If done then clean episode reward and update final rewards
-            result.tmp_final_rewards *= masks
-            result.tmp_final_rewards += (1 - masks) * result.episode_rewards
-            result.episode_rewards *= masks
-            result.update_list()
-
-
-        result.episode_rewards *= masks                                # reset episode reward
-        if args.cuda:
-            masks = masks.cuda()
-
-        # reset current states for envs done
-        CurrentState.check_and_reset(masks)
-
-        # reset current states for envs done
-        CurrentState.check_and_reset(masks)
-
-        # Update current state and add data to rollouts
-        CurrentState.update(state)
-        rollouts.insert(step,
-                        CurrentState(),
-                        action.data,
-                        action_log_prob.data,
-                        value.data,
-                        reward,
-                        masks)
-
-
