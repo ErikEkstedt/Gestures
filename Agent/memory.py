@@ -420,7 +420,6 @@ class RolloutStorageObs(object):
     calculated from the last state.
 
     example:
-
         RolloutStorage.states[0].copy_(s)
         for step in num_steps:
             self.insert(step, s, a, v, r, mask).
@@ -640,7 +639,6 @@ def test_RolloutStorage(Env, args):
     CurrentObs_s = StackedObs(1, args.num_stack, s_ob)
 
     # === RolloutStorageObs ===
-
     rollouts_m = RolloutStorageObs(args.num_steps,
                                    args.num_processes,
                                    CurrentObs_m.size()[1],
@@ -652,7 +650,6 @@ def test_RolloutStorage(Env, args):
                                    CurrentObs_s.size()[1],
                                    CurrentObs_s.size(),
                                    s_ac)
-
 
 
 if __name__ == '__main__':
