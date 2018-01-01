@@ -69,11 +69,11 @@ def main():
     optimizer_pi = optim.Adam(pi.parameters(), lr=args.pi_lr)
 
     # TODO here
-    pi = CNNPolicy(CurrentObs.state_shape,
-                   ac_shape,
-                   hidden=args.hidden,
-                   total_frames=args.num_frames)
-
+    # pi = CNNPolicy(CurrentObs.state_shape,
+    #                ac_shape,
+    #                hidden=args.hidden,
+    #                total_frames=args.num_frames)
+    #
 
     # ==== Training ====
     print('Learning {}(ac: {}, ob: {})'.format( args.env_id, ac_shape, ob_shape))
