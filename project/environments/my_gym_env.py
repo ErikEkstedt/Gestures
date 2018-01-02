@@ -8,12 +8,11 @@ class MyGymEnv(gym.Env):
         'render.modes': ['human', 'rgb_array'],
         'video.frames_per_second': 60
         }
-
+    VIDEO_W = 300
+    VIDEO_H = 200
     def __init__(self, action_dim=2, obs_dim=7, RGB=False, W=600, H=400):
         self.scene = None
         self.RGB = RGB
-        self.VIDEO_W = W
-        self.VIDEO_H = H
 
         high = np.ones([action_dim])
         self.action_space = gym.spaces.Box(-high, high)
@@ -22,6 +21,8 @@ class MyGymEnv(gym.Env):
         self.observation_space = gym.spaces.Box(-high, high)
 
         if self.RGB:
+            self.VIDEO_W = W
+            self.VIDEO_H = H
             self.rgb_space = gym.spaces.Box(low=0, high=255,
                                             shape=(self.VIDEO_W,
                                                    self.VIDEO_H,

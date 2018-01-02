@@ -5,10 +5,9 @@ import gym
 from itertools import count
 from OpenGL import GLE # fix for opengl issues on desktop  / nvidia
 
-PATH_TO_CUSTOM_XML = "/home/erik/com_sci/Master_code/Project/environments/xml_files"
-
-# Environments
 from project.environments.my_gym_env import MyGymEnv
+
+PATH_TO_CUSTOM_XML = "/home/erik/com_sci/Master_code/Project/environments/xml_files"
 
 # Target functions
 def plane_target(r0, r1, x0=0, y0=0, z0=0.41):
@@ -36,6 +35,7 @@ def sphere_target(r0, r1, x0=0, y0=0, z0=0.41):
     y1 = y + r1*np.sin(theta)*np.sin(phi)
     z1 = z + r1*np.cos(theta)
     return [x, y, z, x1, y1, z1]
+
 
 class Base(MyGymEnv):
     def __init__(self, XML_PATH=PATH_TO_CUSTOM_XML,
@@ -269,8 +269,8 @@ class ReacherPlane(ReacherCommon, Base):
         ''' Hierarchical Difference potential as reward '''
         potential_old = self.potential
         self.potential = self.calc_potential()
-        r1 = 1 * float(self.potential[0] - potential_old[0]) # elbow
-        r2 = 10 * float(self.potential[1] - potential_old[1]) # hand
+        r1 = float(self.potential[0] - potential_old[0]) # elbow
+        r2 = float(self.potential[1] - potential_old[1]) # hand
         return r1 + r2
 
     def camera_adjust(self):

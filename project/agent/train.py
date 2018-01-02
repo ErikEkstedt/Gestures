@@ -7,7 +7,7 @@ from torchvision.utils import make_grid
 import matplotlib.pyplot as plt
 import cv2
 
-from project.agent.environments.utils import rgb_render, rgb_tensor_render
+from project.environments.utils import rgb_render, rgb_tensor_render
 
 # === Training ===
 def exploration(pi, CurrentState, rollouts, args, result,  env):
@@ -112,7 +112,7 @@ def explorationRGB(pi, CurrentState, CurrentObs, rollouts, args, result,  env):
         pi.n += 1
 
         # Sample actions
-        value, action, action_log_prob, a_std = pi.sample(CurrentState())
+        value, action, action_log_prob, a_std = pi.sample(CurrentObs())
         cpu_actions = action.data.squeeze(1).cpu().numpy()
 
         # Observe reward and next state
@@ -138,7 +138,7 @@ def explorationRGB(pi, CurrentState, CurrentObs, rollouts, args, result,  env):
             masks = masks.cuda()
 
         # reset current states for envs done
-        CurrentState.check_and_reset(masks)
+        CurrentObs.check_and_reset(masks)
 
         # Update current state and add data to rollouts
         CurrentState.update(state)
@@ -153,7 +153,7 @@ def explorationRGB(pi, CurrentState, CurrentObs, rollouts, args, result,  env):
                         masks)
 
 def trainRGB(pi, args, rollouts, optimizer_pi):
-    value, _, _, _ = pi.sample(rollouts.get_last_state()) # one extra
+    value, _, _, _ = pi.sample(rollouts.get_last_obs()) # one extra
     rollouts.compute_returns(value.data, args.no_gae, args.gamma, args.tau)
 
     # Calculate Advantage (normalize)
@@ -169,7 +169,7 @@ def trainRGB(pi, args, rollouts, optimizer_pi):
 
             # Reshape to do in a single forward pass for all steps
             values, action_log_probs, dist_entropy = pi.evaluate_actions(
-                Variable(states_batch), Variable(actions_batch))
+                Variable(obs_batch), Variable(actions_batch))
 
             # PPO loss
             adv_targ = Variable(adv_targ)

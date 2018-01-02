@@ -8,16 +8,16 @@ import torch.nn as nn
 from torch.autograd import Variable
 import torch.optim as optim
 
-from project.agent.utils import log_print, make_log_dirs
-from project.agent.arguments import FakeArgs, get_args
-from project.agent.model import MLPPolicy
-from project.agent.memory import RolloutStorage, StackedState, Results
+from .utils import log_print, make_log_dirs
+from .arguments import FakeArgs, get_args
+from .model import MLPPolicy
+from .memory import RolloutStorage, StackedState, Results
 
-from project.agent.train import train, exploration
-from project.agent.test import test, test_existing_env, Test_and_Save_Video, test_and_render
+from .train import train, exploration
+from .test import test, test_existing_env, Test_and_Save_Video, test_and_render
 
-from project.agent.utils import get_env
-from project.agent.environments.reacher_envs import make_parallel_environments
+from .utils import get_env
+from project.environments.Reacher import ReacherPlane
 
 
 def main():

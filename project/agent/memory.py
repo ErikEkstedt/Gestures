@@ -131,8 +131,8 @@ class Results(object):
 
 # ==================================================
 # Classes that are used for the "Curren state/obs"
-# Maybe the frames should be stacked or processed in
-# some way.
+# Maybe the frames should be stacked or processed in some way.
+
 class StackedObs(object):
     ''' stacked obs for Roboschool
 
@@ -154,13 +154,12 @@ class StackedObs(object):
         if obs_shape[0] > obs_shape[2]:
             ''' Change Dims (H,W,C) ->  (C,H,W) '''
             obs_shape = (obs_shape[2], obs_shape[0],obs_shape[1])
-
-        self.num_stack = num_stack
         if num_stack > 1:
-            self.obs_shape = (num_stack, *obs_shape)
+            self.obs_shape = (obs_shape[0]*num_stack, obs_shape[1], obs_shape[2])
         else:
             self.obs_shape = obs_shape
 
+        self.num_stack = num_stack
         self.current_state = torch.zeros(num_processes, *self.obs_shape)
         self.num_processes = num_processes
         self.use_cuda = use_cuda
@@ -169,9 +168,12 @@ class StackedObs(object):
 
     def update(self, s):
         if type(s) is np.ndarray:
-            s = s.transpose(0, 3, 1, 2)
+            if len(s.shape)>3:
+                s = s.transpose(0, 3, 1, 2).astype('float')
+            else:
+                s = s.transpose(2, 0, 1).astype('float')
+            s /= 255
             s = torch.from_numpy(s).float()
-        assert type(s) is torch.Tensor
         if self.use_cuda:
             s = s.cuda()
         if self.num_stack > 1:
@@ -485,7 +487,7 @@ class RolloutStorageObs(object):
         Mostly used for calculating `next value_prediction` before training.
         use `view(num_proc, -1)` to get correct dims for policy.
         '''
-        return self.observations[-1].view(self.num_processes, -1)
+        return self.observations[-1].view(-1, *self.obs_size)
 
     def compute_returns(self, next_value, no_gae, gamma, tau):
         if not no_gae:
