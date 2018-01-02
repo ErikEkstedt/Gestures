@@ -1,5 +1,4 @@
 # Todo
-
 1. [x] Memory, include pixel observations.
 	* [x] StackedState
 	* [x] RolloutStorage
@@ -17,7 +16,6 @@
 	* [ ] Compare training time
 * [ ] predictive dynamics model which tries to predict a robots movement and instantly choose that predictive state as target.
 
-
 ## Program:
 * [x] Make target rgb-visible during rendering.
 * [ ] Think about mimic in practice
@@ -26,17 +24,17 @@
 * [ ] Continue training. Save checkpoint
 * [ ] After som easy convergence put two robots in an environment and have one mimic the other.
 
-
 ## Environment:
 * [ ] Create 2 target 3 DoF env.
 * [x] Humanoid with appropriate limits.
-
 
 ## Dynamics Model
 * Go through tha main again.
 * envs - learn from mujoco gym?
 * train on humanoid-reacher-custom-evns
 
+--------------------------------------------
+-------------------------------------------
 # plan
 The experiments that I run I make a script that does just that experiment.
 Easy to rerun experiments and all hyperparameters will be the same easily.
