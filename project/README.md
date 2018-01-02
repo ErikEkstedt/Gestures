@@ -9,7 +9,6 @@
 	* [ ] Make 2dof plane viewd from above take actions from pixels alone
 	* [ ] Combine state and pixels
 
-
 ## ML:
 * [ ] Annealing learning rate
 * [ ] make CNN autoencoder module
@@ -38,113 +37,80 @@
 * envs - learn from mujoco gym?
 * train on humanoid-reacher-custom-evns
 
+# plan
+The experiments that I run I make a script that does just that experiment.
+Easy to rerun experiments and all hyperparameters will be the same easily.
 
+## Environment
+1. [x] 2 Dof
+	* [x] Plane
+	* [x] 3D 
+2. [x] 3 Dof
+	* [x] Plane
+	* [x] 3D 
+	* [ ] two networks for each arm.
+3. [ ] 2-3-DoF = 6 DoF
+	* [ ] Plane
+	* [ ] 3D 
+4. [x] 6 Dof Humanoid and rgb
+	* [ ] 3D 
 
-----------------------------------------------------------------------------
+## Reward
+1. [x] Only absolute distance
+2. [x] Only difference distance 
+3. [x] both above with:
+	* [x] Electricity cost, EC
+	* [x] Torque cost, TC
+	* [x] stuck cost, SC
+4. [x] Hierarchical scaling
+5. [ ] RGB Reward function.
+	* [ ] MSE
+	* [ ] MSE + diff_penalty = movement regularizer
 
-## Why does training improve but when loading state dict the result sucks?
-Don't know why... might come back...
-But for now simply just save models with good score and then restart scirpt until correct behaviour. [This pains me]
+These are hyperparameters defined in Agent.arguments. 
+## architecture
+1. [ ] FC
+	* Layers/Hidden
+2. [ ] LSTM
 
+## State
+Stacking of frames
+* [ ] no-stack (=1)
+* [ ] 2-stack
+* [ ] 4-stack
 
-### Possible Sources:
-* [x] Check that StackedState gives same output for all numbers of processes. YES! (memory.py - test())
-*	[x] torch.load? - loads corrupt file?
-	* torch.load and state dict works well.
-	* same input gives same output everytime
-* [ ] Environment
-	* [x] moters, motor_names - different order? actions goes to wrong joints? NO
-	* Beahviour:
-		* same between resets.
-		* different between init's
+## Observation
+1. Define simple CNN
+	* rgb -> state
+	* rgb -> action
+	* clstm -> action
+2. Combination of understanding and coordination
+	
+## Experiment to run
+1. [x] 2DoF
+	* target: plane
+	* reward
+		* abs. dist
+		* diff. dist 
+		* regular costs
 
-------------------------------------------------------------------------------
+2. [x] 3DoF
+	* reward
+		* diff. dist 
+		* regular costs
 
-Project
-==========
-
-		Roboschool is broken on my setup.
-		After calling env.reset(), if there has been some type of rendering, the robot and target disappears and all numbers are *nan*.
-
-		However, my own CustomReacher environment is now working correctly and using a single process convergence is easily reached.
-		There still seems to be something wrong with the multiple process setup.
-
-# [Agent](Agent/)
-Pytorch training.
-
-* [main.py](Agent/main.py)
-* [model.py](Agent/model.py)
-* [memory.py](Agent/memory.py)
-* [test.py](Agent/test.py)
-* [train.py](Agent/train.py)
-* Help Scripts:
-	* [vislogger.py](Agent/vislogger.py)
-	* [utils.py](Agent/utils.py)
-	* [arguments.py](Agent/arguments.py)
-	* [loadtest.py](Agent/loadtest.py)
-
-# [Environments](environments/)
-
-##  [gym_env.py](environments/custom_envs.py)
-
-Extends OpenAI's gym.Env class.
-* _seed
-* _render
-* _reset
-* _step
-* HUD
-
-## environment code
-
-All robot functions in `envs` containing functions:
-* robot_specific_reset()
-	* robot_reset()
-	* target_reset()
-* calc_state()
-	* calc_to_target_vec()
-* calc_reward(action)
-	* calc_potential()
-* get_rgb()
-
-##   [reacher_envs.py ](environments/reacher_envs.py) (DoF = Degrees of Freedom)
-All custom environments.
-
-* **Reacher_plane**
-* **Reacher2Dof**
-* **Reacher3Dof**
-* **Reacher6Dof**
-
-##   [humanoid_envs.py ](environments/humanoid_envs.py)
-All custom environments.
-
-* **Humanoid**
-* **Humanoid_right3DoF**
-* **Humanoid6DoF**
-
-
-
-## [xml_files](environments/xml_files)
-Directory for the xml files.
-
-### reacher
-*  Reacher2DoF.xml
-*  Reacher3DoF.xml
-*  Reacher3DoF_2Targets.xml
-*  Reacher6DoF.xml
-*  Reacher_plane
-*  ReacherHumanoid.xml
-
-### humanoid
-
-* humanoid.xml
-	* Roboschool's symmetric humanoid
-* humanoid6DoF.xml
-* humanoid_right3DoF.xml
-* upper_torso.xml
-
-
-# [Baselines](Baselines/)
-OpenAI baselines training
-Mostly used for debugging training, is env wrong or algorithm...
-
-
+3. 6Dof
+	* same target:
+		* plane
+		* one octagon
+		* quart
+		* all reachable 3D
+	* two targets:
+		* plane
+		* one octagon
+		* quart
+		* all reachable 3D
+	* reward
+		* abs. dist
+		* diff. dist 
+		* regular costs

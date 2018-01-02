@@ -43,7 +43,6 @@ This project aims to engineer a suitable simulation environment, a reward
 function, and a network architecture that will make learning to move and mimic
 movements, in the way explained above, possible.
 
-
 # [project.agent](project.agent/)
 Pytorch Agent
 

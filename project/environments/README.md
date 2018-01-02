@@ -1,17 +1,7 @@
-#  Todo
-
-
-NOW:
-
-Torso!
-
-angle
-
-
 # Environment
 
-
-In my custom classes i load the xml file for the robot only once. Only if no scene has been initialized. For me this makes the reset() work as expected.
+In my custom classes i load the xml file for the robot only once. Only if no
+scene has been initialized. For me this makes the reset() work as expected.
 
 ```python
 def _reset(self):
@@ -38,14 +28,49 @@ def _reset(self):
 	return s, rgb
 ```
 
-I do not have great knowledge about everything in the bullet/gym code but it seems superfluous to load the xml file each reset. At least in the singleplayer scenario, I have not tried multiplayer.
+I do not have great knowledge about everything in the bullet/gym code but it
+seems superfluous to load the xml file each reset. At least in the singleplayer
+scenario, I have not tried multiplayer.
 
-## gym_env.py
+## reacher.py
+* class Base(MyGymEnv)
+* class ReacherCommon()
+* class ReacherPlane(ReacherCommon, Base)
+* class Reacher3D(ReacherCommon, Base)
 
-MyGymEnv is a class which is the wrapper for OpenAI gym. It contains important functions such as:
+## humanoid.py
+* class MyGymEnv(gym.Env)
+* class Base(MyGymEnv)
+* class TargetHumanoid(Base)
+* class Humanoid(Base)
+
+## my_gym_env.py
+MyGymEnv is a class which is the wrapper for OpenAI gym. It contains important
+functions such as:
 * _seed
 * _reset
 * _render
 * _step
+
+        
+## SubProcEnv.py
+
+* class CloudpickleWrapper(object):
+* class SubprocVecEnv(VecEnv):
+* class SubprocVecEnv_RGB(VecEnv):
+* def worker_RGB(remote, parent_remote, env_fn_wrapper):
+* def worker(remote, parent_remote, env_fn_wrapper):
+
+## utils.py
+* def rgb_render(obs, title='obs')
+* def rgb_tensor_render(obs, title='tensor_obs')
+* def single_episodes(Env, args, verbose=True)
+* def parallel_episodes(Env, args, verbose=False)
+* def make_parallel_environments(Env, args)
+
+
+# xml_files
+* reacher
+* humanoid
 
 

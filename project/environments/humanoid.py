@@ -1,12 +1,16 @@
+''' Humanoid environments
+
+Easily gets stuck. must fix.
+
+'''
 from roboschool.scene_abstract import Scene, SingleRobotEmptyScene
 import os
 import numpy as np
 import gym
 from itertools import count
-
 from OpenGL import GL  # fix for opengl issues on desktop  / nvidia
 
-PATH_TO_CUSTOM_XML = "/home/erik/com_sci/Master_code/Project/environments/xml_files"
+PATH_TO_CUSTOM_XML = os.path.join(os.path.dirname(__file__), "xml_files")
 
 
 class MyGymEnv(gym.Env):
@@ -14,7 +18,6 @@ class MyGymEnv(gym.Env):
         'render.modes': ['human', 'rgb_array'],
         'video.frames_per_second': 60
         }
-
     def __init__(self, action_dim=2, obs_dim=7, RGB=False, W=600, H=400):
         self.scene = None
         self.RGB = RGB
@@ -241,7 +244,7 @@ class TargetHumanoid(Base):
                             "robot_left_shoulder1",
                             "robot_left_shoulder2",
                             "robot_left_elbow"]
-        self.motor_power = [10000]*len(self.motor_names)
+        self.motor_power = [10]*len(self.motor_names)
         self.motors = [self.jdict[n] for n in self.motor_names]
 
         # target and potential
@@ -250,7 +253,7 @@ class TargetHumanoid(Base):
     def robot_reset(self):
         ''' np.random for correct seed. '''
         for j in self.robot_joints.values():
-            j.reset_current_position(np.random.uniform(low=-3.01, high=3.01 ), 0)
+            j.reset_current_position(np.random.uniform(low=-2.01, high=2.01 ), 0)
             j.set_motor_torque(0)
 
     def calc_state(self):
@@ -426,17 +429,20 @@ def show_obs_state(datadict):
         input('Enter when done')
 
 if __name__ == '__main__':
-    from Agent.arguments import get_args
-    from utils import single_episodes
-    from utils import parallel_episodes
+    from project.agent.arguments import get_args
+    from utils import single_episodes, parallel_episodes
 
     args = get_args()
     args.video_W = 100
     args.video_H = 100
     Env = TargetHumanoid
     # Env = Humanoid
-    # single_episodes(Env, args, verbose=args.verbose)
-    parallel_episodes(Env, args, args.verbose)
+    if args.num_processes > 1:
+        parallel_episodes(Env, args)
+    else:
+        single_episodes(Env, args, verbose=args.verbose)
+
     # d = DataGenerator(10)
     # show_obs_state(d)
     # save_data(500)
+    # parallel_episodes(Env, args, args.verbose)
