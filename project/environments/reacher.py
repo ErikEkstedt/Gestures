@@ -7,7 +7,8 @@ from OpenGL import GLE # fix for opengl issues on desktop  / nvidia
 
 from project.environments.my_gym_env import MyGymEnv
 
-PATH_TO_CUSTOM_XML = "/home/erik/com_sci/Master_code/Project/environments/xml_files"
+# PATH_TO_CUSTOM_XML = "/home/erik/com_sci/Master_code/Project/environments/xml_files"
+PATH_TO_CUSTOM_XML = os.path.join(os.path.dirname(__file__), "xml_files")
 
 # Target functions
 def plane_target(r0, r1, x0=0, y0=0, z0=0.41):
@@ -241,7 +242,7 @@ class ReacherPlane(ReacherCommon, Base):
         Base.__init__(self,XML_PATH=PATH_TO_CUSTOM_XML,
                         robot_name='robot_arm',
                         target_name='target0',
-                        model_xml='reacher/reacher_plane.xml',
+                        model_xml='reacher/ReacherPlane.xml',
                         ac=2, obs=22,
                         args=args)
         print('I am', self.model_xml)
@@ -259,11 +260,22 @@ class ReacherPlane(ReacherCommon, Base):
         self.potential = self.calc_potential()
 
     def target_reset(self):
+        ''' circle in xy-plane'''
+        # Length and origo for robot
         r0, r1 = 0.2, 0.2
         x0, y0, z0 = 0, 0, 0.41
-        coords = sphere_target(r0, r1, x0, y0, z0)
-        coords = plane_target(r0, r1, x0, y0, z0)
-        self.set_custom_target(coords)
+
+        # randomize targets in plane
+        theta = 2 * np.pi * np.random.rand()
+        x1 = x0 + r0*np.cos(theta)
+        y1 = y0 + r0*np.sin(theta)
+        z1 = z0
+
+        theta = 2 * np.pi * np.random.rand()
+        x2 = x1 + r1*np.cos(theta)
+        y2 = y1 + r1*np.sin(theta)
+        z2 = z1
+        self.set_custom_target([x1, y1, z1, x2, y2, z2])
 
     def calc_reward(self, a):
         ''' Hierarchical Difference potential as reward '''
@@ -274,6 +286,7 @@ class ReacherPlane(ReacherCommon, Base):
         return r1 + r2
 
     def camera_adjust(self):
+        ''' Vision from straight above '''
         self.camera.move_and_look_at( 0, 0, 1, 0, 0, 0.4)
 
 
@@ -282,7 +295,7 @@ class Reacher3D(ReacherCommon, Base):
         Base.__init__(self,XML_PATH=PATH_TO_CUSTOM_XML,
                         robot_name='robot_arm',
                         target_name='target0',
-                        model_xml='reacher/reacher_base.xml',
+                        model_xml='reacher/Reacher3D.xml',
                         ac=3, obs=24,
                         args=args)
         print('I am', self.model_xml)
@@ -321,9 +334,12 @@ class Reacher3D(ReacherCommon, Base):
 
 
 if __name__ == '__main__':
-    from Agent.arguments import get_args
-    from utils import single_episodes
+    from project.agent.arguments import get_args
+    from utils import single_episodes, parallel_episodes
     args = get_args()
     Env = ReacherPlane
     # Env = Reacher3D
-    single_episodes(Env, args, verbose=args.verbose)
+    if args.num_processes > 1:
+        parallel_episodes(Env, args)
+    else:
+        single_episodes(Env, args, verbose=args.verbose)

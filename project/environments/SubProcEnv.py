@@ -3,7 +3,7 @@ from multiprocessing import Process, Pipe
 from baselines.common.vec_env import VecEnv
 
 # Copy of baselines ´baselines/common/vec_env/subproc_vec_env.py´
-# With added rgb soluti.
+# With added rgb solution.
 
 
 def worker(remote, parent_remote, env_fn_wrapper):

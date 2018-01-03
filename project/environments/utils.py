@@ -1,5 +1,7 @@
 import cv2
 import torch
+import numpy as np
+import time
 
 def rgb_render(obs, title='obs'):
     ''' cv2 as argument such that import is not done redundantly'''
@@ -17,7 +19,6 @@ def rgb_tensor_render(obs, title='tensor_obs'):
 
 def single_episodes(Env, args, verbose=True):
     ''' Runs episode in one single process
-
     important args:
         args.RGB = True/False    - extracts rgb from episodes
         args.render = True/False - human friendly rendering
@@ -29,7 +30,6 @@ def single_episodes(Env, args, verbose=True):
     env = Env(args)
     if verbose: print('RGB: {}\tGravity: {}\tMAX: {}\t'.format(env.RGB, env.gravity, env.MAX_TIME))
     if args.RGB:
-        import cv2
         s, obs = env.reset()
         if verbose:
             print(s.shape)
@@ -38,7 +38,9 @@ def single_episodes(Env, args, verbose=True):
             input('Press Enter to start')
         while True:
             s, obs, r, d, _ = env.step(env.action_space.sample())
-            if args.render: rgb_render(obs, cv2)
+            if args.render:
+                rgb_render(obs)
+                time.sleep(0.10)
             if verbose: print('Reward: ', r)
             if d:
                 s=env.reset()
@@ -63,28 +65,34 @@ def single_episodes(Env, args, verbose=True):
 def parallel_episodes(Env, args, verbose=False):
     from itertools import count
     env = make_parallel_environments(Env, args)
+    R = 0
     if args.RGB:
         s, obs = env.reset()
         if verbose:
             print('state shape:', s.shape)
             print('obs shape:', obs.shape)
             input('Enter to start')
+        for i in count(1):
+            action = np.random.rand(*(args.num_processes, *env.action_space.shape))
+            s, obs, r, d, _ = env.step(action)
+            if args.render:
+                for i in range(args.num_processes):
+                    rgb_render(obs[i], str(i))
+            R += r
+            if sum(d) > 0:
+                print('Step: {}, Reward: {}, mean: {}'.format(i, R, R.mean(axis=0)))
+                R = 0
     else:
         s = env.reset()
         if verbose:
             print('state shape:', s.shape)
             input('Enter to start')
-
-    R = 0
-    for i in count(1):
-        if args.RGB:
-            s, obs, r, d, _ = env.step([env.action_space.sample()] * args.num_processes)
-        else:
+        for i in count(1):
             s, r, d, _ = env.step([env.action_space.sample()] * args.num_processes)
-        R += r
-        if sum(d) > 0:
-            print('Step: {}, Reward: {}, mean: {}'.format(i, R, R.mean(axis=0)))
-            R = 0
+            R += r
+            if sum(d) > 0:
+                print('Step: {}, Reward: {}, mean: {}'.format(i, R, R.mean(axis=0)))
+                R = 0
 
 def make_parallel_environments(Env, args):
     ''' imports SubprocVecEnv from baselines.
@@ -92,15 +100,10 @@ def make_parallel_environments(Env, args):
     :param num_processes        int, # env
     '''
     if args.RGB:
-        try:
-            from envs import SubprocVecEnv_RGB as SubprocVecEnv
-        except:
-            from environments.envs import SubprocVecEnv_RGB as SubprocVecEnv
+        from SubProcEnv import SubprocVecEnv_RGB as SubprocVecEnv
     else:
-        try:
-            from envs import SubprocVecEnv
-        except:
-            from environments.envs import SubprocVecEnv
+        from SubProcEnv import SubprocVecEnv
+
     def multiple_envs(Env, args, rank):
         def _thunk():
             env = Env(args)
