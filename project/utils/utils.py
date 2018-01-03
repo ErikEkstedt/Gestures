@@ -90,6 +90,7 @@ def log_print(agent, dist_entropy, value_loss, floss, action_loss, j):
                 action_loss.data[0],))
 
 def make_gym_env(env_id, seed, rank, log_dir):
+    ''' Make parallel gym environments '''
     import gym
     from baselines.common import bench
     def _thunk():
@@ -98,4 +99,3 @@ def make_gym_env(env_id, seed, rank, log_dir):
         env = bench.Monitor(env, os.path.join(log_dir, "{}.monitor.json".format(rank)))
         return env
     return _thunk
-

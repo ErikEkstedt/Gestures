@@ -1,6 +1,5 @@
+import argparse
 import numpy as np
-import gym
-from copy import deepcopy
 import os
 
 import torch
@@ -8,68 +7,47 @@ import torch.nn as nn
 from torch.autograd import Variable
 import torch.optim as optim
 
-from .utils import log_print, make_log_dirs
-from .arguments import FakeArgs, get_args
-from .model import MLPPolicy
-from .memory import RolloutStorage, StackedState, Results
-
-from .train import train, exploration
-from .test import test, test_existing_env, Test_and_Save_Video, test_and_render
-
-from .utils import get_env
-from project.environments.Reacher import ReacherPlane
+from utils.utils import make_log_dirs
+from utils.arguments import get_args
+from utils.vislogger import VisLogger
+from models.coordination import MLPPolicy
+from agent.memory import RolloutStorage, StackedState, Results
+from agent.train import train, exploration
+from agent.test import Test_and_Save_Video
+from environments.reacher import ReacherPlane
+from environments.utils import make_parallel_environments
 
 
 def main():
     args = get_args()
-
-    # === Environment ===
-    Env = get_env(args)
-
-    # Logger
     make_log_dirs(args)
-
     args.num_updates   = int(args.num_frames) // args.num_steps // args.num_processes
-
-    if args.vis:
-        from vislogger import VisLogger
+    if not args.no_vis:
         vis = VisLogger(args)
 
-    if args.num_processes > 1:
-        from train import exploration
-        env = make_parallel_environments(Env,args)
-    else:
-        from train import Exploration_single as exploration
-        env = Env(args)
-        env.seed(args.seed)
+    # === Environment ===
 
-    tmp_rgb = args.RGB # save rgb flag
-    if args.video:
-        args.RGB = True
-        video_env = Env(args)
+    Env = ReacherPlane  # using Env as variable so I only need to change this line between experiments
+    env = make_parallel_environments(Env,args)
 
+    tmp_rgb = args.RGB # reset rgb flag
     args.RGB = True
     test_env = Env(args)
     args.RGB = tmp_rgb # reset rgb flag
 
     ob_shape = env.observation_space.shape[0]
     ac_shape = env.action_space.shape[0]
-        # === Memory ===
-    result = Results(max_n=200, max_u=10)
-    CurrentState = StackedState(args.num_processes,
-                                args.num_stack,
-                                ob_shape)
 
+    # === Memory ===
+    result = Results(max_n=200, max_u=10)
+    CurrentState = StackedState(args.num_processes, args.num_stack, ob_shape)
     rollouts = RolloutStorage(args.num_steps,
                               args.num_processes,
                               CurrentState.size()[1],
                               ac_shape)
 
     # === Model ===
-    pi = MLPPolicy(CurrentState.state_shape,
-                   ac_shape,
-                   hidden=args.hidden,
-                   total_frames=args.num_frames)
+    pi = MLPPolicy(CurrentState.state_shape, ac_shape, args)
 
     pi.train()
     optimizer_pi = optim.Adam(pi.parameters(), lr=args.pi_lr)
@@ -120,7 +98,8 @@ def main():
                 print('Testing {} episodes'.format(args.num_test))
 
             pi.cpu()
-            sd = deepcopy(pi.cpu().state_dict())
+            # sd = deepcopy(pi.cpu().state_dict())
+            sd = pi.cpu().state_dict()
             # test_reward = test(test_env, MLPPolicy, sd, args)
             # test_reward = test_existing_env(test_env, MLPPolicy, sd, args)
             test_reward, BestVideo = Test_and_Save_Video(test_env, MLPPolicy, sd, args)

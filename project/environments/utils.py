@@ -96,14 +96,13 @@ def parallel_episodes(Env, args, verbose=False):
 
 def make_parallel_environments(Env, args):
     ''' imports SubprocVecEnv from baselines.
-    :param seed                 int
-    :param num_processes        int, # env
+    :param Env         environment
+    :param args        arguments (argparse object)
     '''
     if args.RGB:
-        from SubProcEnv import SubprocVecEnv_RGB as SubprocVecEnv
+        from project.environments.SubProcEnv import SubprocVecEnv_RGB as SubprocVecEnv
     else:
-        from SubProcEnv import SubprocVecEnv
-
+        from project.environments.SubProcEnv import SubprocVecEnv
     def multiple_envs(Env, args, rank):
         def _thunk():
             env = Env(args)

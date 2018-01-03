@@ -26,10 +26,7 @@ def Test_and_Save_Video(test_env, Model, state_dict, args, verbose=False):
     ac_shape = test_env.action_space.shape[0]
     CurrentState = StackedState(1, args.num_stack, ob_shape)
 
-    pi = Model(ob_shape, ac_shape)
-    pi = Model(CurrentState.state_shape,
-               ac_shape,
-               hidden=args.hidden)
+    pi = Model(CurrentState.state_shape, ac_shape, args)
     pi.load_state_dict(state_dict)
 
     # == Test ==

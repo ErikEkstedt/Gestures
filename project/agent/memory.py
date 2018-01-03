@@ -221,7 +221,6 @@ class StackedObs(object):
 
 class StackedState(object):
     ''' stacked state for Roboschool
-
     state: np.array, shape: (num_proc, 44) (roboschoolhumanoid)
 
     Thus with defaults:
