@@ -10,7 +10,6 @@ def get_args():
     parser.add_argument('--dof', type=int, default=2)
     parser.add_argument('--video-W', type=int, default=100)
     parser.add_argument('--video-H', type=int, default=100)
-
     parser.add_argument('--MAX_TIME', type=int, default=300)
     parser.add_argument('--gravity', type=float, default=9.81)
     parser.add_argument('--power', type=float, default=0.5)
@@ -81,10 +80,12 @@ def get_args():
     # Log
     parser.add_argument('--vis-interval', type=int, default=1,
                         help='vis interval, one log per n updates (default: 1)')
-    parser.add_argument('--log-dir', default='/tmp/',
-                        help='directory to save agent logs (default: /tmp/)')
     parser.add_argument('--log-interval', type=int, default=1,
                         help='log interval in console, one log per n updates (default: 1)')
+    parser.add_argument('--log-dir', default='/tmp/',
+                        help='directory to save agent logs (default: /tmp/)')
+    parser.add_argument('--data-dir', default='/home/erik/DATA/project/',
+                        help='directory to save generated data (default: /DATA/project/)')
 
     # Boolean
     parser.add_argument('--no-cuda', action='store_true', default=False,

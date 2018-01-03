@@ -1,46 +1,60 @@
-def DataGenerator(dpoints=1000, prob=0.03):
+''' Collects randomly generated data from enivronments.  '''
+import torch
+import numpy as np
+from tqdm import tqdm
+
+def DataGenerator(env, args, dpoints=1000):
     """ DataGenerator runs some episodes and randomly saves rgb, state pairs
-    Kwargs:
-        :dpoints : Number of data points to collect
-        :prob    : probability of chosing a state/obs pair
 
-    Returns:
-        dict
+    :dpoints            : Number of data points to collect
+    :Returns            : dict
     """
-    from numpy.random import uniform
-    args.RGB = True  # to be safe
-    env = TargetHumanoid(args)
     s, obs = env.reset()
-    t = 0
     states, obs_list = [], []
-    while len(states) < dpoints:
-        s, obs, _, d, _ = env.step(env.action_space.sample())
-        t += 1
-        if uniform() < prob:
-            states.append(s)
-            obs_list.append(obs)
-        if d:
-            s=env.reset()
-            t=0
-    return {'states': states, 'obs':obs_list}
+    steps = dpoints // args.num_processes
+    print('start collecting')
+    for i in tqdm(range(steps)):
+        action = np.random.rand(*(args.num_processes, *env.action_space.shape))
+        s, obs, _, d, _ = env.step(action)
+        for j in range(args.num_processes):
+            states.append(s[j])
+            obs_list.append(obs[j])
+    return {'obs':obs_list, 'states': states}
 
-def save_data(dpoints):
-    import torch
-    data = DataGenerator(dpoints)
-    name = '/home/erik/DATA/humanoid/test.pt'
-    torch.save(data, name)
 
-def show_obs_state(datadict):
-    """Prints out state and previews corresponding observation
-    Args:
-        datadict : dict containing states and obs
-    """
-    # import cv2
-    import matplotlib.pyplot as plt
-    for s, obs in zip(datadict['states'], datadict['obs']):
-        print('State: ', s)
-        # cv2.imshow('', obs)
-        plt.imshow(obs)
-        plt.pause(0.1)
-        input('Enter when done')
+def main():
+    from project.utils.arguments import get_args
+    from project.environments.reacher import ReacherPlane, Reacher3D
+    from project.environments.utils import make_parallel_environments
+    # from project.data.dataset import ProjectDataSet
+    import os
+    import pathlib
 
+    args = get_args()
+    args.RGB = True  # to be safe
+    args.video_W = 40
+    args.video_H = 40
+    Env = ReacherPlane
+    # Env = Reacher3D
+    env = make_parallel_environments(Env, args)
+
+    print('Generate Data...')
+    dpoints = int(1e5)
+    data = DataGenerator(env, args, dpoints=dpoints)
+    print('Done')
+
+    # add in correct dir
+    env_string = str(Env).split(".")[-1][:-2]
+    dir_ = os.path.join(args.data_dir, env_string)
+    if not os.path.exists(dir_):
+        print('Creating directory {}...'.format(dir_))
+        pathlib.Path(dir_).mkdir(parents=True, exist_ok=True)
+
+    name = 'obsdata_rgb{}-{}-3_n{}.pt'.format(args.video_W, args.video_H, dpoints)
+    filename = os.path.join(dir_, name)
+    torch.save(data, filename)
+
+
+
+if __name__ == '__main__':
+    main()

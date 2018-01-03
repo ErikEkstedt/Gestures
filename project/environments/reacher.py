@@ -7,35 +7,7 @@ from OpenGL import GLE # fix for opengl issues on desktop  / nvidia
 
 from project.environments.my_gym_env import MyGymEnv
 
-# PATH_TO_CUSTOM_XML = "/home/erik/com_sci/Master_code/Project/environments/xml_files"
 PATH_TO_CUSTOM_XML = os.path.join(os.path.dirname(__file__), "xml_files")
-
-# Target functions
-def plane_target(r0, r1, x0=0, y0=0, z0=0.41):
-    ''' circle in xy-plane'''
-    theta = 2 * np.pi * np.random.rand()
-    x = x0 + r0*np.cos(theta)
-    y = y0 + r0*np.sin(theta)
-    z = z0
-    theta = 2 * np.pi * np.random.rand()
-    x1 = x + r1*np.cos(theta)
-    y1 = y + r1*np.sin(theta)
-    z1 = z
-    return [x, y, z, x1, y1, z1]
-
-def sphere_target(r0, r1, x0=0, y0=0, z0=0.41):
-    ''' free targets in 3d space '''
-    theta = np.pi * np.random.rand()
-    phi = 2 * np.pi * np.random.rand()
-    x = x0 + r0*np.sin(theta)*np.cos(phi)
-    y = y0 + r0*np.sin(theta)*np.sin(phi)
-    z = z0 + r0*np.cos(theta)
-    theta = np.pi * np.random.rand()
-    phi = 2 * np.pi * np.random.rand()
-    x1 = x + r1*np.sin(theta)*np.cos(phi)
-    y1 = y + r1*np.sin(theta)*np.sin(phi)
-    z1 = z + r1*np.cos(theta)
-    return [x, y, z, x1, y1, z1]
 
 
 class Base(MyGymEnv):
@@ -261,21 +233,22 @@ class ReacherPlane(ReacherCommon, Base):
 
     def target_reset(self):
         ''' circle in xy-plane'''
-        # Length and origo for robot
-        r0, r1 = 0.2, 0.2
-        x0, y0, z0 = 0, 0, 0.41
+        r0, r1 = 0.2, 0.2  # arm lengths
+        x0, y0, z0 = 0, 0, 0.41  # arm origo
+        coords = self.plane_target(r0, r1, x0, y0, z0)
+        self.set_custom_target(coords)
 
-        # randomize targets in plane
+    def plane_target(self, r0, r1, x0=0, y0=0, z0=0.41):
+        ''' circle in xy-plane'''
         theta = 2 * np.pi * np.random.rand()
-        x1 = x0 + r0*np.cos(theta)
-        y1 = y0 + r0*np.sin(theta)
-        z1 = z0
-
+        x = x0 + r0*np.cos(theta)
+        y = y0 + r0*np.sin(theta)
+        z = z0
         theta = 2 * np.pi * np.random.rand()
-        x2 = x1 + r1*np.cos(theta)
-        y2 = y1 + r1*np.sin(theta)
-        z2 = z1
-        self.set_custom_target([x1, y1, z1, x2, y2, z2])
+        x1 = x + r1*np.cos(theta)
+        y1 = y + r1*np.sin(theta)
+        z1 = z
+        return [x, y, z, x1, y1, z1]
 
     def calc_reward(self, a):
         ''' Hierarchical Difference potential as reward '''
@@ -313,10 +286,24 @@ class Reacher3D(ReacherCommon, Base):
         self.calc_to_target_vec()
         self.potential = self.calc_potential()
 
+    def sphere_target(self, r0, r1, x0=0, y0=0, z0=0.41):
+        ''' free targets in 3d space '''
+        theta = np.pi * np.random.rand()
+        phi = 2 * np.pi * np.random.rand()
+        x = x0 + r0*np.sin(theta)*np.cos(phi)
+        y = y0 + r0*np.sin(theta)*np.sin(phi)
+        z = z0 + r0*np.cos(theta)
+        theta = np.pi * np.random.rand()
+        phi = 2 * np.pi * np.random.rand()
+        x1 = x + r1*np.sin(theta)*np.cos(phi)
+        y1 = y + r1*np.sin(theta)*np.sin(phi)
+        z1 = z + r1*np.cos(theta)
+        return [x, y, z, x1, y1, z1]
+
     def target_reset(self):
         r0, r1 = 0.2, 0.2
         x0, y0, z0 = 0, 0, 0.41
-        coords = sphere_target(r0, r1, x0, y0, z0)
+        coords = self.sphere_target(r0, r1, x0, y0, z0)
         self.set_custom_target(coords)
 
     def calc_reward(self, a):
@@ -334,7 +321,7 @@ class Reacher3D(ReacherCommon, Base):
 
 
 if __name__ == '__main__':
-    from project.agent.arguments import get_args
+    from project.utils.arguments import get_args
     from utils import single_episodes, parallel_episodes
     args = get_args()
     Env = ReacherPlane
