@@ -4,9 +4,6 @@ This code is for the understanding/translation model. The function of this
 module is to translate from RGB observations to state space (some space where
 the coordination module operates)
 '''
-
-import copy
-import math
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
@@ -15,6 +12,46 @@ from torch.autograd import Variable
 
 from project.dynamics_model.utils import Conv2d_out_shape, ConvTranspose2d_out_shape
 from project.dynamics_model.CLSTMCell import CLSTMCell
+
+def total_params(p):
+    n = 1
+    for i in p:
+        n *= int(i)
+    return n
+
+class VanillaCNN(nn.Module):
+    def __init__(self,
+                 input_shape=(3,100,100),
+                 state_shape=22,
+                 feature_maps=[16, 32, 64],
+                 kernel_sizes=[5, 5, 5],
+                 strides=[2, 2, 2],
+                 args=None):
+        super(VanillaCNN, self).__init__()
+        self.input_shape    = input_shape
+        self.state_shape    = state_shape
+        self.feature_maps   = feature_maps
+        self.kernel_sizes   = kernel_sizes
+        self.strides        = strides
+
+        self.conv1          = nn.Conv2d(input_shape[0], feature_maps[0], kernel_size  = kernel_sizes[0], stride = strides[0])
+        self.out_shape1     = Conv2d_out_shape(self.conv1, input_shape)
+        self.conv2          = nn.Conv2d(feature_maps[0], feature_maps[1], kernel_size = kernel_sizes[1], stride = strides[1])
+        self.out_shape2     = Conv2d_out_shape(self.conv2, self.out_shape1)
+        self.conv3          = nn.Conv2d(feature_maps[1], feature_maps[2], kernel_size = kernel_sizes[2], stride = strides[2])
+        self.out_shape3     = Conv2d_out_shape(self.conv3, self.out_shape2)
+        self.total_conv_out = total_params(self.out_shape3)
+        self.head           = nn.Linear(self.total_conv_out, args.hidden)
+        self.out            = nn.Linear(args.hidden, state_shape)
+
+    def forward(self, x):
+        x = F.relu(self.conv1(x))
+        x = F.relu(self.conv2(x))
+        x = F.relu(self.conv3(x))
+        x = x.view(x.size(0), -1)
+        x = F.relu(self.head(x))
+        return self.out(x)
+
 
 class CLSTM(nn.Module):
     '''A hardcoded small prediction model to test if the CLSTMCell works.'''
@@ -106,6 +143,7 @@ class CLSTM(nn.Module):
     def reset_hidden(self):
         self.hidden_states = None
 
+
 class CNNAutoencoder(nn.Module):
     def __init__(self, input_size, action_shape,
                     hidden=128,
@@ -120,49 +158,40 @@ class CNNAutoencoder(nn.Module):
     def forward(self, input):
         pass
 
-class Translation(nn.Module):
-    def __init__(self, input_shape=(3,100,100),
-                    action_shape=2,
-                    in_channels=3,
-                    feature_maps=[64, 64, 64],
-                    kernel_sizes=[5, 5, 5],
-                    strides=[2, 2, 2],
-                    args=None):
 
-            super(CNNPolicy, self).__init__()
-            self.input_shape  = input_shape
-            self.action_shape = action_shape
-            self.feature_maps = feature_maps
-            self.kernel_sizes = kernel_sizes
-            self.strides      = strides
+def test_VanillaCNN(args):
+    from project.agent.memory import StackedObs
+    import numpy as np
 
-            self.conv1          = nn.Conv2d(input_shape[0], feature_maps[0], kernel_size  = kernel_sizes[0], stride = strides[0])
-            self.out_shape1     = Conv2d_out_shape(self.conv1, input_shape)
-            self.conv2          = nn.Conv2d(feature_maps[0], feature_maps[1], kernel_size = kernel_sizes[1], stride = strides[1])
-            self.out_shape2     = Conv2d_out_shape(self.conv2, self.out_shape1)
-            self.conv3          = nn.Conv2d(feature_maps[1], feature_maps[2], kernel_size = kernel_sizes[2], stride = strides[2])
-            self.out_shape3     = Conv2d_out_shape(self.conv3, self.out_shape2)
-            self.total_conv_out = total_params(self.out_shape3)
+    ob_shape = (64,64,3)
+    st_shape = 22
+    CurrentObs = StackedObs(args.num_processes, args.num_stack, ob_shape)
+    obs = np.random.rand(*(args.num_processes,*ob_shape))*255  # env returns numpy
+    CurrentObs.update(obs)
 
-            self.fc1       = nn.Linear(self.total_conv_out, args.hidden)
-            self.value     = nn.Linear(args.hidden, 1)
-            self.action    = nn.Linear(args.hidden, action_shape)
-            self.train()
+    model = VanillaCNN(input_shape=CurrentObs.obs_shape,
+                       state_shape=st_shape,
+                       feature_maps=[64, 64, 64],
+                       kernel_sizes=[5, 5, 5],
+                       strides=[2, 2, 2],
+                       args=args)
 
-            self.n         = 0
-            self.total_n   = args.num_frames
-            self.std_start = args.std_start
-            self.std_stop  = args.std_stop
+    if True:
+        CurrentObs.cuda()
+        model.cuda()
 
-        def forward(self, x):
-            x = F.relu(self.conv1(x))
-            x = F.relu(self.conv2(x))
-            x = F.relu(self.conv3(x))
-            x = x.view(x.size(0), -1)
-            x = F.tanh(self.fc1(x))
-            v = self.value(x)
-            ac_mean = self.action(x)
-            ac_std = self.std(ac_mean)  #std annealing
-            return v, ac_mean, ac_std
+    in_ = Variable(CurrentObs())
+    out = model(in_)
+
+    print('OUT:\n')
+    print('Out size:\n', out.data.size())
+    print('\n\nDATA:')
+    print('Out:\n', out.data)
+
+
+if __name__ == '__main__':
+    from project.utils.arguments import get_args
+    args = get_args()
+    test_VanillaCNN(args)
 
 

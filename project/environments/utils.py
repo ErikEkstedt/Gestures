@@ -17,6 +17,31 @@ def rgb_tensor_render(obs, title='tensor_obs'):
     im = obs.numpy().astype('uint8')
     rgb_render(im, title)
 
+
+# ======================== #
+# Run Episodes             #
+# ======================== #
+def print_state(Env, args):
+    ''' Runs episodes and prints (labeled) states every step '''
+    env = Env(args)
+    s = env.reset()
+    while True:
+        s, r, d, _ = env.step(env.action_space.sample())
+        print('\nState size', s.shape)
+        print('\ntarget position:')
+        print(env.target_position)
+        print('\nimportant_positions:')
+        print(env.important_positions)
+        print('\nto_target_vec:')
+        print(env.to_target_vec)
+        print('\njoint positions:')
+        print(env.joint_positions)
+        print('\njoint_speeds:')
+        print(env.joint_speeds)
+        input('Press Enter to continue')
+        if d:
+            s = env.reset()
+
 def single_episodes(Env, args, verbose=True):
     ''' Runs episode in one single process
     important args:
@@ -112,7 +137,11 @@ def make_parallel_environments(Env, args):
     return SubprocVecEnv([multiple_envs(Env, args, i) for i in range(args.num_processes)])
 
 
-# Example Reward functions
+
+# ======================== #
+# Example Reward functions #
+# ======================== #
+
 def calc_reward(self, a):
     ''' Reward function '''
     # Distance Reward

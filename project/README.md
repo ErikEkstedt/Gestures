@@ -9,8 +9,15 @@
 	* [ ] Combine state and pixels
 
 3. [ ] Understanding Module
-	* [ ] Create Data - Supervised Learning
-		* [ ] Dataset
+	* [x] Create Data - Supervised Learning
+		* [x] Dataset
+		* [ ] only positions
+			* Only joint_speed codes dynamic behavior and they are last.
+			* ReacherPlane: s[:-2]
+			* Reacher3D:		s[:-3]
+		* [ ] velocities ?
+			* [ ] stack frames
+			
 	* [ ] Train model
 		* [ ] Vanilla CNN
 		* [ ] CLSTM (Don't start before Vanilla done)

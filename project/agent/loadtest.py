@@ -50,8 +50,8 @@ def test_without_args():
     print('Run...')
     run_episodes(env, pi, CurrentState)
 
-# --- Debugging ----
 
+# --- Debugging ----
 def check_types(state):
     for s in state:
         if not s.dtype == 'float32':
@@ -89,7 +89,6 @@ def print_motors(env):
     print('\nMotor_names:')
     for m in env.motor_names:
         print(m)
-
 # -----------------
 
 def main():

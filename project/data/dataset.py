@@ -2,8 +2,6 @@ import torch
 import numpy as np
 from torch.utils.data import Dataset, DataLoader
 
-
-
 class ToTensorSeq(object):
     def __call__(self, sample):
         rgb, state, action, rgb_target, state_target = sample.values()
@@ -79,9 +77,16 @@ class ToTensor(object):
         obs = obs.transpose((2, 0, 1))  #swap color axis np(seq,H,W,C) -> torch(seq,C,H,W)
         obs = torch.from_numpy(obs).float()
         obs /= 255.  # normalize
-        state = torch.from_numpy(state)
+        state = torch.from_numpy(state).float()
         return obs, state
 
+class ToTensorNoVel(object):
+    def __call__(self, obs, state):
+        obs = obs.transpose((2, 0, 1))  #swap color axis np(seq,H,W,C) -> torch(seq,C,H,W)
+        obs = torch.from_numpy(obs).float()
+        obs /= 255.  # normalize
+        state = torch.from_numpy(state[:-2]).float()
+        return obs, state
 
 class ProjectDataSet(Dataset):
     '''Dataset for Understanding model
@@ -91,7 +96,7 @@ class ProjectDataSet(Dataset):
     Arguments:
         data:       {'obs': [obs_list], 'states': [states]}
     '''
-    def __init__(self, data, transform=ToTensor()):
+    def __init__(self, data, transform=ToTensorNoVel()):
         self.obs = data['obs']
         self.state = data['states']
         self.transform = transform
@@ -108,7 +113,7 @@ class ProjectDataSet(Dataset):
         return obs, state
 
 
-def load_data(path, batch_size=256, num_workers=4, shuffle=True):
+def load_dataset(path, batch_size=256, num_workers=4, shuffle=True):
     data = torch.load(path)
     dset = ProjectDataSet(data)
     tloader = DataLoader(dset, batch_size=batch_size, num_workers=num_workers, shuffle=shuffle)
