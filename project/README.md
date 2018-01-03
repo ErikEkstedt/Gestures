@@ -3,10 +3,18 @@
 	* [x] StackedState
 	* [x] RolloutStorage
 
-2. [ ] Make RGB training results. Same rewards but just pixel info.
-	* [ ] CNN model
+2. [x] Make RGB training results. Same rewards but just pixel info.
+	* [x] CNN model
 	* [ ] Make 2dof plane viewd from above take actions from pixels alone
 	* [ ] Combine state and pixels
+
+3. [ ] Understanding Module
+	* [ ] Create Data - Supervised Learning
+		* [ ] Dataset
+	* [ ] Train model
+		* [ ] Vanilla CNN
+		* [ ] CLSTM (Don't start before Vanilla done)
+
 
 ## ML:
 * [ ] Annealing learning rate
@@ -33,12 +41,10 @@
 * envs - learn from mujoco gym?
 * train on humanoid-reacher-custom-evns
 
---------------------------------------------
 -------------------------------------------
 # plan
 The experiments that I run I make a script that does just that experiment.
 Easy to rerun experiments and all hyperparameters will be the same easily.
-
 ## Environment
 1. [x] 2 Dof
 	* [x] Plane

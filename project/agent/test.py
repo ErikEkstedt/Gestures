@@ -1,14 +1,9 @@
 from itertools import count
 import numpy as np
 import torch
+from tqdm import tqdm, trange
 
-import matplotlib
-import matplotlib.pyplot as plt
-import matplotlib.animation as animation
-from tqdm import tqdm
-
-from .memory import StackedState, StackedObs
-
+from memory import StackedState, StackedObs
 
 def Test_and_Save_Video(test_env, Model, state_dict, args, verbose=False):
     '''
@@ -32,7 +27,7 @@ def Test_and_Save_Video(test_env, Model, state_dict, args, verbose=False):
     # == Test ==
     total_reward, episode_reward, best_episode_reward = 0, 0, -999
     Video = []
-    for i in range(args.num_test):
+    for i in trange(args.num_test):
         state, obs = test_env.reset()
         for j in count(1):
             CurrentState.update(state)
@@ -84,7 +79,7 @@ def Test_and_Save_Video_RGB(test_env, Model, state_dict, args, verbose=False):
     # Test environments
     total_reward, episode_reward, best_episode_reward = 0, 0, -999
     Video = []
-    for i in range(args.num_test):
+    for i in trange(args.num_test):
         state, obs = test_env.reset()
         for j in count(1):
             CurrentObs.update(obs)
@@ -106,20 +101,3 @@ def Test_and_Save_Video_RGB(test_env, Model, state_dict, args, verbose=False):
                 done = False
                 break
     return total_reward/args.num_test, Video
-
-
-# Video
-def make_video(vid, filenname):
-    print('-'*50)
-    print('Making Video')
-    fig = plt.figure()
-    ims = []
-    for frame in tqdm(vid):
-        im = plt.imshow(frame, animated=True)
-        ims.append([im])
-    ani = animation.ArtistAnimation(fig, ims, interval=30, blit=True, repeat_delay=1000)
-    ani.save(filenname)
-
-
-if __name__ == '__main__':
-    print('Not Implemented')
