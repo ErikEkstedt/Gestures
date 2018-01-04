@@ -20,6 +20,12 @@ def total_params(p):
     return n
 
 class VanillaCNN(nn.Module):
+    ''' Simple CNN model RGB -> state
+
+    - 3 Conv w/ stride 2
+    - MLP Hidden layer
+    - MLP output
+    '''
     def __init__(self,
                  input_shape=(3,100,100),
                  state_shape=22,

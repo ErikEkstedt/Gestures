@@ -8,7 +8,7 @@ from memory import StackedState, StackedObs
 def Test_and_Save_Video(test_env, Model, state_dict, args, verbose=False):
     '''
     Test with video
-    :param test_env   - Reacher/HUmanoid environment
+    :param test_env   - Reacher/Humanoid environment
     :param Model      - The policy network
     :param state_dict - nn.Module.state_dict
     :param verbose    - Boolean, be verbose
@@ -52,6 +52,7 @@ def Test_and_Save_Video(test_env, Model, state_dict, args, verbose=False):
 def Test_and_Save_Video_RGB(test_env, Model, state_dict, args, verbose=False):
     '''
     WARNING: Init values for CNNPolicy are hardcoded here....
+
     Test with video
     :param test_env   - Reacher/HUmanoid environment
     :param Model      - The policy network

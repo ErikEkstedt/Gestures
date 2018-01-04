@@ -89,13 +89,14 @@ class ToTensorReacherPlane(object):
         state = torch.from_numpy(state[:-2]).float()  # remove joint_speed
         return obs, state
 
-class ProjectDataSet(Dataset):
+
+class ReacherPlaneDataset(Dataset):
     '''Dataset for Understandigng model
     Translation:    input=RGB -> target=State
     Arguments:
         data:       {'obs': [obs_list], 'states': [states]}
     '''
-    def __init__(self, data, transform=ToTensor()):
+    def __init__(self, data, transform=ToTensorReacherPlane()):
         self.obs = data['obs']
         self.state = data['states']
         self.transform = transform
@@ -111,6 +112,22 @@ class ProjectDataSet(Dataset):
             obs, state = self.transform(obs, state)
         return obs, state
 
+
+def load_reacherplane_data(path, batch_size=256, num_workers=4, shuffle=True):
+    '''Dataset for Understanding model ReacherPlane
+    (joints_speeds are omitted)
+    :param path        : path to data
+    :param batch_size  : int
+    :param num_workers : int
+    :param shuffle     : Boolean
+    '''
+    data = torch.load(path)
+    dset = ReacherPlaneDataset(data, ToTensorReacherPlane())
+    tloader = DataLoader(dset,
+                         batch_size=batch_size,
+                         num_workers=num_workers,
+                         shuffle=shuffle)
+    return dset, tloader
 
 def load_dataset(path, batch_size=256, num_workers=4, shuffle=True, transform=ToTensor()):
     '''Dataset for Understanding model

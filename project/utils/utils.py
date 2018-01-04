@@ -53,11 +53,10 @@ def make_log_dirs(args):
 
     rootpath = args.log_dir
     day = get_today()
-    dof = 'DoF' + str(args.dof)
     if args.RGB:
-        rootpath = os.path.join(rootpath, day, dof, 'RGB')
+        rootpath = os.path.join(rootpath, day, args.env_id, 'RGB')
     else:
-        rootpath = os.path.join(rootpath, day, dof)
+        rootpath = os.path.join(rootpath, day, args.env_id)
 
     run = 0
     while os.path.exists("{}/run-{}".format(rootpath, run)):
