@@ -53,7 +53,6 @@ class MyGymEnv(gym.Env):
 
         self.camera = self.scene.cpp_world.new_camera_free_float(self.VIDEO_W, self.VIDEO_H, "video_camera")
         s = self.calc_state()
-        self.potential = self.calc_potential()
         if self.RGB:
             rgb = self.get_rgb()
             return (s, rgb)

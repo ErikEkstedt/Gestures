@@ -10,6 +10,23 @@ from data.dataset import load_dataset
 
 from models.understanding import VanillaCNN
 
+def plot_and_save(model, opt, loss, vloss, vis, args):
+        if vis:
+            # Draw plots
+            vis.line_update(Xdata=ep, Ydata=loss.data[0], name='Training Loss')
+            vis.line_update(Xdata=ep, Ydata=vloss.data[0], name='Validation Loss')
+        if ep % args.save_interval == 0:
+            # ==== Save model ======
+            name = os.path.join(args.checkpoint_dir,
+                                'UnderDict{}_{}.pt'.format(ep, round(vloss.data[0], 3)))
+            sd = model.cpu().state_dict()
+            torch.save(sd, name)
+            if args.cuda:
+                model.cuda()
+        print('Epoch: {}/{}\t loss: {}\t Vloss:{}'.format(ep,
+                                                          args.understand_epochs,
+                                                          loss.data[0],
+                                                          vloss.data[0]))
 
 def train_understand(model, Loss, opt, dloader, vloader, args, vis=None):
     model.train()
@@ -34,25 +51,23 @@ def train_understand(model, Loss, opt, dloader, vloader, args, vis=None):
             predicted_states = model(obs)
             vloss = Loss(predicted_states, states)
 
-        # Log, Plot and Save
-        if vis:
-            # Draw plots
-            vis.line_update(Xdata=ep, Ydata=loss.data[0], name='Training Loss')
-            vis.line_update(Xdata=ep, Ydata=vloss.data[0], name='Validation Loss')
+        plot_and_save(model, opt, loss, vloss, vis, args)
 
-        if ep % args.save_interval == 0:
-            # ==== Save model ======
-            name = os.path.join(args.checkpoint_dir,
-                                'UnderDict{}_{}.pt'.format(ep, round(vloss.data[0], 3)))
-            sd = model.cpu().state_dict()
-            torch.save(sd, name)
+
+def test_understand(model, tloader, args):
+    model.eval()
+    for ep in range(args.num_test):
+        # Test
+        for obs, states in tloader:
+            obs, states = Variable(obs), Variable(states, volatile=True)
             if args.cuda:
-                model.cuda()
-
-        print('Epoch: {}/{}\t loss: {}\t Vloss:{}'.format(ep,
-                                                          args.understand_epochs,
-                                                          loss.data[0],
-                                                          vloss.data[0]))
+                obs, states = obs.cuda(), states.cuda()
+            predicted_states = model(obs)
+            for i in range(5):
+                print('State:', states[i])
+                print('Pred :', predicted_states[i])
+                print('Diff :', (predicted_states[i]-states[i]).abs())
+            input('Press Enter to continue')
 
 
 def main():
@@ -65,20 +80,20 @@ def main():
         vis = VisLogger(args)
 
     # === Load Data ===
-    path = '/home/erik/DATA/project/ReacherPlane/obsdata_rgb40-40-3_n500000_0.pt'
-    # path = '/home/erik/DATA/project/ReacherPlane/obsdata_rgb40-40-3.pt'
+    # path = '/home/erik/DATA/project/ReacherPlane/obsdata_rgb40-40-3_n500000_0.pt'
+    path = '/home/erik/DATA/project/ReacherPlane/obsdata_rgb40-40-3.pt'
     dset, dloader = load_dataset(path)
+
+
 
     val_path = '/home/erik/DATA/project/ReacherPlane/obsdata_rgb40-40-3.pt'
     val_dset, vloader = load_dataset(val_path)
 
     # Check dims
     ob, st = dset[0]
-    vob, vst = val_dset[0]
-    ob_shape, vob_shape =  ob.shape, vob.shape
-    st_shape, vst_shape =  st.shape, vst.shape
-    assert vob_shape == ob_shape
-    assert vst_shape == st_shape
+    # vob, vst = val_dset[0]
+    # assert vob.shape == ob.shape
+    # assert vst.shape == st.shape
     if args.verbose:
         print('ob_shape', ob_shape)
         print('st_shape', st_shape)
@@ -87,14 +102,17 @@ def main():
         input('Press Enter to continue')
 
     # === Model ===
-    model = VanillaCNN(input_shape=ob_shape,
-                       state_shape=st_shape[0],
+    model = VanillaCNN(input_shape=ob.shape,
+                       state_shape=st.shape[0],
                        feature_maps=[64, 64, 64],
                        kernel_sizes=[5, 5, 5],
                        strides=[2, 2, 2],
                        args=args)
     Loss = nn.MSELoss()
     opt = optim.Adam(model.parameters(), lr=args.understand_lr)
+
+    test_understand(model, dloader, args)
+    input('Press Enter to continue')
 
     if args.cuda:
         model.cuda()
@@ -104,15 +122,6 @@ def main():
         train_understand(model, Loss, opt, dloader, vloader, args, vis)
     else:
         train_understand(model, Loss, opt, dloader, vloader, args)
-
-
-
-
-
-
-
-
-
 
 
 if __name__ == '__main__':

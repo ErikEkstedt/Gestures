@@ -80,23 +80,22 @@ class ToTensor(object):
         state = torch.from_numpy(state).float()
         return obs, state
 
-class ToTensorNoVel(object):
+
+class ToTensorReacherPlane(object):
     def __call__(self, obs, state):
         obs = obs.transpose((2, 0, 1))  #swap color axis np(seq,H,W,C) -> torch(seq,C,H,W)
         obs = torch.from_numpy(obs).float()
         obs /= 255.  # normalize
-        state = torch.from_numpy(state[:-2]).float()
+        state = torch.from_numpy(state[:-2]).float()  # remove joint_speed
         return obs, state
 
 class ProjectDataSet(Dataset):
-    '''Dataset for Understanding model
-
+    '''Dataset for Understandigng model
     Translation:    input=RGB -> target=State
-
     Arguments:
         data:       {'obs': [obs_list], 'states': [states]}
     '''
-    def __init__(self, data, transform=ToTensorNoVel()):
+    def __init__(self, data, transform=ToTensor()):
         self.obs = data['obs']
         self.state = data['states']
         self.transform = transform
@@ -113,18 +112,33 @@ class ProjectDataSet(Dataset):
         return obs, state
 
 
-def load_dataset(path, batch_size=256, num_workers=4, shuffle=True):
+def load_dataset(path, batch_size=256, num_workers=4, shuffle=True, transform=ToTensor()):
+    '''Dataset for Understanding model
+    :param path        : path to data
+    :param batch_size  : int
+    :param num_workers : int
+    :param shuffle     : Boolean
+    :param transform   : transformation function
+    '''
     data = torch.load(path)
-    dset = ProjectDataSet(data)
-    tloader = DataLoader(dset, batch_size=batch_size, num_workers=num_workers, shuffle=shuffle)
+    dset = ProjectDataSet(data, transform)
+    tloader = DataLoader(dset,
+                         batch_size=batch_size,
+                         num_workers=num_workers,
+                         shuffle=shuffle)
     return dset, tloader
 
 if __name__ == '__main__':
     from tqdm import tqdm_gui, tqdm
-    path = '/home/erik/DATA/project/ReacherPlane/obsdata_rgb40-40-3_n100000.pt'
-    dset, dloader = load_data(path)
-    i = 0
-    for obs, state in tqdm(dloader):
-        i+=1
-    print(i)
+    from project.environments.utils import rgb_tensor_render
+    path = '/home/erik/DATA/project/ReacherPlaneNoTarget/obsdata_rgb40-40-3_n5000_0.pt'
+    dset, dloader = load_dataset(path)
+    for obs, state in dloader:
+        print(obs.shape)
+        print(state.shape)
+        im = obs[0]*255
+        rgb_tensor_render(im)
+        print(state[0])
+        input('Press Enter to continue')
+
 

@@ -36,6 +36,13 @@ scenario, I have not tried multiplayer.
 * class Base(MyGymEnv)
 * class ReacherCommon()
 * class ReacherPlane(ReacherCommon, Base)
+	* No z-axis info (constrained in plane)
+	* calc_state  -> robot_key_points, joint_speeds
+	* calc_reward -> None
+* class ReacherPlaneNoTarget(ReacherCommon)
+	* No target included in render or state
+	* calc_state  -> robot_key_points, joint_speeds
+	* calc_reward -> None
 * class Reacher3D(ReacherCommon, Base)
 
 ## humanoid.py

@@ -5,6 +5,7 @@ import os
 from tqdm import tqdm
 import pathlib
 
+
 def DataGenerator(env, args):
     """ DataGenerator runs some episodes and randomly saves rgb, state pairs
 
@@ -38,9 +39,10 @@ def get_filename(Env, args):
 
     return os.path.join("{}{}.pt".format(filename, run))
 
+
 def main():
     from project.utils.arguments import get_args
-    from project.environments.reacher import ReacherPlane, Reacher3D
+    from project.environments.reacher import ReacherPlaneNoTarget, ReacherPlane, Reacher3D
     from project.environments.utils import make_parallel_environments
     # from project.data.dataset import ProjectDataSet
 
@@ -48,7 +50,7 @@ def main():
     args.RGB = True  # to be safe
     args.video_W = 40
     args.video_H = 40
-    Env = ReacherPlane
+    Env = ReacherPlaneNoTarget
     # Env = Reacher3D
     env = make_parallel_environments(Env, args)
 
@@ -58,9 +60,8 @@ def main():
 
     # add in correct dir
     filename = get_filename(Env, args)
-    print(filename)
-    input('Press Enter to continue')
     print('Saving into: ', filename)
+    input('Press Enter to continue')
 
     torch.save(data, filename)
 
