@@ -33,17 +33,36 @@ seems superfluous to load the xml file each reset. At least in the singleplayer
 scenario, I have not tried multiplayer.
 
 ## reacher.py
-* class Base(MyGymEnv)
-* class ReacherCommon()
-* class ReacherPlane(ReacherCommon, Base)
-	* No z-axis info (constrained in plane)
-	* calc_state  -> robot_key_points, joint_speeds
-	* calc_reward -> None
-* class ReacherPlaneNoTarget(ReacherCommon)
-	* No target included in render or state
-	* calc_state  -> robot_key_points, joint_speeds
-	* calc_reward -> None
-* class Reacher3D(ReacherCommon, Base)
+
+### class Base(MyGymEnv)
+Base class inherets from [MyGymEnv](environments/my_gym_env.py)
+
+### class ReacherPlaneNoTarget(Base) 
+No target included in render or state. A bare bone baseline environment which
+returns a state with key_robot_pos and joint_speeds
+
+| Action size | State size | State Information |
+|:-----------:|:--------:|:-------:|
+| 2						| 6			| elbow_XY, hand_XY, joint speed |
+
+
+### class ReacherCommon()
+
+### class ReacherPlane(ReacherCommon, Base)
+* No z-axis info (constrained in plane)
+* calc_state  -> robot_key_points, joint_speeds
+* calc_reward -> None
+
+| Action size | State size | State Information |
+|:-----------:|:--------:|:-------:|
+| 2						| 14			| elbow_XY, hand_XY, target1_XY, target2_XY, joint speed |
+
+
+### class Reacher3D(ReacherCommon, Base)
+
+| Action size | State size | State Information |
+|:-----------:|:--------:|:-------:|
+| 3						| 21			| elbow XYZ, hand_XYZ, joint speed |
 
 ## humanoid.py
 * class MyGymEnv(gym.Env)
