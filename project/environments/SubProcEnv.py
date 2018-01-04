@@ -4,8 +4,6 @@ from baselines.common.vec_env import VecEnv
 
 # Copy of baselines ´baselines/common/vec_env/subproc_vec_env.py´
 # With added rgb solution.
-
-
 def worker(remote, parent_remote, env_fn_wrapper):
     parent_remote.close()
     env = env_fn_wrapper.x()
@@ -95,6 +93,7 @@ class SubprocVecEnv(VecEnv):
     @property
     def num_envs(self):
         return len(self.remotes)
+
 
 # -------------
 def worker_RGB(remote, parent_remote, env_fn_wrapper):

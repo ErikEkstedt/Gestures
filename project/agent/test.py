@@ -2,8 +2,7 @@ from itertools import count
 import numpy as np
 import torch
 from tqdm import tqdm, trange
-
-from memory import StackedState, StackedObs
+from project.agent.memory import StackedState, StackedObs
 
 def Test_and_Save_Video(test_env, Model, state_dict, args, verbose=False):
     '''
