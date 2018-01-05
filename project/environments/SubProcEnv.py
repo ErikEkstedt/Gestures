@@ -136,9 +136,8 @@ class SubprocVecEnv_RGB(VecEnv):
             p.start()
         for remote in self.work_remotes:
             remote.close()
-
         self.remotes[0].send(('get_spaces', None))
-        self.action_space, self.state_space, self.observation_space= self.remotes[0].recv()
+        self.action_space, self.state_space, self.observation_space = self.remotes[0].recv()
 
     def step(self, actions):
         for remote, action in zip(self.remotes, actions):

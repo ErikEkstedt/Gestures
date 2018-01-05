@@ -485,7 +485,7 @@ if __name__ == '__main__':
     # print_state_noTarget(Env, args)
 
     Env = ReacherPlane
-    print_state(Env, args)
+    # print_state(Env, args)
 
     # Env = Reacher3D
     # print_state(Env, args)
@@ -495,4 +495,3 @@ if __name__ == '__main__':
         parallel_episodes(Env, args)
     else:
         single_episodes(Env, args, verbose=args.verbose)
-

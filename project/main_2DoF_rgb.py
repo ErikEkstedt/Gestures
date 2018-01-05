@@ -38,14 +38,11 @@ def main():
     args.RGB = True 	# be safe
     Env = ReacherPlane  # Using Env, only change this line between experiments
     env = make_parallel_environments(Env,args)
-
-    tmp_rgb = args.RGB # reset rgb flag
     test_env = Env(args)
-    args.RGB = tmp_rgb # reset rgb flag
 
-    ob_shape = env.observation_space.shape # RGB
     st_shape = env.state_space.shape[0]    # Joints state
     ac_shape = env.action_space.shape[0]   # Actions
+    ob_shape = env.observation_space.shape # RGB
 
     # === Memory ===
     CurrentState = StackedState(args.num_processes, args.num_stack, st_shape)

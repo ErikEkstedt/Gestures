@@ -62,8 +62,8 @@ def Test_and_Save_Video_RGB(test_env, Model, state_dict, args, verbose=False):
     :output           - List, containing all videoframes
     '''
     # == Model
-    st_shape = test_env.observation_space.shape
-    ob_shape = test_env.rgb_space.shape
+    ob_shape = test_env.observation_space.shape
+    st_shape = test_env.state_space.shape
     ac_shape = test_env.action_space.shape[0]
 
     CurrentObs = StackedObs(1, args.num_stack, ob_shape)

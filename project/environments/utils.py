@@ -24,9 +24,20 @@ def rgb_tensor_render(obs, title='tensor_obs'):
 def print_state(Env, args):
     ''' Runs episodes and prints (labeled) states every step '''
     env = Env(args)
+    print('action space:', env.action_space.shape)
+    print('state space:', env.state_space.shape)
+    if args.RGB:
+        print('Obs space:', env.observation_space.shape)
     s = env.reset()
+    print()
+    print('-'*50)
+    print()
     while True:
-        s, r, d, _ = env.step(env.action_space.sample())
+        if args.RGB:
+            s, o, r, d, _ = env.step(env.action_space.sample())
+            print('\nObs size', o.shape)
+        else:
+            s, r, d, _ = env.step(env.action_space.sample())
         print('\nState size', s.shape)
         print('\ntarget position:')
         print(env.target_position)
@@ -106,7 +117,10 @@ def parallel_episodes(Env, args, verbose=False):
     from itertools import count
     env = make_parallel_environments(Env, args)
     R = 0
+    print('action shape: ', env.action_space.shape)
+    print('state shape: ', env.state_space.shape)
     if args.RGB:
+        print('obs shape: ', env.observation_space.shape)
         s, obs = env.reset()
         if verbose:
             print('state shape:', s.shape)
