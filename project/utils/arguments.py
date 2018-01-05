@@ -15,6 +15,7 @@ def get_args():
     parser.add_argument('--gravity', type=float, default=9.81)
     parser.add_argument('--power', type=float, default=0.5)
     parser.add_argument('--RGB', action='store_true', default=False)
+    parser.add_argument('--COMBI', action='store_true', default=False)
     parser.add_argument('--video', action='store_true', default=False)
     parser.add_argument('--render', action='store_true', default=False)
 

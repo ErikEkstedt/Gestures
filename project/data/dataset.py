@@ -2,6 +2,7 @@ import torch
 import numpy as np
 from torch.utils.data import Dataset, DataLoader
 
+
 class ToTensorSeq(object):
     def __call__(self, sample):
         rgb, state, action, rgb_target, state_target = sample.values()
@@ -112,7 +113,6 @@ class ReacherPlaneDataset(Dataset):
             obs, state = self.transform(obs, state)
         return obs, state
 
-
 def load_reacherplane_data(path, batch_size=256, num_workers=4, shuffle=True):
     '''Dataset for Understanding model ReacherPlane
     (joints_speeds are omitted)
@@ -148,8 +148,8 @@ def load_dataset(path, batch_size=256, num_workers=4, shuffle=True, transform=To
 if __name__ == '__main__':
     from tqdm import tqdm_gui, tqdm
     from project.environments.utils import rgb_tensor_render
-    path = '/home/erik/DATA/project/ReacherPlaneNoTarget/obsdata_rgb40-40-3_n5000_0.pt'
-    dset, dloader = load_dataset(path)
+    path = '/home/erik/DATA/Project/ReacherPlaneNoTarget/obsdata_rgb40-40-3_n100000_0.pt'
+    dset, dloader = load_reacherplane_data(path)
     for obs, state in dloader:
         print(obs.shape)
         print(state.shape)

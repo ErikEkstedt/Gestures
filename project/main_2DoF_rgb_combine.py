@@ -48,10 +48,12 @@ def main():
     ac_shape = env.action_space.shape[0]   # Actions
 
     # === Memory ===
-    CurrentState = StackedState(args.num_processes, args.num_stack, st_shape)
-    result     = Results(max_n=200, max_u=10)
-    CurrentObs = StackedObs(args.num_processes, args.num_stack, ob_shape)
-    rollouts   = RolloutStorageObs(args.num_steps,
+    result             = Results(200, 10)
+    CurrentState       = StackedState(args.num_processes, args.num_stack, st_shape)
+    CurrentStateTarget = StackedState(args.num_processes, args.num_stack, st_shape)
+    CurrentObs         = StackedObs(args.num_processes, args.num_stack, ob_shape)
+    CurrentObsTarget   = StackedObs(args.num_processes, args.num_stack, ob_shape)
+    rollouts           = RolloutStorageObs(args.num_steps,
                                    args.num_processes,
                                    CurrentState.size()[1],
                                    CurrentObs.size()[1:],
@@ -66,23 +68,33 @@ def main():
                    kernel_sizes=[5, 5, 5],
                    strides=[2, 2, 2],
                    args=args)
+
     pi.train()
     optimizer_pi = optim.Adam(pi.parameters(), lr=args.pi_lr)
     print('\nPOLICY:\n', pi)
 
-
     # ==== Training ====
     print('Learning {}(ac: {}, ob: {})'.format( args.env_id, ac_shape, ob_shape))
     print('\nTraining for %d Updates' % args.num_updates)
-    s, obs = env.reset()
+    s, s_target, obs, obs_target = env.reset()
     CurrentState.update(s)
+    CurrentStateTarget.update(s_target)
     CurrentObs.update(obs)
-    if False:
+    CurrentObsTarget.update(obs_target)
+    if True:
         print('After env.reset | s.shape', s.shape)
         print('After env.reset | obs.shape', obs.shape)
         print('After env.reset | obs.mean', obs.mean())
+
         print('CurrentObs().size()', CurrentObs().size())
         print('CurrentObs().mean()', CurrentObs().mean())
+        print('CurrentObsTarget().size()', CurrentObsTarget().size())
+        print('CurrentObsTarget().mean()', CurrentObsTarget().mean())
+
+        print('CurrentState().size()', CurrentState().size())
+        print('CurrentState().mean()', CurrentState().mean())
+        print('CurrentStateTarget().size()', CurrentStateTarget().size())
+        print('CurrentStateTarget().mean()', CurrentStateTarget().mean())
 
     rollouts.states[0].copy_(CurrentState())
     rollouts.observations[0].copy_(CurrentObs())

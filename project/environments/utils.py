@@ -3,12 +3,17 @@ import torch
 import numpy as np
 import time
 
+
+# ======================== #
+# Render                   #
+# ======================== #
 def rgb_render(obs, title='obs'):
     ''' cv2 as argument such that import is not done redundantly'''
     cv2.imshow(title, cv2.cvtColor(obs, cv2.COLOR_RGB2BGR))
     if cv2.waitKey(20) & 0xFF == ord('q'):
         print('Stop')
         return
+
 
 def rgb_tensor_render(obs, title='tensor_obs'):
     assert type(obs) is torch.Tensor
@@ -17,10 +22,10 @@ def rgb_tensor_render(obs, title='tensor_obs'):
     im = obs.numpy().astype('uint8')
     rgb_render(im, title)
 
-
 # ======================== #
 # Run Episodes             #
 # ======================== #
+
 def print_state(Env, args):
     ''' Runs episodes and prints (labeled) states every step '''
     env = Env(args)
@@ -45,7 +50,25 @@ def print_state(Env, args):
 def print_state_noTarget(Env, args):
     ''' Runs episodes and prints (labeled) states every step '''
     env = Env(args)
-    s = env.reset()
+    s, s_target, o, o_target = env.reset()
+    while True:
+        s, r, d, _ = env.step(env.action_space.sample())
+        print('\nState size', s.shape)
+        print('\nrobot_key_points:')
+        print(env.robot_key_points)
+        print('\njoint_speeds:')
+        print(env.joint_speeds)
+        input('Press Enter to continue')
+        if d:
+            s = env.reset()
+
+def print_state_Combi(Env, args):
+    ''' Runs episodes and prints (labeled) states every step '''
+    from project.data.dataset import load_reacherplane_data
+    path = '/home/erik/DATA/Project/ReacherPlaneNoTarget/obsdata_rgb40-40-3_n100000_0.pt'
+    dset, dloader = load_reacherplane_data(path)
+    env = Env(args, dset)
+    s, s_target, o, o_target = env.reset()
     while True:
         s, r, d, _ = env.step(env.action_space.sample())
         print('\nState size', s.shape)
@@ -62,7 +85,6 @@ def single_episodes(Env, args, verbose=True):
     important args:
         args.RGB = True/False    - extracts rgb from episodes
         args.render = True/False - human friendly rendering
-
     :Env                         - Environment to run
     :args                        - argparse object
     :verbose                     - print out information (rewards, shapes)
@@ -76,6 +98,22 @@ def single_episodes(Env, args, verbose=True):
             print(obs.shape)
             print(obs.dtype)
             input('Press Enter to start')
+        while True:
+            s, obs, r, d, _ = env.step(env.action_space.sample())
+            if args.render:
+                rgb_render(obs)
+                time.sleep(0.10)
+            if verbose: print('Reward: ', r)
+            if d:
+                s=env.reset()
+    elif args.COMBI:
+        s, s_target, o, o_target = env.reset()
+        if verbose:
+            print('state shape:', s.shape)
+            print('state target shape:', s_target.shape)
+            print('obs shape:', o.shape)
+            print('obs target shape:', o_target.shape)
+            input('Enter to start')
         while True:
             s, obs, r, d, _ = env.step(env.action_space.sample())
             if args.render:
@@ -104,9 +142,9 @@ def single_episodes(Env, args, verbose=True):
 
 def parallel_episodes(Env, args, verbose=False):
     from itertools import count
-    env = make_parallel_environments(Env, args)
     R = 0
     if args.RGB:
+        env = make_parallel_environments(Env, args)
         s, obs = env.reset()
         if verbose:
             print('state shape:', s.shape)
@@ -122,7 +160,27 @@ def parallel_episodes(Env, args, verbose=False):
             if sum(d) > 0:
                 print('Step: {}, Reward: {}, mean: {}'.format(i, R, R.mean(axis=0)))
                 R = 0
+    elif args.COMBI:
+        env = make_parallel_environments_combine(Env, args)
+        s, s_target, o, o_target = env.reset()
+        if verbose:
+            print('state shape:', s.shape)
+            print('state target shape:', s_target.shape)
+            print('obs shape:', o.shape)
+            print('obs target shape:', o_target.shape)
+            input('Enter to start')
+        for i in count(1):
+            action = np.random.rand(*(args.num_processes, *env.action_space.shape))
+            s, obs, r, d, _ = env.step(action)
+            if args.render:
+                for i in range(args.num_processes):
+                    rgb_render(obs[i], str(i))
+            R += r
+            if sum(d) > 0:
+                print('Step: {}, Reward: {}, mean: {}'.format(i, R, R.mean(axis=0)))
+                R = 0
     else:
+        env = make_parallel_environments(Env, args)
         s = env.reset()
         if verbose:
             print('state shape:', s.shape)
@@ -139,25 +197,33 @@ def make_parallel_environments(Env, args):
     :param Env         environment
     :param args        arguments (argparse object)
     '''
-    if args.RGB:
-        from project.environments.SubProcEnv import SubprocVecEnv_RGB as SubprocVecEnv
-    else:
-        from project.environments.SubProcEnv import SubprocVecEnv
     def multiple_envs(Env, args, rank):
         def _thunk():
             env = Env(args)
             env.seed(args.seed+rank*1000)
             return env
         return _thunk
+
+    if args.RGB:
+        from project.environments.SubProcEnv import SubprocVecEnv_RGB as SubprocVecEnv
+    else:
+        from project.environments.SubProcEnv import SubprocVecEnv
     return SubprocVecEnv([multiple_envs(Env, args, i) for i in range(args.num_processes)])
 
-
+def make_parallel_environments_combine(Env, args, Targets):
+    from project.environments.SubProcEnv import SubprocVecEnv_Combine as SubprocVecEnv
+    def multiple_envs(Env, args, Targets, rank):
+        def _thunk():
+            env = Env(args, Targets)
+            env.seed(args.seed+rank*1000)
+            return env
+        return _thunk
+    return SubprocVecEnv([multiple_envs(Env, args, i) for i in range(args.num_processes)])
 
 # ======================== #
 # Example Reward functions #
 # Only States
 # ======================== #
-
 def calc_reward(self, a):
     ''' Reward function '''
     # Distance Reward
