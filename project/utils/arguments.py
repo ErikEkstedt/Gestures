@@ -4,7 +4,7 @@ import torch
 def get_args():
     parser = argparse.ArgumentParser(description='PPOAgent')
     parser.add_argument('--num-processes', type=int, default=4)
-    parser.add_argument('--dpoints', type=int, default=1000000)
+    parser.add_argument('--dpoints', type=int, default=500000)
 
     # === Environment ===
     parser.add_argument('--env-id', default='CustomReacher')
@@ -43,13 +43,13 @@ def get_args():
     parser.add_argument('--max-grad-norm', type=float, default=5, help='ppo clip parameter (default: 5)')
 
     # === PPO Training ===
-    parser.add_argument('--num-frames', type=int, default=int(10e6), help='number of frames to train (default: 10e6)')
+    parser.add_argument('--num-frames', type=int, default=int(3e6), help='number of frames to train (default: 3e6)')
     parser.add_argument('--num-steps', type=int, default=2048, help='number of exploration steps in ppo (default: ?)')
     parser.add_argument('--batch-size', type=int, default=256, help='ppo batch size (default: 256)')
-    parser.add_argument('--max-episode-length', type=int, default=100000, help='maximum steps in one episode (default: 10000)')
+    parser.add_argument('--max-episode-length', type=int, default=1000, help='maximum steps in one episode (default: 1000)')
     parser.add_argument('--ppo-epoch', type=int, default=8, help='number of ppo epochs, K in paper (default: 8)')
     parser.add_argument('--num-stack', type=int, default=1, help='number of frames to stack (default: 1)')
-    parser.add_argument('--hidden', type=int, default=256, help='Number of hidden neurons in policy (default: 128)')
+    parser.add_argument('--hidden', type=int, default=128, help='Number of hidden neurons in policy (default: 128)')
     parser.add_argument('--std-start', type=float, default=-0.6, help='std-start (Hyperparams for Roboschool in paper)')
     parser.add_argument('--std-stop', type=float, default=-1.7, help='std stop (Hyperparams for Roboschool in paper)')
     parser.add_argument('--seed', type=int, default=10, help='random seed (default: 10)')
@@ -65,7 +65,6 @@ def get_args():
     parser.add_argument('--log-interval', type=int, default=1, help='log interval in console, one log per n updates (default: 1)')
     parser.add_argument('--log-dir', default='/tmp/', help='directory to save agent logs (default: /tmp/)')
     parser.add_argument('--data-dir', default='/home/erik/DATA/project/', help='directory to save generated data (default: /DATA/project/)')
-
 
     # === Boolean ===
     parser.add_argument('--no-cuda', action='store_true', default=False, help='disables CUDA training')

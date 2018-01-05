@@ -27,11 +27,19 @@ def weights_init_mlp(m):
 
 
 class Policy(object):
-    """ evaluate_actions, sample, act, std, get_std
+    """ Super Class for Policies
+
+    Functions:
+
+    : evaluate_actions : In(s_t, actions), Out(value, a_logprobs, dist_entropy)
+    : sample           : In(s_t), Out(value, a, a_logprobs, a_logstd)
+    : act              : In(s_t), Out(value, action)
+    : std              : In(x), Out(logstd)
+    : get_std          : In( ), Out(std)
 
     Superclass for the different policies (CNN/MLP) containing common funcs.
     """
-    def evaluate_actions(self, x, actions):
+    def evaluate_actions(self, s_t, actions):
         v, action_mean, action_logstd = self(x)
         action_std = action_logstd.exp()
 

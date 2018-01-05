@@ -1,4 +1,5 @@
 import sys
+import os
 import torch
 from tqdm import tqdm
 
@@ -20,9 +21,27 @@ def make_video(vid, filename='/tmp/video'):
     ani.save(name)
     print('Saved video to:', name)
 
+def convert_dir_video(dirpath):
+    assert os.path.exists(dirpath)
+    print('Converting .pt files to mp4...')
+    for root, dirs, files in os.walk(dirpath):
+        print('root', root)
+        print('dirs', dirs)
+        print('files', files)
+        for f in files:
+            if f.endswith('.pt'):
+                fpath = os.path.join(dirpath, f)
+                vid = torch.load(fpath)
+                name = fpath[:-3]  # omit extension
+                make_video(vid, name)
+
 
 if __name__ == '__main__':
-    filename = sys.argv[1]
-    video_name = sys.argv[2]
-    vid = torch.load(filename)
-    make_video(vid, video_name)
+    if len(sys.argv) > 2:
+        filename = sys.argv[1]
+        video_name = sys.argv[2]
+        vid = torch.load(filename)
+        make_video(vid, video_name)
+    else:
+        convert_dir_video(sys.argv[1])
+

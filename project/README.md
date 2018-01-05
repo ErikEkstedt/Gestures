@@ -1,27 +1,30 @@
 # Todo
-1. [x] Memory, include pixel observations.
-	* [x] StackedState
-	* [x] RolloutStorage
 
 2. [x] Make RGB training results. Same rewards but just pixel info.
 	* [x] CNN model
-	* [ ] Make 2dof plane viewd from above take actions from pixels alone
+	* [x] Make 2dof plane viewd from above take actions from pixels alone
 	* [ ] Combine state and pixels
 
 3. [ ] Understanding Module
 	* [x] Create Data - Supervised Learning
 		* [x] Dataset
-		* [ ] only positions
+		* [x] only positions
 			* Only joint_speed codes dynamic behavior and they are last.
 			* ReacherPlane: s[:-2]
 			* Reacher3D:		s[:-3]
-		* [ ] velocities ?
+		* [x] velocities ?
 			* [ ] stack frames
-			
+
+
+Combined model
+RGB without target. Use as target. combined model.
+Reward in state and rgb.
+
+
 	* [ ] Train model
 		* [ ] Vanilla CNN
 		* [ ] CLSTM (Don't start before Vanilla done)
-
+__________
 
 ## ML:
 * [ ] Annealing learning rate

@@ -49,6 +49,7 @@ def train_understand(model, Loss, opt, dloader, vloader, args, vis=None):
                                                           loss.data[0],
                                                           vloss.data[0]))
 
+
 def test_understand(model, tloader, args):
     model.eval()
     for ep in range(args.num_test):

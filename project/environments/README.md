@@ -39,7 +39,7 @@ Base class inherets from [MyGymEnv](environments/my_gym_env.py)
 
 ### class ReacherPlaneNoTarget(Base) 
 No target included in render or state. A bare bone baseline environment which
-returns a state with key_robot_pos and joint_speeds
+returns a state with key_robot_pos and joint_speeds.
 
 | Action size | State size | State Information |
 |:-----------:|:--------:|:-------:|
@@ -96,7 +96,6 @@ functions such as:
 
 
 # xml_files
-* reacher
-* humanoid
+[reacher](environments.xml_files.reacher)
 
-
+[humanoid](environments.xml_files.humanoid)

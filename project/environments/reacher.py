@@ -41,7 +41,7 @@ class Base(MyGymEnv):
             self.frame_skip = 1
 
             # Robot
-            self.power = 0.8
+            self.power = 0.5
         else:
             MyGymEnv.__init__(self, action_dim=ac,
                               obs_dim=obs,
@@ -66,6 +66,7 @@ class Base(MyGymEnv):
 
             # Robot
             self.power                = args.power # 0.5
+
     def print_relevant_information(self):
         print('Robot name: {}, Target name={}'.format(self.robot_name, self.target_name))
         print('XML fileme: {}, Path={}'.format(self.model_xml, self.XML_PATH))
@@ -261,6 +262,7 @@ class ReacherCommon():
         rendered_rgb = np.fromstring(rgb, dtype=np.uint8).reshape( (self.VIDEO_H,self.VIDEO_W,3) )
         return rendered_rgb
 
+
 class ReacherPlane(ReacherCommon, Base):
     def __init__(self, args=None):
         Base.__init__(self,XML_PATH=PATH_TO_CUSTOM_XML,
@@ -272,21 +274,21 @@ class ReacherPlane(ReacherCommon, Base):
         print('I am', self.model_xml)
 
     def calc_to_target_vec(self):
-        ''' gets hand position, target position and the vector in bewteen'''
+        ''' gets hand position, target position and the difference vector'''
         # Elbow target
-        target_position1 = np.array(self.target_parts['target0'].pose().xyz())
-        elbow_position = np.array(self.parts['robot_elbow'].pose().xyz())
+        target_position1 = np.array(self.target_parts['target0'].pose().xyz()[:2])
+        elbow_position = np.array(self.parts['robot_elbow'].pose().xyz()[:2])
         self.totarget1 = elbow_position - target_position1
 
         # Hand target
-        target_position2 = np.array(self.target_parts['target1'].pose().xyz())
-        hand_position = np.array(self.parts['robot_hand'].pose().xyz())
+        target_position2 = np.array(self.target_parts['target1'].pose().xyz()[:2])
+        hand_position = np.array(self.parts['robot_hand'].pose().xyz()[:2])
         self.totarget2 = hand_position - target_position2
 
         # Plane does not need Z-values
-        self.target_position = np.concatenate((target_position1[:2], target_position2[:2]))
-        self.robot_key_points = np.concatenate((elbow_position[:2], hand_position[:2]))
-        self.to_target_vec = np.concatenate((self.totarget1[:2], self.totarget2[:2]),)
+        self.target_position = np.concatenate((target_position1, target_position2))
+        self.robot_key_points = np.concatenate((elbow_position, hand_position))
+        self.to_target_vec = np.concatenate((self.totarget1, self.totarget2),)
 
     def calc_state(self):
         j = np.array([j.current_relative_position()
@@ -294,7 +296,7 @@ class ReacherPlane(ReacherCommon, Base):
                      dtype=np.float32).flatten()
         self.joints_at_limit = np.count_nonzero(np.abs(j[0::2]) > 0.99)
         self.joint_speeds = j[1::2]
-        self.calc_to_target_vec()  # calcs target_position, important_pos, to_target_vec
+        self.calc_to_target_vec()  # calcs target_position, robot_key_points, to_target_vec
         return np.concatenate((self.target_position,
                                self.robot_key_points,
                                self.to_target_vec,
@@ -332,11 +334,11 @@ class ReacherPlane(ReacherCommon, Base):
         return [x, y, z, x1, y1, z1]
 
     def calc_reward(self, a):
-        ''' Hierarchical Difference potential as reward '''
+        ''' Difference potential as reward '''
         potential_old = self.potential
         self.potential = self.calc_potential()
-        r1 = float(self.potential[0] - potential_old[0]) # elbow
-        r2 = float(self.potential[1] - potential_old[1]) # hand
+        r1 = self.reward_constant1 * float(self.potential[0] - potential_old[0]) # elbow
+        r2 = self.reward_constant2 * float(self.potential[1] - potential_old[1]) # hand
         return r1 + r2
 
     def camera_adjust(self):
@@ -401,18 +403,11 @@ class Reacher3D(ReacherCommon, Base):
         self.camera.move_and_look_at( 0.5, 0, 1, 0, 0, 0.4)
 
 
-def ReacherPlaneStateMask(s):
-    target_pos = s[:2] + s[3:5]
-    robot_key_points = s[6:8] + s[9:11]
-    to_target_vec = s[12:15] + s[16:18]
-    return target_pos, robot_key_points, to_target_vec
-
 
 if __name__ == '__main__':
     from project.utils.arguments import get_args
     from utils import single_episodes, parallel_episodes
     from utils import print_state, print_state_noTarget
-
     args = get_args()
 
     # Env = ReacherPlaneNoTarget

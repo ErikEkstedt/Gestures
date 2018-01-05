@@ -16,6 +16,7 @@ from agent.train import train, exploration
 from agent.test import Test_and_Save_Video
 from environments.reacher import ReacherPlane
 from environments.utils import make_parallel_environments
+from environments.data import make_video
 
 
 def main():
@@ -26,7 +27,6 @@ def main():
         vis = VisLogger(args)
 
     # === Environment ===
-
     Env = ReacherPlane  # using Env as variable so I only need to change this line between experiments
     env = make_parallel_environments(Env,args)
 
@@ -83,16 +83,7 @@ def main():
 
         #  ==== TEST ======
         nt = 5
-        if not args.no_test and j % args.test_interval < nt:
-            ''' `j % args.test_interval < 5` is there because:
-            If tests are not performed during some interval bad luck might make
-            it that although the model becomes better the test occured
-            during a bad policy update. The policy adjust for this in the next
-            update but we might miss good policies if we test too seldom.
-            Thus we test in an interval of 5 every args.test_interval.
-            (default: args.num_test = 50)
-                -> test updates [50,54], [100,104], ...
-            '''
+        if not args.no_test and j % args.test_interval < nt and j>nt:
             if j % args.test_interval == 0:
                 print('-'*45)
                 print('Testing {} episodes'.format(args.num_test))
@@ -132,6 +123,8 @@ def main():
             if args.cuda:
                 pi.cuda()
 
+    =
+    make_video()
 
 if __name__ == '__main__':
     main()
