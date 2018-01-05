@@ -19,7 +19,6 @@ def total_params(p):
 
 class Policy(object):
     """ Super Class for Policies
-
     Functions:
 
     : evaluate_actions : In(s_t, actions), Out(value, a_logprobs, dist_entropy)
@@ -177,8 +176,6 @@ class CombinePolicy(nn.Module, Policy):
 
 def test_combinepolicy(args):
     ''' Test for CombinePolicy '''
-
-    # shapes
     s_shape        = 22
     o_shape        = (3, 40, 40)
     o_target_shape = o_shape

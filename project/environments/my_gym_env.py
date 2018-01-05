@@ -10,9 +10,15 @@ class MyGymEnv(gym.Env):
         }
     VIDEO_W = 300
     VIDEO_H = 200
-    def __init__(self, action_dim=2, obs_dim=7, RGB=False, W=600, H=400):
+    def __init__(self,
+                 action_dim=2,
+                 obs_dim=7,
+                 RGB=False,
+                 COMBI=False,
+                 W=600, H=400):
         self.scene = None
         self.RGB = RGB
+        self.COMBI = COMBI
 
         high = np.ones([action_dim])
         self.action_space = gym.spaces.Box(-high, high)
@@ -32,7 +38,7 @@ class MyGymEnv(gym.Env):
         self.np_random, seed = gym.utils.seeding.np_random(seed)
         return [seed]
 
-    def _reset(self):
+    def _reset(self, Targets=None):
         if self.scene is None:
             ''' First reset '''
             self.scene = self.initialize_scene()
@@ -56,6 +62,9 @@ class MyGymEnv(gym.Env):
         if self.RGB:
             rgb = self.get_rgb()
             return (s, rgb)
+        elif self.COMBI:
+            o = self.get_rgb()
+            return (s, self.target_key_points, o, self.target_obs)
         else:
             return s
 

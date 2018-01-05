@@ -488,11 +488,19 @@ if __name__ == '__main__':
     # Env = ReacherPlaneNoTarget
     # print_state_noTarget(Env, args)
 
+<<<<<<< HEAD
+    Env = ReacherPlane
+    # print_state(Env, args)
+||||||| merged common ancestors
+    Env = ReacherPlane
+    print_state(Env, args)
+=======
     if args.COMBI:
         Env = ReacherPlaneCombi
         print_state_Combi(Env, args)
     # Env = ReacherPlane
     # print_state(Env, args)
+>>>>>>> d4d7dc7c40946cfab32340f99c68df6e883eeb40
 
     # Env = Reacher3D
     # print_state(Env, args)
@@ -502,4 +510,3 @@ if __name__ == '__main__':
         parallel_episodes(Env, args)
     else:
         single_episodes(Env, args, verbose=args.verbose)
-
