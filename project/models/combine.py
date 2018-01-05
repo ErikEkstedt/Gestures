@@ -1,4 +1,21 @@
+import copy
+import math
 import torch
+import torch.nn as nn
+import torch.nn.functional as F
+import torch.optim as optim
+from torch.autograd import Variable
+
+from project.dynamics_model.utils import Conv2d_out_shape, ConvTranspose2d_out_shape
+from project.dynamics_model.CLSTMCell import CLSTMCell
+
+
+def total_params(p):
+    n = 1
+    for i in p:
+        n *= int(i)
+    return n
+
 
 class Policy(object):
     """ Super Class for Policies
@@ -66,9 +83,9 @@ class Policy(object):
         return math.exp(self.log_std_value)
 
 
-class MLPPolicy(nn.Module, Policy):
+class MLP(nn.Module):
     def __init__(self, input_size, action_shape, args):
-        super(MLPPolicy, self).__init__()
+        super(MLP, self).__init__()
         self.fc1 = nn.Linear(input_size, args.hidden)
         self.fc2 = nn.Linear(args.hidden, args.hidden)
 
@@ -101,7 +118,7 @@ class PixelEmbedding(nn.Module):
                  kernel_sizes=[5, 5, 5],
                  strides=[2, 2, 2],
                  args=None):
-        super(VanillaCNN, self).__init__()
+        super(PixelEmbedding, self).__init__()
         self.input_shape    = input_shape
         self.state_shape    = state_shape
         self.feature_maps   = feature_maps
@@ -143,12 +160,42 @@ class CombinePolicy(nn.Module, Policy):
                                   feature_maps=[16, 32, 64],
                                   kernel_sizes=[5, 5, 5],
                                   strides=[2, 2, 2],
-                                  args=None):
+                                  args=None)
 
-    def forward(self, o, s, o_target, s_target):
+        self.mlp = MLP(self, input_size, action_shape, args)
+
+    def forward(self, o, o_target, s, s_target):
         o_cat = torch.cat((o, o_target), dim=1)
         s_cat = torch.cat((s, s_target), dim=1)
 
         x = self.cnn(o_cat)
         x = torch.cat((x, s_cat), dim=1)
+        return self.mlp(x)
 
+
+def test_combinepolicy(args):
+    ''' Test for CombinePolicy '''
+
+    # shapes
+    s_shape        = 22
+    o_shape        = (3, 40, 40)
+    o_target_shape = o_shape
+    s_target_shape = 4
+    a_shape        = 2
+
+    # Tensors
+    s  = torch.rand(s_shape)
+    s_ = torch.rand(s_target_shape)
+    o  = torch.rand(o_shape)
+    o_ = torch.rand(o_target_shape)
+
+    pi = CombinePolicy(o_shape, o_target_shape, s_shape, s_target_shape, a_shape, args)
+
+    out = pi(o, o_, s, s_)
+    print(out)
+
+
+if __name__ == '__main__':
+    from project.utils.arguments import get_args
+    args = get_args()
+    test_combinepolicy(args)
