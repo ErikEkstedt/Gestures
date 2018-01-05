@@ -62,12 +62,9 @@ def print_state_noTarget(Env, args):
         if d:
             s = env.reset()
 
-def print_state_Combi(Env, args):
+def print_state_Combi(Env, args, Targets):
     ''' Runs episodes and prints (labeled) states every step '''
-    from project.data.dataset import load_reacherplane_data
-    path = '/home/erik/DATA/Project/ReacherPlaneNoTarget/obsdata_rgb40-40-3_n100000_0.pt'
-    dset, dloader = load_reacherplane_data(path)
-    env = Env(args, dset)
+    env = Env(args, Targets)
     s, s_target, o, o_target = env.reset()
     while True:
         s, r, d, _ = env.step(env.action_space.sample())
@@ -76,11 +73,13 @@ def print_state_Combi(Env, args):
         print(env.robot_key_points)
         print('\njoint_speeds:')
         print(env.joint_speeds)
-        input('Press Enter to continue')
+        ans = input("Done? Press 'y' >")
+        if ans == "y":
+            return
         if d:
             s = env.reset()
 
-def single_episodes(Env, args, verbose=True):
+def single_episodes(Env, args, Targets=None, verbose=True):
     ''' Runs episode in one single process
     important args:
         args.RGB = True/False    - extracts rgb from episodes
@@ -89,9 +88,8 @@ def single_episodes(Env, args, verbose=True):
     :args                        - argparse object
     :verbose                     - print out information (rewards, shapes)
     '''
-    env = Env(args)
-    if verbose: print('RGB: {}\tGravity: {}\tMAX: {}\t'.format(env.RGB, env.gravity, env.MAX_TIME))
-    if args.RGB:
+    if not args.COMBI and args.RGB:
+        env = Env(args)
         s, obs = env.reset()
         if verbose:
             print(s.shape)
@@ -107,6 +105,8 @@ def single_episodes(Env, args, verbose=True):
             if d:
                 s=env.reset()
     elif args.COMBI:
+        args.RGB = True
+        env = Env(args, Targets)
         s, s_target, o, o_target = env.reset()
         if verbose:
             print('state shape:', s.shape)
@@ -123,6 +123,7 @@ def single_episodes(Env, args, verbose=True):
             if d:
                 s=env.reset()
     else:
+        env = Env(args)
         s = env.reset()
         if verbose:
             print("jdict", env.jdict)
@@ -140,7 +141,7 @@ def single_episodes(Env, args, verbose=True):
                 s=env.reset()
                 if verbose: print('Target pos: ',env.target_position)
 
-def parallel_episodes(Env, args, verbose=False):
+def parallel_episodes(Env, args, Targets=None, verbose=False):
     from itertools import count
     R = 0
     if args.RGB:
@@ -161,7 +162,7 @@ def parallel_episodes(Env, args, verbose=False):
                 print('Step: {}, Reward: {}, mean: {}'.format(i, R, R.mean(axis=0)))
                 R = 0
     elif args.COMBI:
-        env = make_parallel_environments_combine(Env, args)
+        env = make_parallel_environments_combine(Env, args, Targets)
         s, s_target, o, o_target = env.reset()
         if verbose:
             print('state shape:', s.shape)
@@ -215,10 +216,10 @@ def make_parallel_environments_combine(Env, args, Targets):
     def multiple_envs(Env, args, Targets, rank):
         def _thunk():
             env = Env(args, Targets)
-            env.seed(args.seed+rank*1000)
+            env.seed(args.seed+rank*100)
             return env
         return _thunk
-    return SubprocVecEnv([multiple_envs(Env, args, i) for i in range(args.num_processes)])
+    return SubprocVecEnv([multiple_envs(Env, args, Targets, i) for i in range(args.num_processes)])
 
 # ======================== #
 # Example Reward functions #

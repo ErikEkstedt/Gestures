@@ -476,30 +476,38 @@ class Reacher3D(ReacherCommon, Base):
 
     def camera_adjust(self):
         self.camera.move_and_look_at( 0.5, 0, 1, 0, 0, 0.4)
+# ---------------------------------------------------------
 
 
 if __name__ == '__main__':
     from project.utils.arguments import get_args
+    from project.data.dataset import load_reacherplane_data
     from utils import single_episodes, parallel_episodes
     from utils import print_state, print_state_noTarget
     from utils import print_state_Combi
     args = get_args()
-
     # Env = ReacherPlaneNoTarget
     # print_state_noTarget(Env, args)
 
     if args.COMBI:
+        path = '/home/erik/DATA/project/ReacherPlaneNoTarget/obsdata_rgb40-40-3_n100000_0.pt'
+        Targets, dloader = load_reacherplane_data(path)
         Env = ReacherPlaneCombi
-        print_state_Combi(Env, args)
-    # Env = ReacherPlane
-    # print_state(Env, args)
+        # print_state_Combi(Env, args, path)
+        if args.num_processes > 1:
+            parallel_episodes(Env, args, Targets)
+        else:
+            single_episodes(Env, args, Targets, verbose=args.verbose)
 
-    # Env = Reacher3D
-    # print_state(Env, args)
-
-    input('Press Enter to continue')
-    if args.num_processes > 1:
-        parallel_episodes(Env, args)
     else:
-        single_episodes(Env, args, verbose=args.verbose)
+        Env = ReacherPlane
+        print_state(Env, args)
+        # Env = Reacher3D
+        # print_state(Env, args)
+
+        input('Press Enter to continue')
+        if args.num_processes > 1:
+            parallel_episodes(Env, args)
+        else:
+            single_episodes(Env, args, verbose=args.verbose)
 

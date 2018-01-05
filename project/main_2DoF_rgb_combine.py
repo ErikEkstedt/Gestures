@@ -15,7 +15,7 @@ from utils.utils import make_log_dirs
 from utils.arguments import get_args
 from utils.vislogger import VisLogger
 
-from models.coordination import MLPPolicy, CNNPolicy
+from models.combine import CombinePolicy
 
 from agent.test import Test_and_Save_Video_RGB as Test_and_Save_Video
 from agent.train import explorationRGB as exploration
@@ -23,9 +23,19 @@ from agent.train import trainRGB as train
 from agent.memory import RolloutStorageObs, Results
 from agent.memory import StackedObs, StackedState
 
-from environments.utils import make_parallel_environments
-from environments.reacher import ReacherPlane
+from data.dataset import load_reacherplane_data
 
+from environments.utils import make_parallel_environments_combine
+from environments.reacher import ReacherPlaneCombi
+
+'''
+TODO:
+
+Need to fix check of dimensions in test/train targets
+
+exploration
+train
+'''
 
 def main():
     args = get_args()
@@ -34,13 +44,19 @@ def main():
     if not args.no_vis:
         vis = VisLogger(args)
 
+    # === Targets ===
+    train_path = '/home/erik/DATA/project/ReacherPlaneNoTarget/obsdata_rgb40-40-3_n100000_0.pt'
+    Targets, _ = load_reacherplane_data(train_path)
+
+    test_path = '/home/erik/DATA/project/ReacherPlaneNoTarget/obsdata_rgb40-40-3_n100000_1.pt'
+    TargetsTest, _ = load_reacherplane_data(test_path)
     # === Environment ===
     args.RGB = True
-    Env = ReacherPlane  # using Env as variable so I only need to change this line between experiments
-    env = make_parallel_environments(Env,args)
+    Env = ReacherPlaneCombi  # using Env as variable so I only need to change this line between experiments
+    env = make_parallel_environments_combine(Env,args, Targets)
 
     tmp_rgb = args.RGB # reset rgb flag
-    test_env = Env(args)
+    test_env = Env(args, TargetsTest)
     args.RGB = tmp_rgb # reset rgb flag
 
     ob_shape = env.observation_space.shape # RGB
@@ -51,8 +67,10 @@ def main():
     result             = Results(200, 10)
     CurrentState       = StackedState(args.num_processes, args.num_stack, st_shape)
     CurrentStateTarget = StackedState(args.num_processes, args.num_stack, st_shape)
+
     CurrentObs         = StackedObs(args.num_processes, args.num_stack, ob_shape)
     CurrentObsTarget   = StackedObs(args.num_processes, args.num_stack, ob_shape)
+
     rollouts           = RolloutStorageObs(args.num_steps,
                                    args.num_processes,
                                    CurrentState.size()[1],
@@ -61,33 +79,46 @@ def main():
 
     # === Model ===
     # CurrentObs.obs_shape - (C, W, H)
-    pi = CNNPolicy(input_shape=CurrentObs.obs_shape,
-                   action_shape=ac_shape,
-                   in_channels=CurrentObs.obs_shape[0],
-                   feature_maps=[64, 64, 64],
-                   kernel_sizes=[5, 5, 5],
-                   strides=[2, 2, 2],
-                   args=args)
 
+    pi = CombinePolicy(o_shape=CurrentObs.obs_shape,
+                       o_target_shape=CurrentObs.obs_shape,
+                       s_shape=st_shape,
+                       s_target_shape=st_shape,
+                       a_shape=ac_shape,
+                       feature_maps=[64, 64, 8],
+                       kernel_sizes=[5, 5, 5],
+                       strides=[2, 2, 2],
+                       args=args)
     pi.train()
     optimizer_pi = optim.Adam(pi.parameters(), lr=args.pi_lr)
+    input(pi.total_parameters())
     print('\nPOLICY:\n', pi)
 
     # ==== Training ====
     print('Learning {}(ac: {}, ob: {})'.format( args.env_id, ac_shape, ob_shape))
     print('\nTraining for %d Updates' % args.num_updates)
     s, s_target, obs, obs_target = env.reset()
+
     CurrentState.update(s)
     CurrentStateTarget.update(s_target)
+
     CurrentObs.update(obs)
     CurrentObsTarget.update(obs_target)
     if True:
-        print('After env.reset | s.shape', s.shape)
-        print('After env.reset | obs.shape', obs.shape)
-        print('After env.reset | obs.mean', obs.mean())
+        print('env.reset | s.shape', s.shape)
+        print('env.reset | s_target.shape', s.shape)
+
+        print('env.reset | type(obs)', type(obs))
+        print('env.reset | obs.shape', obs.shape)
+        print('env.reset | obs.mean', obs.mean())
+
+        print('env.reset | type(obs_target)', type(obs_target))
+        print('env.reset | obs_target.shape', obs_target.shape)
+        print('env.reset | obs_target.mean', obs_target.mean())
 
         print('CurrentObs().size()', CurrentObs().size())
         print('CurrentObs().mean()', CurrentObs().mean())
+
         print('CurrentObsTarget().size()', CurrentObsTarget().size())
         print('CurrentObsTarget().mean()', CurrentObsTarget().mean())
 
@@ -101,7 +132,9 @@ def main():
 
     if args.cuda:
         CurrentState.cuda()
+        CurrentStateTarget.cuda()
         CurrentObs.cuda()
+        CurrentObsTarget.cuda()
         rollouts.cuda()
         pi.cuda()
 

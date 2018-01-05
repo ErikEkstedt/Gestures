@@ -1,5 +1,8 @@
 import copy
 import math
+from functools import reduce
+import operator
+
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
@@ -148,7 +151,17 @@ class CombinePolicy(nn.Module, Policy):
     self(o, o_, s, s_)  : o,s = current state/obs, o_,s_ = target state/obs
 
     '''
-    def __init__(self, o_shape, o_target_shape, s_shape, s_target_shape, a_shape, args):
+    def __init__(self,
+                 o_shape,
+                 o_target_shape,
+                 s_shape,
+                 s_target_shape,
+                 a_shape,
+                 feature_maps=[64, 32, 16],
+                 kernel_sizes=[5, 5, 5],
+                 strides=[2, 2, 2],
+                 args=None):
+
         super(CombinePolicy, self).__init__()
         self.o_shape = o_shape
         self.s_shape = s_shape
@@ -159,10 +172,11 @@ class CombinePolicy(nn.Module, Policy):
         self.obs_shape = (o_shape[0]+o_target_shape[0], *o_shape[1:])
 
         self.cnn = PixelEmbedding(self.obs_shape,
-                                  feature_maps=[16, 32, 64],
-                                  kernel_sizes=[5, 5, 5],
-                                  strides=[2, 2, 2],
+                                  feature_maps=feature_maps,
+                                  kernel_sizes=kernel_sizes,
+                                  strides=strides,
                                   args=None)
+
         self.nparams_emb = self.cnn.n_out + s_shape + s_target_shape
         self.mlp = MLP(self.nparams_emb, a_shape, args)
 
@@ -173,6 +187,14 @@ class CombinePolicy(nn.Module, Policy):
         x = torch.cat((x, s_cat), dim=1)
         return self.mlp(x)
 
+    def total_parameters(self):
+        p = 0
+        for parameter in self.parameters():
+            print(parameter.shape)
+            tmp_params = reduce(operator.mul, parameter.shape)
+            print(tmp_params)
+            p += tmp_params
+        return p
 
 def test_combinepolicy(args):
     ''' Test for CombinePolicy '''
