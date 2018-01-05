@@ -35,17 +35,17 @@ def main():
         vis = VisLogger(args)
 
     # === Environment ===
-    args.RGB = True
-    Env = ReacherPlane  # using Env as variable so I only need to change this line between experiments
+    args.RGB = True 	# be safe
+    Env = ReacherPlane  # Using Env, only change this line between experiments
     env = make_parallel_environments(Env,args)
 
     tmp_rgb = args.RGB # reset rgb flag
     test_env = Env(args)
     args.RGB = tmp_rgb # reset rgb flag
 
-    ob_shape = env.rgb_space.shape
-    st_shape  = env.observation_space.shape[0]
-    ac_shape  = env.action_space.shape[0]
+    ob_shape = env.observation_space.shape # RGB
+    st_shape = env.state_space.shape[0]    # Joints state
+    ac_shape = env.action_space.shape[0]   # Actions
 
     # === Memory ===
     CurrentState = StackedState(args.num_processes, args.num_stack, st_shape)

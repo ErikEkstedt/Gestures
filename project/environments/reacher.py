@@ -156,8 +156,7 @@ class ReacherPlaneNoTarget(Base):
             j.set_motor_torque(0)
 
     def robot_specific_reset(self):
-        self.motor_names = ["robot_shoulder_joint_z",
-                            "robot_elbow_joint"]
+        self.motor_names = ["robot_shoulder_joint_z", "robot_elbow_joint"]
         self.motor_power = [100, 100]
         self.motors = [self.jdict[n] for n in self.motor_names]
 
@@ -190,6 +189,84 @@ class ReacherPlaneNoTarget(Base):
         self.camera.move_and_look_at( 0, 0, 1, 0, 0, 0.4)
 
 
+class ReacherPlaneNoTarget(Base):
+    def __init__(self, args=None):
+        Base.__init__(self, Targets,
+                      XML_PATH=PATH_TO_CUSTOM_XML,
+                      robot_name='robot_arm',
+                      model_xml='reacher/ReacherPlaneNoTarget.xml',
+                      ac=2, obs=6, args=args)
+        print('I am', self.model_xml)
+        self.Targets = Targets
+
+    def calc_reward(self, a):
+        ''' Difference potential as reward '''
+        potential_old = self.potential
+        self.potential = self.calc_potential()
+        r1 = self.reward_constant1 * float(self.potential[0] - potential_old[0]) # elbow
+        r2 = self.reward_constant2 * float(self.potential[1] - potential_old[1]) # hand
+        return r1 + r2
+
+    def calc_potential(self):
+        p1 = -self.potential_constant*np.linalg.norm(self.totarget1)
+        p2 = -self.potential_constant*np.linalg.norm(self.totarget2)
+        return np.array([p1, p2])
+
+    def calc_to_target_vec(self):
+        ''' gets hand position, target position and the difference vector'''
+        self.robot_key_points
+
+        # Plane does not need Z-values
+        self.target_position = np.concatenate((target_position1, target_position2))
+        self.robot_key_points = np.concatenate((elbow_position, hand_position))
+        self.to_target_vec = np.concatenate((self.totarget1, self.totarget2),)
+
+    def robot_reset(self):
+        ''' np.random for correct seed. '''
+        for j in self.robot_joints.values():
+            j.reset_current_position(np.random.uniform(low=-0.01, high=0.01 ), 0)
+            j.set_motor_torque(0)
+
+    def robot_specific_reset(self):
+        self.motor_names = ["robot_shoulder_joint_z", "robot_elbow_joint"]
+        self.motor_power = [100, 100]
+        self.motors = [self.jdict[n] for n in self.motor_names]
+
+        self.robot_reset()
+        self.get_target()  # self.target_key_points, self.target_obs
+        self.calc_robot_keypoints()
+
+    def get_target(self):
+        pass
+
+
+    def calc_robot_keypoints(self):
+        ''' gets hand position, target position and the vector in bewteen'''
+        elbow_position = np.array(self.parts['robot_elbow'].pose().xyz())[:2]
+        hand_position = np.array(self.parts['robot_hand'].pose().xyz())[:2]
+        self.robot_key_points = np.concatenate((elbow_position, hand_position))
+        self.diff_key_points = self.target_key_popints - self.robot_key_points
+
+    def calc_state(self):
+        j = np.array([j.current_relative_position()
+                      for j in self.robot_joints.values()],
+                     dtype=np.float32).flatten()
+        self.joints_at_limit = np.count_nonzero(np.abs(j[0::2]) > 0.99)
+        self.joint_speeds = j[1::2]
+        self.calc_robot_keypoints()  # calcs target_position, important_pos, to_target_vec
+        return np.concatenate((self.robot_key_points, self.joint_speeds))
+
+    def get_rgb(self):
+        self.camera_adjust()
+        rgb, _, _, _, _ = self.camera.render(False, False, False) # render_depth, render_labeling, print_timing)
+        rendered_rgb = np.fromstring(rgb, dtype=np.uint8).reshape( (self.VIDEO_H,self.VIDEO_W,3) )
+        return rendered_rgb
+
+    def camera_adjust(self):
+        ''' Vision from straight above '''
+        self.camera.move_and_look_at( 0, 0, 1, 0, 0, 0.4)
+
+# ---------------------------------------------------------
 class ReacherCommon():
     def robot_reset(self):
         ''' np.random for correct seed. '''
@@ -234,7 +311,7 @@ class ReacherPlane(ReacherCommon, Base):
                         robot_name='robot_arm',
                         target_name='target0',
                         model_xml='reacher/ReacherPlane.xml',
-                        ac=2, obs=16,
+                        ac=2, obs=14,
                         args=args)
         print('I am', self.model_xml)
 
@@ -295,21 +372,8 @@ class ReacherPlane(ReacherCommon, Base):
         return np.concatenate((self.target_position,
                                self.robot_key_points,
                                self.to_target_vec,
-                               self.joint_positions,
+                               # self.joint_positions,
                                self.joint_speeds))
-
-    # def calc_state(self):
-    #     ''' Without joint_positions '''
-    #     j = np.array([j.current_relative_position()
-    #                   for j in self.robot_joints.values()],
-    #                  dtype=np.float32).flatten()
-    #     self.joints_at_limit = np.count_nonzero(np.abs(j[0::2]) > 0.99)
-    #     self.joint_speeds = j[1::2]
-    #     self.calc_to_target_vec()  # calcs target_position, robot_key_points, to_target_vec
-    #     return np.concatenate((self.target_position,
-    #                            self.robot_key_points,
-    #                            self.to_target_vec,
-    #                            self.joint_speeds))
 
     def calc_reward(self, a):
         ''' Difference potential as reward '''
@@ -409,7 +473,6 @@ class Reacher3D(ReacherCommon, Base):
 
     def camera_adjust(self):
         self.camera.move_and_look_at( 0.5, 0, 1, 0, 0, 0.4)
-
 
 
 if __name__ == '__main__':

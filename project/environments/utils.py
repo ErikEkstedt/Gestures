@@ -155,6 +155,7 @@ def make_parallel_environments(Env, args):
 
 # ======================== #
 # Example Reward functions #
+# Only States
 # ======================== #
 
 def calc_reward(self, a):
@@ -205,10 +206,8 @@ def calc_reward(self, a):
     r2 = 10 * float(self.potential[1] - potential_old[1]) # hand
     return r1 + r2
 
-def calc_reward(self, a):
-    ''' IN PROGRESS Difference potential as reward '''
-    potential_old = self.potential
-    self.potential = self.calc_potential()
-    r1 = float(self.potential[0] - potential_old[0]) # elbow
-    r2 = float(self.potential[1] - potential_old[1]) # hand
-    return r1 + r2
+
+# ======================== #
+# Example Reward functions #
+# Only States
+# ======================== #

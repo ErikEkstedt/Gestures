@@ -43,9 +43,11 @@ class Policy(object):
         dist_entropy = dist_entropy.sum(-1).mean()
         return v, action_log_probs, dist_entropy
 
-    def sample(self, s_t):
-        input = Variable(s_t, volatile=True)
-        v, action_mean, action_logstd = self(input)
+    def sample(self, o, o_target, s, s_target):
+        o, o_target = Variable(o), Variable(o_target)
+        s, s_target = Variable(s, volatile=True), Variable(s_target, volatile=True)
+
+        v, action_mean, action_logstd = self(o, o_target, s, s_target)
         action_std = action_logstd.exp()
 
         noise = Variable(torch.randn(action_std.size()))
@@ -62,25 +64,11 @@ class Policy(object):
         dist_entropy = dist_entropy.sum(-1).mean()
         return v, action, action_log_probs, action_std
 
-    def act(self, s_t):
-        input = Variable(s_t, volatile=True)
-        v, action, _ = self(input)
+    def act(self, o, o_target, s, s_target):
+        o, o_target = Variable(o), Variable(o_target)
+        s, s_target = Variable(s, volatile=True), Variable(s_target, volatile=True)
+        v, action, _ = self(o, o_target, s, s_target)
         return v, action
-
-    def std(self, x):
-        ratio = self.n/self.total_n
-        self.log_std_value = self.std_start - (self.std_start - self.std_stop)*ratio
-        std = torch.FloatTensor([self.log_std_value])
-        ones = torch.ones(x.data.size())
-        if x.is_cuda:
-            std = std.cuda()
-            ones=ones.cuda()
-        std = std*ones
-        std = Variable(std)
-        return std
-
-    def get_std(self):
-        return math.exp(self.log_std_value)
 
 
 class MLP(nn.Module):
@@ -105,6 +93,21 @@ class MLP(nn.Module):
         ac_mean = self.action(x)
         ac_std = self.std(ac_mean)  #std annealing
         return v, ac_mean, ac_std
+
+    def std(self, x):
+        ratio = self.n/self.total_n
+        self.log_std_value = self.std_start - (self.std_start - self.std_stop)*ratio
+        std = torch.FloatTensor([self.log_std_value])
+        ones = torch.ones(x.data.size())
+        if x.is_cuda:
+            std = std.cuda()
+            ones=ones.cuda()
+        std = std*ones
+        std = Variable(std)
+        return std
+
+    def get_std(self):
+        return math.exp(self.log_std_value)
 
 
 class PixelEmbedding(nn.Module):
@@ -141,6 +144,11 @@ class PixelEmbedding(nn.Module):
 
 
 class CombinePolicy(nn.Module, Policy):
+    ''' Policy that uses both state and obs
+
+    self(o, o_, s, s_)  : o,s = current state/obs, o_,s_ = target state/obs
+
+    '''
     def __init__(self, o_shape, o_target_shape, s_shape, s_target_shape, a_shape, args):
         super(CombinePolicy, self).__init__()
         self.o_shape = o_shape
@@ -156,14 +164,12 @@ class CombinePolicy(nn.Module, Policy):
                                   kernel_sizes=[5, 5, 5],
                                   strides=[2, 2, 2],
                                   args=None)
-
         self.nparams_emb = self.cnn.n_out + s_shape + s_target_shape
-        self.mlp = MLP(self, self.nparams_emb, action_shape, args)
+        self.mlp = MLP(self.nparams_emb, a_shape, args)
 
     def forward(self, o, o_target, s, s_target):
         o_cat = torch.cat((o, o_target), dim=1)
         s_cat = torch.cat((s, s_target), dim=1)
-
         x = self.cnn(o_cat)
         x = torch.cat((x, s_cat), dim=1)
         return self.mlp(x)
@@ -180,15 +186,24 @@ def test_combinepolicy(args):
     a_shape        = 2
 
     # Tensors
-    s  = torch.rand(s_shape)
-    s_ = torch.rand(s_target_shape)
-    o  = torch.rand(o_shape)
-    o_ = torch.rand(o_target_shape)
+    s  = torch.rand(s_shape).unsqueeze(0)
+    s_ = torch.rand(s_target_shape).unsqueeze(0)
+    o  = torch.rand(o_shape).unsqueeze(0)
+    o_ = torch.rand(o_target_shape).unsqueeze(0)
 
     pi = CombinePolicy(o_shape, o_target_shape, s_shape, s_target_shape, a_shape, args)
 
-    out = pi(o, o_, s, s_)
-    print(out)
+    print('pi.sample()')
+    v, a, a_logprobs, a_std = pi.sample(o, o_, s, s_)
+    print('Value:', v.shape)
+    print('a_mean:', a.shape)
+    print('a_logprobs:', a_logprobs.shape)
+    print('a_std:', a_std.shape)
+
+    print('pi.act()')
+    v, a = pi.act(o, o_, s, s_)
+    print('Value:', v.shape)
+    print('a:', a.shape)
 
 
 if __name__ == '__main__':

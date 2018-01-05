@@ -24,7 +24,7 @@ def worker(remote, parent_remote, env_fn_wrapper):
             remote.close()
             break
         elif cmd == 'get_spaces':
-            remote.send((env.action_space, env.observation_space))
+            remote.send((env.action_space, env.state_space))
         else:
             raise NotImplementedError
 
@@ -60,7 +60,7 @@ class SubprocVecEnv(VecEnv):
             remote.close()
 
         self.remotes[0].send(('get_spaces', None))
-        self.action_space, self.observation_space = self.remotes[0].recv()
+        self.action_space, self.state_space = self.remotes[0].recv()
 
 
     def step(self, actions):
@@ -116,7 +116,7 @@ def worker_RGB(remote, parent_remote, env_fn_wrapper):
             remote.close()
             break
         elif cmd == 'get_spaces':
-            remote.send((env.action_space, env.observation_space, env.rgb_space))
+            remote.send((env.action_space, env.state_space, env.observation_space))
         else:
             raise NotImplementedError
 
@@ -138,7 +138,7 @@ class SubprocVecEnv_RGB(VecEnv):
             remote.close()
 
         self.remotes[0].send(('get_spaces', None))
-        self.action_space, self.observation_space, self.rgb_space = self.remotes[0].recv()
+        self.action_space, self.state_space, self.observation_space= self.remotes[0].recv()
 
     def step(self, actions):
         for remote, action in zip(self.remotes, actions):

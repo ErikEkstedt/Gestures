@@ -103,6 +103,7 @@ def main():
     # env.seed(args.seed)
 
     ob_shape = env.observation_space.shape[0]
+    st_shape = env.state_space.shape[0]
     ac_shape = env.action_space.shape[0]
 
 

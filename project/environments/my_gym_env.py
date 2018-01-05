@@ -18,15 +18,15 @@ class MyGymEnv(gym.Env):
         self.action_space = gym.spaces.Box(-high, high)
 
         high = np.inf*np.ones([obs_dim])
-        self.observation_space = gym.spaces.Box(-high, high)
+        self.state_space = gym.spaces.Box(-high, high)
 
         if self.RGB:
             self.VIDEO_W = W
             self.VIDEO_H = H
-            self.rgb_space = gym.spaces.Box(low=0, high=255,
-                                            shape=(self.VIDEO_W,
-                                                   self.VIDEO_H,
-                                                   3))
+            self.observation_space = gym.spaces.Box(low=0, high=255,
+                                                    shape=(self.VIDEO_W,
+                                                           self.VIDEO_H,
+                                                           3))
 
     def _seed(self, seed=None):
         self.np_random, seed = gym.utils.seeding.np_random(seed)
