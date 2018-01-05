@@ -24,8 +24,6 @@ class Base(MyGymEnv):
         if args is None:
             ''' Defaults '''
             MyGymEnv.__init__(self, action_dim=ac, obs_dim=obs, RGB=False)
-
-            # Env (xml forward walkers)
             self.MAX_TIME=300
             self.potential_constant   = 100
             self.electricity_cost     = -2.0  # cost for using motors -- this parameter should be carefully tuned against reward for making progress, other values less improtant
@@ -66,10 +64,6 @@ class Base(MyGymEnv):
 
             # Robot
             self.power                = args.power # 0.5
-
-    def print_relevant_information(self):
-        print('Robot name: {}, Target name={}'.format(self.robot_name, self.target_name))
-        print('XML fileme: {}, Path={}'.format(self.model_xml, self.XML_PATH))
 
     def initialize_scene(self):
         return Scene(self.gravity, self.timestep, self.frame_skip)
@@ -222,39 +216,10 @@ class ReacherCommon():
                 else:
                     j.reset_current_position(y1, 0)
 
-    def calc_to_target_vec(self):
-        ''' gets hand position, target position and the vector in bewteen'''
-        # Elbow target
-        target_position1 = np.array(self.target_parts['target0'].pose().xyz())
-        elbow_position = np.array(self.parts['robot_elbow'].pose().xyz())
-        self.totarget1 = elbow_position - target_position1
-
-        # Hand target
-        target_position2 = np.array(self.target_parts['target1'].pose().xyz())
-        hand_position = np.array(self.parts['robot_hand'].pose().xyz())
-        self.totarget2 = hand_position - target_position2
-
-        self.target_position = np.concatenate((target_position1, target_position2))
-        self.robot_key_points = np.concatenate((elbow_position, hand_position))
-        self.to_target_vec = np.concatenate((self.totarget1, self.totarget2),)
-
-    def calc_state(self):
-        j = np.array([j.current_relative_position()
-                        for j in self.robot_joints.values()],
-                        dtype=np.float32).flatten()
-        self.joints_at_limit = np.count_nonzero(np.abs(j[0::2]) > 0.99)
-        self.joint_positions = j[0::2]
-        self.joint_speeds = j[1::2]
-        self.calc_to_target_vec()  # calcs target_position, important_pos, to_target_vec
-        return np.concatenate((self.target_position,
-                                self.robot_key_points,
-                                self.to_target_vec,
-                                self.joint_speeds),)
-
     def calc_potential(self):
         p1 = -self.potential_constant*np.linalg.norm(self.totarget1)
         p2 = -self.potential_constant*np.linalg.norm(self.totarget2)
-        return p1, p2
+        return np.array([p1, p2])
 
     def get_rgb(self):
         self.camera_adjust()
@@ -269,50 +234,18 @@ class ReacherPlane(ReacherCommon, Base):
                         robot_name='robot_arm',
                         target_name='target0',
                         model_xml='reacher/ReacherPlane.xml',
-                        ac=2, obs=14,
+                        ac=2, obs=16,
                         args=args)
         print('I am', self.model_xml)
 
-    def calc_to_target_vec(self):
-        ''' gets hand position, target position and the difference vector'''
-        # Elbow target
-        target_position1 = np.array(self.target_parts['target0'].pose().xyz()[:2])
-        elbow_position = np.array(self.parts['robot_elbow'].pose().xyz()[:2])
-        self.totarget1 = elbow_position - target_position1
-
-        # Hand target
-        target_position2 = np.array(self.target_parts['target1'].pose().xyz()[:2])
-        hand_position = np.array(self.parts['robot_hand'].pose().xyz()[:2])
-        self.totarget2 = hand_position - target_position2
-
-        # Plane does not need Z-values
-        self.target_position = np.concatenate((target_position1, target_position2))
-        self.robot_key_points = np.concatenate((elbow_position, hand_position))
-        self.to_target_vec = np.concatenate((self.totarget1, self.totarget2),)
-
-    def calc_state(self):
-        j = np.array([j.current_relative_position()
-                      for j in self.robot_joints.values()],
-                     dtype=np.float32).flatten()
-        self.joints_at_limit = np.count_nonzero(np.abs(j[0::2]) > 0.99)
-        self.joint_speeds = j[1::2]
-        self.calc_to_target_vec()  # calcs target_position, robot_key_points, to_target_vec
-        return np.concatenate((self.target_position,
-                               self.robot_key_points,
-                               self.to_target_vec,
-                               self.joint_speeds))
-
     def robot_specific_reset(self):
-        self.motor_names = ["robot_shoulder_joint_z",
-                            "robot_elbow_joint"]
+        self.motor_names = ["robot_shoulder_joint_z", "robot_elbow_joint"]
         self.motor_power = [100, 100]
         self.motors = [self.jdict[n] for n in self.motor_names]
 
         # target and potential
         self.robot_reset()
         self.target_reset()
-        self.calc_to_target_vec()
-        self.potential = self.calc_potential()
 
     def target_reset(self):
         ''' circle in xy-plane'''
@@ -333,12 +266,58 @@ class ReacherPlane(ReacherCommon, Base):
         z1 = z
         return [x, y, z, x1, y1, z1]
 
+    def calc_to_target_vec(self):
+        ''' gets hand position, target position and the difference vector'''
+        # Elbow target
+        target_position1 = np.array(self.target_parts['target0'].pose().xyz())[:2]
+        elbow_position = np.array(self.parts['robot_elbow'].pose().xyz())[:2]
+        self.totarget1 = elbow_position - target_position1
+
+        # Hand target
+        target_position2 = np.array(self.target_parts['target1'].pose().xyz())[:2]
+        hand_position = np.array(self.parts['robot_hand'].pose().xyz())[:2]
+        self.totarget2 = hand_position - target_position2
+
+        # Plane does not need Z-values
+        self.target_position = np.concatenate((target_position1, target_position2))
+        self.robot_key_points = np.concatenate((elbow_position, hand_position))
+        self.to_target_vec = np.concatenate((self.totarget1, self.totarget2),)
+
+    def calc_state(self):
+        ''' With joint_positions '''
+        j = np.array([j.current_relative_position()
+                      for j in self.robot_joints.values()],
+                     dtype=np.float32).flatten()
+        self.joints_at_limit = np.count_nonzero(np.abs(j[0::2]) > 0.99)
+        self.joint_speeds = j[1::2]
+        self.joint_positions = j[0::2]
+        self.calc_to_target_vec()  # calcs target_position, robot_key_points, to_target_vec
+        return np.concatenate((self.target_position,
+                               self.robot_key_points,
+                               self.to_target_vec,
+                               self.joint_positions,
+                               self.joint_speeds))
+
+    # def calc_state(self):
+    #     ''' Without joint_positions '''
+    #     j = np.array([j.current_relative_position()
+    #                   for j in self.robot_joints.values()],
+    #                  dtype=np.float32).flatten()
+    #     self.joints_at_limit = np.count_nonzero(np.abs(j[0::2]) > 0.99)
+    #     self.joint_speeds = j[1::2]
+    #     self.calc_to_target_vec()  # calcs target_position, robot_key_points, to_target_vec
+    #     return np.concatenate((self.target_position,
+    #                            self.robot_key_points,
+    #                            self.to_target_vec,
+    #                            self.joint_speeds))
+
     def calc_reward(self, a):
         ''' Difference potential as reward '''
-        potential_old = self.potential
+
+        self.potential_old = self.potential
         self.potential = self.calc_potential()
-        r1 = self.reward_constant1 * float(self.potential[0] - potential_old[0]) # elbow
-        r2 = self.reward_constant2 * float(self.potential[1] - potential_old[1]) # hand
+        r1 = self.reward_constant1 * float(self.potential[0] - self.potential_old[0]) # elbow
+        r2 = self.reward_constant2 * float(self.potential[1] - self.potential_old[1]) # hand
         return r1 + r2
 
     def camera_adjust(self):
@@ -368,6 +347,35 @@ class Reacher3D(ReacherCommon, Base):
         self.target_reset()
         self.calc_to_target_vec()
         self.potential = self.calc_potential()
+
+    def calc_to_target_vec(self):
+        ''' gets hand position, target position and the vector in bewteen'''
+        # Elbow target
+        target_position1 = np.array(self.target_parts['target0'].pose().xyz())
+        elbow_position = np.array(self.parts['robot_elbow'].pose().xyz())
+        self.totarget1 = elbow_position - target_position1
+
+        # Hand target
+        target_position2 = np.array(self.target_parts['target1'].pose().xyz())
+        hand_position = np.array(self.parts['robot_hand'].pose().xyz())
+        self.totarget2 = hand_position - target_position2
+
+        self.target_position = np.concatenate((target_position1, target_position2))
+        self.robot_key_points = np.concatenate((elbow_position, hand_position))
+        self.to_target_vec = np.concatenate((self.totarget1, self.totarget2),)
+
+    def calc_state(self):
+        j = np.array([j.current_relative_position()
+                        for j in self.robot_joints.values()],
+                        dtype=np.float32).flatten()
+        self.joints_at_limit = np.count_nonzero(np.abs(j[0::2]) > 0.99)
+        self.joint_positions = j[0::2]
+        self.joint_speeds = j[1::2]
+        self.calc_to_target_vec()  # calcs target_position, important_pos, to_target_vec
+        return np.concatenate((self.target_position,
+                                self.robot_key_points,
+                                self.to_target_vec,
+                                self.joint_speeds),)
 
     def sphere_target(self, r0, r1, x0=0, y0=0, z0=0.41):
         ''' free targets in 3d space '''
@@ -413,11 +421,11 @@ if __name__ == '__main__':
     # Env = ReacherPlaneNoTarget
     # print_state_noTarget(Env, args)
 
-    # Env = ReacherPlane
-    # print_state(Env, args)
-
-    Env = Reacher3D
+    Env = ReacherPlane
     print_state(Env, args)
+
+    # Env = Reacher3D
+    # print_state(Env, args)
 
     input('Press Enter to continue')
     if args.num_processes > 1:

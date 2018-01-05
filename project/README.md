@@ -1,5 +1,13 @@
 # Todo
 
+Todo:
+* Combined model
+* RGB without target. Use as target. combined model.
+* Reward in state and rgb.
+
+* Compare training for ReacherPlane with joint_positions, without
+	* Why does DiffReward converge around 0 ? 
+
 2. [x] Make RGB training results. Same rewards but just pixel info.
 	* [x] CNN model
 	* [x] Make 2dof plane viewd from above take actions from pixels alone
@@ -16,9 +24,6 @@
 			* [ ] stack frames
 
 
-Combined model
-RGB without target. Use as target. combined model.
-Reward in state and rgb.
 
 
 	* [ ] Train model

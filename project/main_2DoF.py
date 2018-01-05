@@ -16,7 +16,7 @@ from agent.train import train, exploration
 from agent.test import Test_and_Save_Video
 from environments.reacher import ReacherPlane
 from environments.utils import make_parallel_environments
-from environments.data import make_video
+from data.make_video import convert_dir_video
 
 
 def main():
@@ -123,8 +123,7 @@ def main():
             if args.cuda:
                 pi.cuda()
 
-    =
-    make_video()
+    convert_dir_video(args.result_dir)
 
 if __name__ == '__main__':
     main()

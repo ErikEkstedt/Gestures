@@ -34,6 +34,8 @@ def print_state(Env, args):
         print(env.robot_key_points)
         print('\nto_target_vec:')
         print(env.to_target_vec)
+        print('\njoint_positions:')
+        print(env.joint_positions)
         print('\njoint_speeds:')
         print(env.joint_speeds)
         input('Press Enter to continue')
@@ -163,10 +165,10 @@ def calc_reward(self, a):
     r1 = self.reward_constant1 * float(self.potential[0] - potential_old[0]) # elbow
     r2 = self.reward_constant2 * float(self.potential[1] - potential_old[1]) # hand
 
-    # Cost
-    electricity_cost  = self.electricity_cost * float(np.abs(a*self.joint_speeds).mean())  # let's assume we have DC motor with controller, and reverse current braking
-    electricity_cost += self.stall_torque_cost * float(np.square(a).mean())
-    joints_at_limit_cost = float(self.joints_at_limit_cost * self.joints_at_limit)
+    # Cost/Penalties. negative sign
+    electricity_cost  = -self.electricity_cost * float(np.abs(a*self.joint_speeds).mean())  # let's assume we have DC motor with controller, and reverse current braking
+    electricity_cost += -self.stall_torque_cost * float(np.square(a).mean())
+    joints_at_limit_cost = float(-self.joints_at_limit_cost * self.joints_at_limit)
 
     # Save rewards ?
     self.rewards = [r1, r2, electricity_cost, joints_at_limit_cost]

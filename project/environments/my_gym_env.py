@@ -43,21 +43,37 @@ class MyGymEnv(gym.Env):
         self.get_joint_dicts()
         self.robot_specific_reset()
 
+        for r in self.mjcf:
+            r.query_position()
+
         # Important Resets
         self.done = False
         self.frame = 0
         self.reward = 0
-
-        for r in self.mjcf:
-            r.query_position()
-
         self.camera = self.scene.cpp_world.new_camera_free_float(self.VIDEO_W, self.VIDEO_H, "video_camera")
         s = self.calc_state()
+        self.potential = self.calc_potential()
         if self.RGB:
             rgb = self.get_rgb()
             return (s, rgb)
         else:
             return s
+
+    def _step(self, a):
+        self.apply_action(a)  # Singleplayer (originally in a condition)
+        self.scene.global_step()
+        self.frame  += 1
+
+        state = self.calc_state()  # also calculates self.joints_at_limit
+        reward = self.calc_reward(a)
+        done = self.stop_condition() # max frame reached?
+        self.done = done
+        self.reward = reward
+        if self.RGB:
+            rgb = self.get_rgb()
+            return state, rgb, reward, bool(done), {}
+        else:
+            return state, reward, bool(done), {}
 
     def _render(self, mode, close):
         if close:
@@ -72,21 +88,6 @@ class MyGymEnv(gym.Env):
             return rendered_rgb
         else:
             assert(0)
-
-    def _step(self, a):
-        self.apply_action(a)  # Singleplayer (originally in a condition)
-        self.scene.global_step()
-        self.frame  += 1
-
-        state = self.calc_state()  # also calculates self.joints_at_limit
-        reward = self.calc_reward(a)
-        done = self.stop_condition() # max frame reached?
-        self.done = done
-        if self.RGB:
-            rgb = self.get_rgb()
-            return state, rgb, reward, bool(done), {}
-        else:
-            return state, reward, bool(done), {}
 
     def HUD(self, s, a, done):
         self.scene.cpp_world.test_window_history_advance()

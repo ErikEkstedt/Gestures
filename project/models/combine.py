@@ -119,19 +119,19 @@ class PixelEmbedding(nn.Module):
                  strides=[2, 2, 2],
                  args=None):
         super(PixelEmbedding, self).__init__()
-        self.input_shape    = input_shape
-        self.state_shape    = state_shape
-        self.feature_maps   = feature_maps
-        self.kernel_sizes   = kernel_sizes
-        self.strides        = strides
+        self.input_shape  = input_shape
+        self.state_shape  = state_shape
+        self.feature_maps = feature_maps
+        self.kernel_sizes = kernel_sizes
+        self.strides      = strides
 
-        self.conv1          = nn.Conv2d(input_shape[0], feature_maps[0], kernel_size  = kernel_sizes[0], stride = strides[0])
-        self.out_shape1     = Conv2d_out_shape(self.conv1, input_shape)
-        self.conv2          = nn.Conv2d(feature_maps[0], feature_maps[1], kernel_size = kernel_sizes[1], stride = strides[1])
-        self.out_shape2     = Conv2d_out_shape(self.conv2, self.out_shape1)
-        self.conv3          = nn.Conv2d(feature_maps[1], feature_maps[2], kernel_size = kernel_sizes[2], stride = strides[2])
-        self.out_shape3     = Conv2d_out_shape(self.conv3, self.out_shape2)
-        self.total_conv_out = total_params(self.out_shape3)
+        self.conv1        = nn.Conv2d(input_shape[0], feature_maps[0], kernel_size  = kernel_sizes[0], stride = strides[0])
+        self.out_shape1   = Conv2d_out_shape(self.conv1, input_shape)
+        self.conv2        = nn.Conv2d(feature_maps[0], feature_maps[1], kernel_size = kernel_sizes[1], stride = strides[1])
+        self.out_shape2   = Conv2d_out_shape(self.conv2, self.out_shape1)
+        self.conv3        = nn.Conv2d(feature_maps[1], feature_maps[2], kernel_size = kernel_sizes[2], stride = strides[2])
+        self.out_shape3   = Conv2d_out_shape(self.conv3, self.out_shape2)
+        self.n_out        = total_params(self.out_shape3)
 
     def forward(self, x):
         x = F.relu(self.conv1(x))
@@ -139,14 +139,9 @@ class PixelEmbedding(nn.Module):
         x = F.relu(self.conv3(x))
         return x.view(x.size(0), -1)
 
+
 class CombinePolicy(nn.Module, Policy):
-    def __init__(self,
-                 o_shape,
-                 o_target_shape,
-                 s_shape,
-                 s_target_shape,
-                 a_shape,
-                 args):
+    def __init__(self, o_shape, o_target_shape, s_shape, s_target_shape, a_shape, args):
         super(CombinePolicy, self).__init__()
         self.o_shape = o_shape
         self.s_shape = s_shape
@@ -162,7 +157,8 @@ class CombinePolicy(nn.Module, Policy):
                                   strides=[2, 2, 2],
                                   args=None)
 
-        self.mlp = MLP(self, input_size, action_shape, args)
+        self.nparams_emb = self.cnn.n_out + s_shape + s_target_shape
+        self.mlp = MLP(self, self.nparams_emb, action_shape, args)
 
     def forward(self, o, o_target, s, s_target):
         o_cat = torch.cat((o, o_target), dim=1)

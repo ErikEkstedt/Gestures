@@ -40,7 +40,7 @@ class Policy(object):
     Superclass for the different policies (CNN/MLP) containing common funcs.
     """
     def evaluate_actions(self, s_t, actions):
-        v, action_mean, action_logstd = self(x)
+        v, action_mean, action_logstd = self(s_t)
         action_std = action_logstd.exp()
 
         # calculate `old_log_probs` directly in exploration.

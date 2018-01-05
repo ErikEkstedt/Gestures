@@ -20,9 +20,9 @@ def get_args():
 
     # === Reward =====
     parser.add_argument('--potential-constant',   type=float, default=100)
-    parser.add_argument('--electricity-cost',     type=float, default=-0.1)
-    parser.add_argument('--stall-torque-cost',    type=float, default=-0.01)
-    parser.add_argument('--joints-at-limit-cost', type=float, default=-0.01)
+    parser.add_argument('--electricity-cost',     type=float, default=0.1)
+    parser.add_argument('--stall-torque-cost',    type=float, default=0.01)
+    parser.add_argument('--joints-at-limit-cost', type=float, default=0.01)
     parser.add_argument('--r1', type=float, default=1.0)
     parser.add_argument('--r2', type=float, default=1.0)
 

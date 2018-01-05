@@ -25,8 +25,6 @@ def convert_dir_video(dirpath):
     assert os.path.exists(dirpath)
     print('Converting .pt files to mp4...')
     for root, dirs, files in os.walk(dirpath):
-        print('root', root)
-        print('dirs', dirs)
         print('files', files)
         for f in files:
             if f.endswith('.pt'):
@@ -34,7 +32,8 @@ def convert_dir_video(dirpath):
                 vid = torch.load(fpath)
                 name = fpath[:-3]  # omit extension
                 make_video(vid, name)
-
+                print('Removing source file...')
+                os.remove(fpath)
 
 if __name__ == '__main__':
     if len(sys.argv) > 2:
