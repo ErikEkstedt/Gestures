@@ -117,10 +117,10 @@ class MLPPolicy(nn.Module, Policy):
 
 
 class CNNPolicy(nn.Module, Policy):
-    def __init__(self, input_shape=(3,100,100),
+    def __init__(self, input_shape=(3, 40, 40),
                  action_shape=2,
                  in_channels=3,
-                 feature_maps=[64, 64, 64],
+                 feature_maps=[128, 64, 8],
                  kernel_sizes=[5, 5, 5],
                  strides=[2, 2, 2],
                  args=None):

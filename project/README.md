@@ -1,35 +1,42 @@
 # Todo
 
 Todo:
-* Combined model
+* COMBINED MODEL
 * RGB without target. Use as target. combined model.
 * Reward in state and rgb.
 
-* Compare training for ReacherPlane with joint_positions, without
-	* Why does DiffReward converge around 0 ? 
 
-2. [x] Make RGB training results. Same rewards but just pixel info.
+1. Training: 
+	* [x] Make RGB training results. Same rewards but just pixel info.
 	* [x] CNN model
 	* [x] Make 2dof plane viewd from above take actions from pixels alone
-	* [ ] Combine state and pixels
+	* [x] Combine state and pixels
+	* [ ] Train models
+		* [x] Vanilla CNN
+		* [x] Vanilla MLP
+		* [ ] Combine
+		* [ ] CLSTM (Don't start before Vanilla done)
+	* [ ] Continue training from checkpoint with smaller learning rate
 
-3. [ ] Understanding Module
+2. [ ] UNDERSTANDING MODULE
 	* [x] Create Data - Supervised Learning
 		* [x] Dataset
-		* [x] only positions
+		* [x] only positions, no speed
 			* Only joint_speed codes dynamic behavior and they are last.
 			* ReacherPlane: s[:-2]
 			* Reacher3D:		s[:-3]
-		* [x] velocities ?
-			* [ ] stack frames
+		* [x] Velocities, if velocities are to be model by a cnn we need stacked frames.
+			* [ ] Stack frames
+			* [ ]	smaller network 
 
 
 
+3. [ ] Make environment that only gives back robots internal state
+	* Key points:
+		* Positions
+		* delta positions
+		* joint_speed
 
-	* [ ] Train model
-		* [ ] Vanilla CNN
-		* [ ] CLSTM (Don't start before Vanilla done)
-__________
 
 ## ML:
 * [ ] Annealing learning rate
@@ -60,20 +67,6 @@ __________
 # plan
 The experiments that I run I make a script that does just that experiment.
 Easy to rerun experiments and all hyperparameters will be the same easily.
-## Environment
-1. [x] 2 Dof
-	* [x] Plane
-	* [x] 3D 
-2. [x] 3 Dof
-	* [x] Plane
-	* [x] 3D 
-	* [ ] two networks for each arm.
-3. [ ] 2-3-DoF = 6 DoF
-	* [ ] Plane
-	* [ ] 3D 
-4. [x] 6 Dof Humanoid and rgb
-	* [ ] 3D 
-
 ## Reward
 1. [x] Only absolute distance
 2. [x] Only difference distance 
@@ -115,21 +108,5 @@ Stacking of frames
 
 2. [x] 3DoF
 	* reward
-		* diff. dist 
-		* regular costs
-
-3. 6Dof
-	* same target:
-		* plane
-		* one octagon
-		* quart
-		* all reachable 3D
-	* two targets:
-		* plane
-		* one octagon
-		* quart
-		* all reachable 3D
-	* reward
-		* abs. dist
 		* diff. dist 
 		* regular costs
