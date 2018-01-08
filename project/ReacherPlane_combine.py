@@ -17,10 +17,11 @@ from utils.vislogger import VisLogger
 
 from models.combine import CombinePolicy
 
-from agent.test import Test_and_Save_Video_RGB as Test_and_Save_Video
-from agent.train import explorationRGB as exploration
-from agent.train import trainRGB as train
-from agent.memory import RolloutStorageObs, Results
+from agent.test import Test_and_Save_Video_Combi as Test_and_Save_Video
+from agent.train import explorationCombine as exploration
+from agent.train import trainCombine as train
+from agent.memory import RolloutStorageCombi as RolloutStorage
+from agent.memory import Results
 from agent.memory import StackedObs, StackedState
 
 from data.dataset import load_reacherplane_data
@@ -37,66 +38,100 @@ exploration
 train
 '''
 
-def main():
-    args = get_args()
-    make_log_dirs(args)
-    args.num_updates   = int(args.num_frames) // args.num_steps // args.num_processes
-    if not args.no_vis:
-        vis = VisLogger(args)
-
-    # === Targets ===
+def get_targets(train_path='', test_path='', verbose=False):
     train_path = '/home/erik/DATA/project/ReacherPlaneNoTarget/obsdata_rgb40-40-3_n100000_0.pt'
-    Targets, _ = load_reacherplane_data(train_path)
+    trainset, trainloader = load_reacherplane_data(train_path)
 
     test_path = '/home/erik/DATA/project/ReacherPlaneNoTarget/obsdata_rgb40-40-3_n100000_1.pt'
-    TargetsTest, _ = load_reacherplane_data(test_path)
-    # === Environment ===
+    testset, testloader = load_reacherplane_data(test_path)
+
+    # check dims
+    ob_tr, s_tr = trainset[4]  # choose random data point
+    ob_te, s_te = testset[4]  # choose random data point
+    if verbose:
+        print('Train:\t state shapes: {}\t obs_shapes:{}'.format( s_tr.shape, ob_tr.shape))
+        print('Test:\t state shapes: {}\t obs_shapes:{}'.format( s_te.shape, ob_te.shape))
+
+    assert s_tr.shape == s_te.shape, 'training and test shapes do not match'
+    assert ob_tr.shape == ob_te.shape, 'training and test shapes do not match'
+    return trainset, testset
+
+def main():
+    args = get_args()
+    print('ReacherPlaneCombi')
+
+    # === Targets ===
+    traintargets, testtargets = get_targets()
+    ob_sample, st_sample, = traintargets[4]
+    ob_target_shape = ob_sample.shape
+    st_target_shape = st_sample.shape[0]
+
+    if args.verbose:
+        print('ob shape: {}, st_shape: {}, COMBI: {}'.format(ob_sample.shape, st_sample.shape, args.COMBI))
+        print('args- Video_W: {}, Video_H: {}'.format(args.video_w, args.video_h))
+        input('Press Enter to continue')
+
+    # Force Settings
     args.RGB = True
+    args.COMBI = True
+    args.video_w = ob_sample.shape[1]
+    args.video_h = ob_sample.shape[2]
+
+    # === Environment ===
     Env = ReacherPlaneCombi  # using Env as variable so I only need to change this line between experiments
-    env = make_parallel_environments_combine(Env,args, Targets)
 
-    tmp_rgb = args.RGB # reset rgb flag
-    test_env = Env(args, TargetsTest)
-    args.RGB = tmp_rgb # reset rgb flag
+    # train
+    env = make_parallel_environments_combine(Env, args, traintargets)
 
-    ob_shape = env.observation_space.shape # RGB
     st_shape = env.state_space.shape[0]    # Joints state
+    ob_shape = env.observation_space.shape # RGB
     ac_shape = env.action_space.shape[0]   # Actions
+
+    # test environment
+    test_env = Env(args, testtargets)
+    test_env.seed(np.random.randint(0,2000))
 
     # === Memory ===
     result             = Results(200, 10)
     CurrentState       = StackedState(args.num_processes, args.num_stack, st_shape)
-    CurrentStateTarget = StackedState(args.num_processes, args.num_stack, st_shape)
+    CurrentStateTarget = StackedState(args.num_processes, args.num_stack, st_target_shape)
 
     CurrentObs         = StackedObs(args.num_processes, args.num_stack, ob_shape)
     CurrentObsTarget   = StackedObs(args.num_processes, args.num_stack, ob_shape)
 
-    rollouts           = RolloutStorageObs(args.num_steps,
-                                   args.num_processes,
-                                   CurrentState.size()[1],
-                                   CurrentObs.size()[1:],
-                                   ac_shape)
+    rollouts           = RolloutStorage(args.num_steps,
+                                        args.num_processes,
+                                        CurrentState.size()[1],
+                                        CurrentStateTarget.size()[1],
+                                        CurrentObs.size()[1:],
+                                        ac_shape)
 
     # === Model ===
     # CurrentObs.obs_shape - (C, W, H)
-
     pi = CombinePolicy(o_shape=CurrentObs.obs_shape,
                        o_target_shape=CurrentObs.obs_shape,
                        s_shape=st_shape,
-                       s_target_shape=st_shape,
+                       s_target_shape=st_target_shape,
                        a_shape=ac_shape,
                        feature_maps=[64, 64, 8],
                        kernel_sizes=[5, 5, 5],
                        strides=[2, 2, 2],
                        args=args)
+
     pi.train()
     optimizer_pi = optim.Adam(pi.parameters(), lr=args.pi_lr)
-    input(pi.total_parameters())
     print('\nPOLICY:\n', pi)
+    print('Total network parameters to train: ', pi.total_parameters())
+
 
     # ==== Training ====
-    print('Learning {}(ac: {}, ob: {})'.format( args.env_id, ac_shape, ob_shape))
+    make_log_dirs(args)
+    args.num_updates   = int(args.num_frames) // args.num_steps // args.num_processes
+    if not args.no_vis:
+        vis = VisLogger(args)
+    print('Learning {}(ac: {}, st: {}, ob: {})'.format( args.env_id, ac_shape, st_shape, ob_shape))
     print('\nTraining for %d Updates' % args.num_updates)
+
     s, s_target, obs, obs_target = env.reset()
 
     CurrentState.update(s)
@@ -104,31 +139,36 @@ def main():
 
     CurrentObs.update(obs)
     CurrentObsTarget.update(obs_target)
-    if True:
+
+    if args.verbose:
+        print('-'*80)
         print('env.reset | s.shape', s.shape)
         print('env.reset | s_target.shape', s.shape)
-
+        print()
         print('env.reset | type(obs)', type(obs))
         print('env.reset | obs.shape', obs.shape)
         print('env.reset | obs.mean', obs.mean())
-
+        print()
         print('env.reset | type(obs_target)', type(obs_target))
         print('env.reset | obs_target.shape', obs_target.shape)
         print('env.reset | obs_target.mean', obs_target.mean())
-
+        print()
         print('CurrentObs().size()', CurrentObs().size())
         print('CurrentObs().mean()', CurrentObs().mean())
-
+        print()
         print('CurrentObsTarget().size()', CurrentObsTarget().size())
         print('CurrentObsTarget().mean()', CurrentObsTarget().mean())
-
+        print()
         print('CurrentState().size()', CurrentState().size())
         print('CurrentState().mean()', CurrentState().mean())
         print('CurrentStateTarget().size()', CurrentStateTarget().size())
         print('CurrentStateTarget().mean()', CurrentStateTarget().mean())
 
     rollouts.states[0].copy_(CurrentState())
+    rollouts.target_states[0].copy_(CurrentStateTarget())
+
     rollouts.observations[0].copy_(CurrentObs())
+    rollouts.target_observations[0].copy_(CurrentObsTarget())
 
     if args.cuda:
         CurrentState.cuda()
@@ -138,9 +178,10 @@ def main():
         rollouts.cuda()
         pi.cuda()
 
-    MAX_REWARD = -999999
+
+    MAX_REWARD = -99999
     for j in range(args.num_updates):
-        exploration(pi, CurrentState, CurrentObs, rollouts, args, result, env)
+        exploration(pi, CurrentState, CurrentStateTarget, CurrentObs, CurrentObsTarget, rollouts, args, result, env)
         vloss, ploss, ent = train(pi, args, rollouts, optimizer_pi)
 
         rollouts.last_to_first()
@@ -157,33 +198,35 @@ def main():
 
         #  ==== TEST ======
         nt = 5
-        if not args.no_test and j % args.test_interval < nt and j>nt:
+        if not args.no_test and j % args.test_interval < nt and j > args.test_thresh:
+        # if not args.no_test and j % args.test_interval < nt:
             if j % args.test_interval == 0:
                 print('-'*45)
                 print('Testing {} episodes'.format(args.num_test))
 
             pi.cpu()
             sd = pi.cpu().state_dict()
-            test_reward, BestVideo = Test_and_Save_Video(test_env, CNNPolicy, sd, args)
+            test_reward, BestVideo = Test_and_Save_Video(test_env, testtargets,  CombinePolicy, sd, args)
 
             # Plot result
             print('Average Test Reward: {}\n '.format(round(test_reward)))
             if args.vis:
                 vis.line_update(Xdata=frame,
                                 Ydata=test_reward, name='Test Score')
-
+                # vis.scatter_update(Xdata=frame,
+                #                 Ydata=test_reward, name='Test Score Scatter')
             #  ==== Save best model ======
             if test_reward > MAX_REWARD:
                 print('--'*45)
                 print('New High Score!\n')
                 print('Avg. Reward: ', test_reward)
                 name = os.path.join(args.result_dir,
-                    'BESTVIDEO{}_{}.pt'.format(round(test_reward, 1), frame))
+                    'BestVideo_targets{}_{}.pt'.format(round(test_reward, 1), frame))
                 print('Saving Best Video')
                 torch.save(BestVideo, name)
                 name = os.path.join(
                     args.checkpoint_dir,
-                    'BESTDICT{}_{}.pt'.format(frame, round(test_reward, 3)))
+                    'BestDictCombi{}_{}.pt'.format(frame, round(test_reward, 3)))
                 torch.save(sd, name)
                 MAX_REWARD = test_reward
             else:

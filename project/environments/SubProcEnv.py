@@ -178,10 +178,10 @@ def worker_Combine(remote, parent_remote, env_fn_wrapper):
     while True:
         cmd, data = remote.recv()
         if cmd == 'step':
-            s, o, reward, done, info = env.step(data)
+            s, s_target, o, o_target, reward, done, info = env.step(data)
             if done:
                 s, s_target, o, o_target = env.reset()
-            remote.send((s, s_, o, o_target, reward, done, info))
+            remote.send((s, s_target, o, o_target, reward, done, info))
         elif cmd == 'reset':
             s, s_target, o, o_target = env.reset()
             remote.send((s, s_target, o, o_target))
@@ -214,14 +214,19 @@ class SubprocVecEnv_Combine(VecEnv):
             remote.close()
 
         self.remotes[0].send(('get_spaces', None))
-        self.action_space, self.state_space, self.observation_space= self.remotes[0].recv()
+        self.action_space, self.state_space, self.observation_space = self.remotes[0].recv()
 
     def step(self, actions):
         for remote, action in zip(self.remotes, actions):
             remote.send(('step', action))
         results = [remote.recv() for remote in self.remotes]
-        state, obs, rews, dones, infos = zip(*results)
-        return np.stack(state), np.stack(obs), np.stack(rews), np.stack(dones), infos
+        state, s_target,  obs, o_target, rews, dones, infos = zip(*results)
+        return np.stack(state), np.stack(s_target), \
+                                np.stack(obs), \
+                                np.stack(o_target), \
+                                np.stack(rews), \
+                                np.stack(dones), \
+                                infos
 
     def reset(self):
         for remote in self.remotes:

@@ -48,7 +48,6 @@ class MyGymEnv(gym.Env):
 
         self.get_joint_dicts()
         self.robot_specific_reset()
-
         for r in self.mjcf:
             r.query_position()
 
@@ -57,14 +56,16 @@ class MyGymEnv(gym.Env):
         self.frame = 0
         self.reward = 0
         self.camera = self.scene.cpp_world.new_camera_free_float(self.VIDEO_W, self.VIDEO_H, "video_camera")
+
         s = self.calc_state()
         self.potential = self.calc_potential()
-        if not self.COMBI and args.RGB:
-            rgb = self.get_rgb()
-            return (s, rgb)
-        elif self.COMBI:
+
+        if self.COMBI:
             o = self.get_rgb()
             return (s, self.target_key_points, o, self.target_obs)
+        elif self.RGB:
+            rgb = self.get_rgb()
+            return (s, rgb)
         else:
             return s
 
@@ -78,6 +79,15 @@ class MyGymEnv(gym.Env):
         done = self.stop_condition() # max frame reached?
         self.done = done
         self.reward = reward
+
+        if self.COMBI:
+            obs = self.get_rgb()
+            return (state,
+                    self.target_key_points,
+                    obs,
+                    self.target_obs,
+                    reward,
+                    bool(done), {})
         if self.RGB:
             rgb = self.get_rgb()
             return state, rgb, reward, bool(done), {}

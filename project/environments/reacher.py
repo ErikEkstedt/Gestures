@@ -16,7 +16,7 @@ class Base(MyGymEnv):
                  target_name='target',
                  model_xml='NOT/A/FILE.xml',
                  ac=6, obs=18,
-                 args = None):
+                 args=None):
         self.XML_PATH    = XML_PATH
         self.model_xml   = model_xml
         self.robot_name  = robot_name
@@ -45,8 +45,8 @@ class Base(MyGymEnv):
                               obs_dim=obs,
                               RGB=args.RGB,
                               COMBI=args.COMBI,
-                              W = args.video_W,
-                              H = args.video_H)
+                              W = args.video_w,
+                              H = args.video_h)
             self.MAX_TIME=args.MAX_TIME
 
             # Reward penalties/values
@@ -151,9 +151,9 @@ class ReacherPlaneNoTarget(Base):
         return None
 
     def robot_reset(self):
-        ''' np.random for correct seed. '''
+        ''' self.np_random for correct seed. '''
         for j in self.robot_joints.values():
-            j.reset_current_position(np.random.uniform(low=-0.01, high=0.01 ), 0)
+            j.reset_current_position(self.self.np_random.uniform(low=-0.01, high=0.01 ), 0)
             j.set_motor_torque(0)
 
     def robot_specific_reset(self):
@@ -211,7 +211,7 @@ class ReacherPlaneCombi(Base):
         self.calc_robot_keypoints()
 
     def get_target(self):
-        idx = np.random.randint(0, len(self.Targets))
+        idx = self.np_random.randint(0, len(self.Targets))
         obs, state = self.Targets[idx]
         self.target_key_points = state.numpy()
         self.target_obs = obs
@@ -244,9 +244,9 @@ class ReacherPlaneCombi(Base):
         self.to_target_vec = np.concatenate((self.totarget1, self.totarget2),)
 
     def robot_reset(self):
-        ''' np.random for correct seed. '''
+        ''' self.np_random for correct seed. '''
         for j in self.robot_joints.values():
-            j.reset_current_position(np.random.uniform(low=-0.01, high=0.01 ), 0)
+            j.reset_current_position(self.np_random.uniform(low=-0.01, high=0.01 ), 0)
             j.set_motor_torque(0)
 
     def calc_state(self):
@@ -272,9 +272,9 @@ class ReacherPlaneCombi(Base):
 # ---------------------------------------------------------
 class ReacherCommon():
     def robot_reset(self):
-        ''' np.random for correct seed. '''
+        ''' self.np_random for correct seed. '''
         for j in self.robot_joints.values():
-            j.reset_current_position(np.random.uniform(low=-0.01, high=0.01 ), 0)
+            j.reset_current_position(self.np_random.uniform(low=-0.01, high=0.01 ), 0)
             j.set_motor_torque(0)
 
     def set_custom_target(self, coords):
@@ -336,11 +336,11 @@ class ReacherPlane(ReacherCommon, Base):
 
     def plane_target(self, r0, r1, x0=0, y0=0, z0=0.41):
         ''' circle in xy-plane'''
-        theta = 2 * np.pi * np.random.rand()
+        theta = 2 * np.pi * self.np_random.rand()
         x = x0 + r0*np.cos(theta)
         y = y0 + r0*np.sin(theta)
         z = z0
-        theta = 2 * np.pi * np.random.rand()
+        theta = 2 * np.pi * self.np_random.rand()
         x1 = x + r1*np.cos(theta)
         y1 = y + r1*np.sin(theta)
         z1 = z
@@ -446,13 +446,13 @@ class Reacher3D(ReacherCommon, Base):
 
     def sphere_target(self, r0, r1, x0=0, y0=0, z0=0.41):
         ''' free targets in 3d space '''
-        theta = np.pi * np.random.rand()
-        phi = 2 * np.pi * np.random.rand()
+        theta = np.pi * self.np_random.rand()
+        phi = 2 * np.pi * self.np_random.rand()
         x = x0 + r0*np.sin(theta)*np.cos(phi)
         y = y0 + r0*np.sin(theta)*np.sin(phi)
         z = z0 + r0*np.cos(theta)
-        theta = np.pi * np.random.rand()
-        phi = 2 * np.pi * np.random.rand()
+        theta = np.pi * self.np_random.rand()
+        phi = 2 * np.pi * self.np_random.rand()
         x1 = x + r1*np.sin(theta)*np.cos(phi)
         y1 = y + r1*np.sin(theta)*np.sin(phi)
         z1 = z + r1*np.cos(theta)
