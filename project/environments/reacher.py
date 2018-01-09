@@ -485,17 +485,20 @@ if __name__ == '__main__':
     from utils import print_state_Combi
     args = get_args()
 
-    # Env = ReacherPlaneNoTarget
-    # print_state_noTarget(Env, args)
 
     if args.COMBI:
         Env = ReacherPlaneCombi
         print_state_Combi(Env, args)
-    # Env = ReacherPlane
-    # print_state(Env, args)
+    else:
 
-    # Env = Reacher3D
-    # print_state(Env, args)
+        # Env = ReacherPlaneNoTarget
+        # print_state_noTarget(Env, args)
+
+        Env = ReacherPlane
+        print_state(Env, args)
+
+        # Env = Reacher3D
+        # print_state(Env, args)
 
     input('Press Enter to continue')
     if args.num_processes > 1:

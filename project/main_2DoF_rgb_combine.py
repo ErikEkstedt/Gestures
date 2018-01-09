@@ -73,6 +73,7 @@ def main():
     optimizer_pi = optim.Adam(pi.parameters(), lr=args.pi_lr)
     print('\nPOLICY:\n', pi)
 
+
     # ==== Training ====
     print('Learning {}(ac: {}, ob: {})'.format( args.env_id, ac_shape, ob_shape))
     print('\nTraining for %d Updates' % args.num_updates)
