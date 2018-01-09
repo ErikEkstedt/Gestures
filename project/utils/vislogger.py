@@ -63,6 +63,26 @@ class VisLogger(object):
                     opts=dict(showlegend=True, xlabel='Frames',
                     ylabel=name, title=name,),)
 
+    def scatter_update(self, Xdata, Ydata, name):
+        '''
+        :param Xdata - torch.Tensor or float
+        :param Ydata - torch.Tensor or float
+        :param name - string
+        '''
+        Xdata = to_numpy(Xdata)
+        Ydata = to_numpy(Ydata)
+        X = np.stack(Xdata, Ydata)
+        print(Xdata)
+        print(Ydata)
+        print(X)
+
+        if name in self.windows.keys():
+            self.viz.updateTrace(X, win=self.windows[name], append=True)
+        else:
+            self.windows[name] = self.viz.scatter(X,
+                    opts=dict(showlegend=True, xlabel='Frames',
+                    ylabel=name, title=name,),)
+
     def bar_update(self, X, name):
         '''
         :param X - torch.Tensor or float

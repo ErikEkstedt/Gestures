@@ -1,5 +1,8 @@
 import copy
 import math
+from functools import reduce
+import operator
+
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
@@ -29,8 +32,12 @@ class Policy(object):
 
     Superclass for the different policies (CNN/MLP) containing common funcs.
     """
-    def evaluate_actions(self, s_t, actions):
-        v, action_mean, action_logstd = self(x)
+    def evaluate_actions(self, o, o_target, s, s_target, actions):
+        ''' requires_Grad=True for all in training'''
+        actions = Variable(actions)
+        o, o_target = Variable(o), Variable(o_target)
+        s, s_target = Variable(s), Variable(s_target)
+        v, action_mean, action_logstd = self(o, o_target, s, s_target)
         action_std = action_logstd.exp()
 
         # calculate `old_log_probs` directly in exploration.
@@ -43,7 +50,8 @@ class Policy(object):
         return v, action_log_probs, dist_entropy
 
     def sample(self, o, o_target, s, s_target):
-        o, o_target = Variable(o), Variable(o_target)
+        ''' volatile input here during exploration. We want gradients at training'''
+        o, o_target = Variable(o, volatile=True), Variable(o_target, volatile=True)
         s, s_target = Variable(s, volatile=True), Variable(s_target, volatile=True)
 
         v, action_mean, action_logstd = self(o, o_target, s, s_target)
@@ -64,7 +72,7 @@ class Policy(object):
         return v, action, action_log_probs, action_std
 
     def act(self, o, o_target, s, s_target):
-        o, o_target = Variable(o), Variable(o_target)
+        o, o_target = Variable(o, volatile=True), Variable(o_target, volatile=True)
         s, s_target = Variable(s, volatile=True), Variable(s_target, volatile=True)
         v, action, _ = self(o, o_target, s, s_target)
         return v, action
@@ -78,35 +86,13 @@ class MLP(nn.Module):
 
         self.value = nn.Linear(args.hidden, 1)
         self.action = nn.Linear(args.hidden, action_shape)
-        self.train()
-
-        self.n         = 0
-        self.total_n   = args.num_frames
-        self.std_start = args.std_start
-        self.std_stop  = args.std_stop
 
     def forward(self, x):
         x = F.tanh(self.fc1(x))
         x = F.tanh(self.fc2(x))
         v = self.value(x)
         ac_mean = self.action(x)
-        ac_std = self.std(ac_mean)  #std annealing
-        return v, ac_mean, ac_std
-
-    def std(self, x):
-        ratio = self.n/self.total_n
-        self.log_std_value = self.std_start - (self.std_start - self.std_stop)*ratio
-        std = torch.FloatTensor([self.log_std_value])
-        ones = torch.ones(x.data.size())
-        if x.is_cuda:
-            std = std.cuda()
-            ones=ones.cuda()
-        std = std*ones
-        std = Variable(std)
-        return std
-
-    def get_std(self):
-        return math.exp(self.log_std_value)
+        return v, ac_mean
 
 
 class PixelEmbedding(nn.Module):
@@ -144,11 +130,19 @@ class PixelEmbedding(nn.Module):
 
 class CombinePolicy(nn.Module, Policy):
     ''' Policy that uses both state and obs
-
     self(o, o_, s, s_)  : o,s = current state/obs, o_,s_ = target state/obs
-
     '''
-    def __init__(self, o_shape, o_target_shape, s_shape, s_target_shape, a_shape, args):
+    def __init__(self,
+                 o_shape,
+                 o_target_shape,
+                 s_shape,
+                 s_target_shape,
+                 a_shape,
+                 feature_maps=[64, 32, 16],
+                 kernel_sizes=[5, 5, 5],
+                 strides=[2, 2, 2],
+                 args=None):
+
         super(CombinePolicy, self).__init__()
         self.o_shape = o_shape
         self.s_shape = s_shape
@@ -156,23 +150,57 @@ class CombinePolicy(nn.Module, Policy):
 
         self.o_target_shape = o_target_shape
         self.s_target_shape = s_target_shape
-        self.obs_shape = (o_shape[0]+o_target_shape[0], *o_shape[1:])
+
+        self.in_channels_cat = o_shape[0]+o_target_shape[0]
+        self.obs_shape = (self.in_channels_cat, *o_shape[1:])
 
         self.cnn = PixelEmbedding(self.obs_shape,
-                                  feature_maps=[16, 32, 64],
-                                  kernel_sizes=[5, 5, 5],
-                                  strides=[2, 2, 2],
+                                  feature_maps=feature_maps,
+                                  kernel_sizes=kernel_sizes,
+                                  strides=strides,
                                   args=None)
+
         self.nparams_emb = self.cnn.n_out + s_shape + s_target_shape
         self.mlp = MLP(self.nparams_emb, a_shape, args)
+        self.train()
+
+        # self.n         = self.mlp.n
+        self.n         = 0
+        self.total_n   = args.num_frames
+        self.std_start = args.std_start
+        self.std_stop  = args.std_stop
 
     def forward(self, o, o_target, s, s_target):
         o_cat = torch.cat((o, o_target), dim=1)
         s_cat = torch.cat((s, s_target), dim=1)
         x = self.cnn(o_cat)
         x = torch.cat((x, s_cat), dim=1)
-        return self.mlp(x)
+        v, ac_mean = self.mlp(x)
+        ac_std = self.std(ac_mean)
+        return v, ac_mean, ac_std
 
+    def std(self, x):
+        ''' linearly decreasing standard deviation '''
+        ratio = self.n/self.total_n
+        self.log_std_value = self.std_start - (self.std_start - self.std_stop)*ratio
+        std = torch.FloatTensor([self.log_std_value])
+        ones = torch.ones(x.data.size())
+        if x.is_cuda:
+            std = std.cuda()
+            ones=ones.cuda()
+        std = std*ones
+        std = Variable(std)
+        return std
+
+    def get_std(self):
+        return math.exp(self.log_std_value)
+
+    def total_parameters(self):
+        p = 0
+        for parameter in self.parameters():
+            tmp_params = reduce(operator.mul, parameter.shape)
+            p += tmp_params
+        return p
 
 def test_combinepolicy(args):
     ''' Test for CombinePolicy '''
