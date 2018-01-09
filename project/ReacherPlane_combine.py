@@ -2,7 +2,6 @@
 State and Obs as input
 Reward function based on state space
 '''
-import argparse
 import numpy as np
 import os
 
@@ -14,29 +13,42 @@ import torch.optim as optim
 from utils.utils import make_log_dirs
 from utils.arguments import get_args
 from utils.vislogger import VisLogger
-
 from models.combine import CombinePolicy
-
 from agent.test import Test_and_Save_Video_Combi as Test_and_Save_Video
 from agent.train import explorationCombine as exploration
 from agent.train import trainCombine as train
 from agent.memory import RolloutStorageCombi as RolloutStorage
 from agent.memory import Results
 from agent.memory import StackedObs, StackedState
-
 from data.dataset import load_reacherplane_data
-
 from environments.utils import make_parallel_environments_combine
 from environments.reacher import ReacherPlaneCombi
 
-'''
-TODO:
 
-Need to fix check of dimensions in test/train targets
+def print_shapes(s, obs, CurrentState, CurrentStateTarget, CurrentObs, CurrentObsTarget):
+    print('-'*80)
+    print('s.shape', s.shape)
+    print('s_target.shape', s.shape)
+    print()
+    print('type(obs)', type(obs))
+    print('obs.shape', obs.shape)
+    print('obs.mean', obs.mean())
+    print()
+    print('type(obs_target)', type(obs_target))
+    print('obs_target.shape', obs_target.shape)
+    print('obs_target.mean', obs_target.mean())
+    print()
+    print('CurrentObs().size()', CurrentObs().size())
+    print('CurrentObs().mean()', CurrentObs().mean())
+    print()
+    print('CurrentObsTarget().size()', CurrentObsTarget().size())
+    print('CurrentObsTarget().mean()', CurrentObsTarget().mean())
+    print()
+    print('CurrentState().size()', CurrentState().size())
+    print('CurrentState().mean()', CurrentState().mean())
+    print('CurrentStateTarget().size()', CurrentStateTarget().size())
+    print('CurrentStateTarget().mean()', CurrentStateTarget().mean())
 
-exploration
-train
-'''
 
 def get_targets(train_path='', test_path='', verbose=False):
     train_path = '/home/erik/DATA/project/ReacherPlaneNoTarget/obsdata_rgb40-40-3_n100000_0.pt'
@@ -56,12 +68,14 @@ def get_targets(train_path='', test_path='', verbose=False):
     assert ob_tr.shape == ob_te.shape, 'training and test shapes do not match'
     return trainset, testset
 
+
 def main():
     args = get_args()
     print('ReacherPlaneCombi')
 
     # === Targets ===
-    traintargets, testtargets = get_targets()
+    print('Loading target labels...')
+    traintargets, testtargets = get_targets()  # asserts same dims on train/test
     ob_sample, st_sample, = traintargets[4]
     ob_target_shape = ob_sample.shape
     st_target_shape = st_sample.shape[0]
@@ -76,6 +90,14 @@ def main():
     args.COMBI = True
     args.video_w = ob_sample.shape[1]
     args.video_h = ob_sample.shape[2]
+
+    # frames -> updates
+    args.num_updates = int(args.num_frames) // args.num_steps // args.num_processes
+    args.test_thresh = int(args.test_thresh) // args.num_steps // args.num_processes
+
+    make_log_dirs(args)
+    if not args.no_vis:
+        vis = VisLogger(args)
 
     # === Environment ===
     Env = ReacherPlaneCombi  # using Env as variable so I only need to change this line between experiments
@@ -95,7 +117,6 @@ def main():
     result             = Results(200, 10)
     CurrentState       = StackedState(args.num_processes, args.num_stack, st_shape)
     CurrentStateTarget = StackedState(args.num_processes, args.num_stack, st_target_shape)
-
     CurrentObs         = StackedObs(args.num_processes, args.num_stack, ob_shape)
     CurrentObsTarget   = StackedObs(args.num_processes, args.num_stack, ob_shape)
 
@@ -125,44 +146,18 @@ def main():
 
 
     # ==== Training ====
-    make_log_dirs(args)
-    args.num_updates   = int(args.num_frames) // args.num_steps // args.num_processes
-    if not args.no_vis:
-        vis = VisLogger(args)
     print('Learning {}(ac: {}, st: {}, ob: {})'.format( args.env_id, ac_shape, st_shape, ob_shape))
     print('\nTraining for %d Updates' % args.num_updates)
 
     s, s_target, obs, obs_target = env.reset()
 
-    CurrentState.update(s)
+    CurrentState.update(s)  # keep track of current state (num_proc, num_stack, state_shape)
     CurrentStateTarget.update(s_target)
 
-    CurrentObs.update(obs)
+    CurrentObs.update(obs)  # keep track of current obs (num_proc, num_stack, obd_shape)
     CurrentObsTarget.update(obs_target)
 
-    if args.verbose:
-        print('-'*80)
-        print('env.reset | s.shape', s.shape)
-        print('env.reset | s_target.shape', s.shape)
-        print()
-        print('env.reset | type(obs)', type(obs))
-        print('env.reset | obs.shape', obs.shape)
-        print('env.reset | obs.mean', obs.mean())
-        print()
-        print('env.reset | type(obs_target)', type(obs_target))
-        print('env.reset | obs_target.shape', obs_target.shape)
-        print('env.reset | obs_target.mean', obs_target.mean())
-        print()
-        print('CurrentObs().size()', CurrentObs().size())
-        print('CurrentObs().mean()', CurrentObs().mean())
-        print()
-        print('CurrentObsTarget().size()', CurrentObsTarget().size())
-        print('CurrentObsTarget().mean()', CurrentObsTarget().mean())
-        print()
-        print('CurrentState().size()', CurrentState().size())
-        print('CurrentState().mean()', CurrentState().mean())
-        print('CurrentStateTarget().size()', CurrentStateTarget().size())
-        print('CurrentStateTarget().mean()', CurrentStateTarget().mean())
+    # print_shapes(s, obs, CurrentState, CurrentState, CurrentObs, CurrentObsTarget)
 
     rollouts.states[0].copy_(CurrentState())
     rollouts.target_states[0].copy_(CurrentStateTarget())

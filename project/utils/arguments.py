@@ -59,7 +59,7 @@ def get_args():
     parser.add_argument('--no-test', action='store_true', default=False, help='disables test during training')
     parser.add_argument('--test-interval', type=int,  default=50, help='how many updates/test (default: 50)')
     parser.add_argument('--num-test', type=int, default=20, help='Number of test episodes during test (default: 20)')
-    parser.add_argument('--test-thresh', type=int, default=1000000, help='Number of updates before test (default: 1000000)')
+    parser.add_argument('--test-thresh', type=int, default=1000000, help='number of frames before test (default: 1000000)')
     parser.add_argument('--load-file', default='/tmp/', help='state_dict to load')
 
     # === LOG ===

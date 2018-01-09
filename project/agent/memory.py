@@ -101,6 +101,9 @@ class Results(object):
     def get_reward_mean(self):
         return torch.Tensor(self.final_reward_list).mean()
 
+    def get_reward_std(self):
+        return torch.Tensor(self.final_reward_list).std()
+
     def get_last_reward(self):
         return self.final_reward_list[0]
 
@@ -119,10 +122,12 @@ class Results(object):
 
     def vis_plot(self, vis, frame, std):
         tr_rew_mean = self.get_reward_mean()
+        tr_rew_std = self.get_reward_std()
         v, p, e = self.get_loss_mean()
 
         # Draw plots
-        vis.line_update(Xdata=frame, Ydata=tr_rew_mean, name='Training Score')
+        vis.line_update(Xdata=frame, Ydata=tr_rew_mean, name='Training Score Mean')
+        vis.line_update(Xdata=frame, Ydata=tr_rew_std, name='Training Score Std')
         vis.line_update(Xdata=frame, Ydata=v, name='Value Loss')
         vis.line_update(Xdata=frame, Ydata=p, name='Policy Loss')
         vis.line_update(Xdata=frame, Ydata=std, name='Action std')
