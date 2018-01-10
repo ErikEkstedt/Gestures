@@ -2,6 +2,7 @@ from visdom import Visdom
 import numpy as np
 import torch
 
+
 # Run 'python -m visdom.server'
 
 def to_numpy(x):
@@ -149,6 +150,7 @@ def test_line_scatter(logger):
     y = [4]
     logger.scatter_update(x,y, 'Scatter')
     logger.line_update(x,y, 'Line')
+
 
 def test_box(logger):
     box = torch.Tensor([1,2,3,5,9,5,3,2,1])
