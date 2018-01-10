@@ -1,9 +1,23 @@
 # Todo
 
-Todo:
-* COMBINED MODEL
-* RGB without target. Use as target. combined model.
-* Reward in state and rgb.
+# Writing Thesis
+
+## Jupyter notebook
+1. [ ] try vim-bindings
+	* vim-ipython
+	* vim-slimux-ipython-jupyter
+	* json-markdown-ipython_python
+	* vim-wiki
+
+This is basicly really structuring the code, writing good research documentation, future work portfolio.
+
+
+# Coding 
+
+## Data Science: 
+* Data collection/result sampling
+
+
 
 
 1. Training: 
@@ -14,11 +28,11 @@ Todo:
 	* [ ] Train models
 		* [x] Vanilla CNN
 		* [x] Vanilla MLP
-		* [ ] Combine
+		* [x] Combine
 		* [ ] CLSTM (Don't start before Vanilla done)
 	* [ ] Continue training from checkpoint with smaller learning rate
 
-2. [ ] UNDERSTANDING MODULE
+2. [x] UNDERSTANDING MODULE
 	* [x] Create Data - Supervised Learning
 		* [x] Dataset
 		* [x] only positions, no speed
@@ -28,15 +42,6 @@ Todo:
 		* [x] Velocities, if velocities are to be model by a cnn we need stacked frames.
 			* [ ] Stack frames
 			* [ ]	smaller network 
-
-
-
-3. [ ] Make environment that only gives back robots internal state
-	* Key points:
-		* Positions
-		* delta positions
-		* joint_speed
-
 
 ## ML:
 * [ ] Annealing learning rate
