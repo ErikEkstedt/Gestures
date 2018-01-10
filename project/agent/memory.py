@@ -66,6 +66,7 @@ class Results_single(object):
 
 class Results(object):
     def __init__(self, max_n=200, max_u=200):
+        # Train
         self.episode_rewards = 0
         self.tmp_final_rewards = 0
         self.final_reward_list = []
@@ -79,6 +80,12 @@ class Results(object):
         self.max_u = max_u
         self.start_time = time.time()
 
+        # Test
+        self.test_episode_list = []
+        self.t = 0
+        self.max_t = max_n  # same as training for comparison
+
+
     def time(self):
         return time.time() - self.start_time
 
@@ -88,6 +95,11 @@ class Results(object):
         if self.n > self.max_n:
             self.final_reward_list.pop()
 
+    def update_test(self, test_list):
+        self.test_episode_list.insert(0, self.tmp_final_rewards.mean())
+        self.n += 1
+        if self.n > self.max_n:
+            self.final_reward_list.pop()
     def update_loss(self, v, p, e):
         self.vloss.insert(0, v)
         self.ploss.insert(0, p)

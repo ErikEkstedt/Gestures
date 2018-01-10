@@ -201,7 +201,12 @@ def main():
 
             pi.cpu()
             sd = pi.cpu().state_dict()
-            test_reward, BestVideo = Test_and_Save_Video(test_env, testtargets,  CombinePolicy, sd, args)
+            test_reward_list, BestVideo = Test_and_Save_Video(test_env, testtargets,  CombinePolicy, sd, args)
+
+            test_reward_list = np.array(test_reward_list)
+            test_reward = test_reward_list.mean()
+
+            result.update_test(test_reward_list)
 
             # Plot result
             print('Average Test Reward: {}\n '.format(round(test_reward)))
