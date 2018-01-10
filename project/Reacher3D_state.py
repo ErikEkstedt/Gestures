@@ -37,7 +37,7 @@ def main():
     test_env = Env(args)
     args.RGB = tmp_rgb # reset rgb flag
 
-    ob_shape = env.observation_space.shape[0]
+    ob_shape = env.state_space.shape[0]
     ac_shape = env.action_space.shape[0]
 
     # === Memory ===

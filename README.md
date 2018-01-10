@@ -44,50 +44,94 @@ function, and a network architecture that will make learning to move and mimic
 movements, in the way explained above, possible.
 
 
-# [project.agent](project.agent/)
-Pytorch Agent
+## Structure
 
-* [main.py](project.agent/main.py)
-* [model.py](project.agent/model.py)
+```
+.
+├── agent
+├── baselines_openai
+├── data
+├── dynamics_model
+├── environments
+│   └── xml_files
+│       ├── humanoid
+│       └── reacher
+├── models
+└── utils
+```
+
+# [agent](project.agent/)
+Pytorch Agent
+```
+.
+├── __init__.py
+├── loadtest.py
+├── memory.py
+├── test.py
+└── train.py
+```
+
 * [memory.py](project.agent/memory.py)
 * [test.py](project.agent/test.py)
 * [train.py](project.agent/train.py)
-* Help Scripts:
-	* [vislogger.py](project.agent/vislogger.py)
-	* [utils.py](project.agent/utils.py)
-	* [arguments.py](project.agent/arguments.py)
-	* [loadtest.py](project.agent/loadtest.py)
+	* Std and noise. good values?
 
+# [model](project.models)
 
------------------------------------------------
-# [project.environments](project.environments/)
-The simulation environments are a big part of this project. 
-##   [reacher.py ](project.environments/reacher.py) (DoF = Degrees of Freedom)
-All custom project.environments.
-* **Reacher_Plane**
-* **Reacher3D**
+```
+.
+├── clstmcell.py
+├── clstm.py
+├── combine.py
+├── coordination.py
+├── __init__.py
+└── understanding.py
+```
 
-##   [humanoid.py ](project.environments/humanoid.py)
-All custom project.environments.
-* **Humanoid**
-* TargetHumanoid
+# [environments](project.environments/)
 
-##  [my_gym_env.py](project.environments/my_gym_env.py)
-Extends OpenAI's gym.Env class.
-* _seed
-* _render
-* _reset
-* _step
-* HUD
+```
+.
+├── humanoid.py
+├── humanoid_training.py
+├── __init__.py
+├── my_gym_env.py
+├── reacher.py
+├── README.md
+├── SubProcEnv.py
+├── utils.py
+└── xml_files
+    ├── humanoid
+    │   ├── HumanoidNoTarget.xml
+    │   └── roboschool_humanoid.xml
+    ├── Notes.md
+    └── reacher
+        ├── Reacher3D.xml
+        ├── ReacherHumanoid.xml
+        ├── ReacherPlaneNoTarget.xml
+        └── ReacherPlane.xml
+```
+# [data](project.data)
+```
+.
+├── collectdata.py
+├── dataset.py
+├── __init__.py
+├── make_video.py
+└── watch_video.py
+```
+# [dynamics_model](project.dynamics_model)
+```
+.
+├── CLSTMCell.py
+├── __init__.py
+├── main.py
+├── main_test.py
+├── model.py
+├── new_model.py
+├── README.md
+├── resume_training.py
+├── test_new_model.py
+└── utils.py
 
-## [xml_files](project.environments/xml_files)
-Directory for the xml files.
-* xml_files/
-	* bullet_mjcf/
-	* gym_assets/
-	* humanoid/
-	* reacher/
-
-# [baselines](baselines/)
-OpenAI baselines training
-Mostly used for debugging training, is env wrong or algorithm...
+```

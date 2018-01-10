@@ -8,7 +8,6 @@ import matplotlib
 import matplotlib.pyplot as plt
 import matplotlib.animation as animation
 
-
 def make_video(vid, filename='/tmp/video'):
     fig = plt.figure()
     ims = []
@@ -21,7 +20,7 @@ def make_video(vid, filename='/tmp/video'):
     ani.save(name)
     print('Saved video to:', name)
 
-def convert_dir_video(dirpath):
+def combine_video_dir(dirpath):
     assert os.path.exists(dirpath)
     print('Converting .pt files to mp4...')
     for root, dirs, files in os.walk(dirpath):
@@ -29,7 +28,9 @@ def convert_dir_video(dirpath):
         for f in files:
             if f.endswith('.pt'):
                 fpath = os.path.join(dirpath, f)
-                vid = torch.load(fpath)
+                vids, targets = torch.load(fpath)
+                print(len(vids))
+                print(len(targets))
                 name = fpath[:-3]  # omit extension
                 make_video(vid, name)
                 print('Removing source file...')
@@ -43,5 +44,5 @@ if __name__ == '__main__':
         vid = torch.load(filename)
         make_video(vid, video_name)
     else:
-        convert_dir_video(sys.argv[1])
+        combine_video_dir(sys.argv[1])
 
