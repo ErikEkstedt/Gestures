@@ -1,3 +1,21 @@
+# Writing Thesis
+## Jupyter notebook
+1. [ ] try vim-bindings
+	* Tried to add extensions to jupyter. not fun. and its clonky to write in browser :/
+		* nvim connection to jupyter should exist! 
+		* the ui is a mix of several buffers. markdown buffers and code buffers.
+		* add mode-jupyter for choosing buffers.
+		* inside a buffer it is pure nvim.
+	* vim-slimux-ipython-jupyter
+	* json-markdown-ipython_python
+	* vim-wiki
+This is basicly really structuring the code, writing good research documentation, future work portfolio.
+
+
+---------------------------------------------
+---------------------------------------------
+---------------------------------------------
+
 ## Why does training improve but when loading state dict the result sucks?
 Don't know why... might come back...
 But for now simply just save models with good score and then restart scirpt until correct behaviour. [This pains me]

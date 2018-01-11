@@ -5,7 +5,7 @@ import gym
 from itertools import count
 from OpenGL import GLE # fix for opengl issues on desktop  / nvidia
 
-from project.environments.my_gym_env import MyGymEnv
+from project.environments.my_gym_env_reacher import MyGymEnv
 
 PATH_TO_CUSTOM_XML = os.path.join(os.path.dirname(__file__), "xml_files")
 
@@ -147,15 +147,6 @@ class ReacherPlaneNoTarget(Base):
                         args=args)
         print('I am', self.model_xml)
 
-    def calc_reward(self, a):
-        return None
-
-    def robot_reset(self):
-        ''' self.np_random for correct seed. '''
-        for j in self.robot_joints.values():
-            j.reset_current_position(self.self.np_random.uniform(low=-0.01, high=0.01 ), 0)
-            j.set_motor_torque(0)
-
     def robot_specific_reset(self):
         self.motor_names = ["robot_shoulder_joint_z", "robot_elbow_joint"]
         self.motor_power = [100, 100]
@@ -164,16 +155,25 @@ class ReacherPlaneNoTarget(Base):
         self.robot_reset()
         self.calc_robot_keypoints()
 
+    def robot_reset(self):
+        ''' self.np_random for correct seed. '''
+        for j in self.robot_joints.values():
+            j.reset_current_position(self.self.np_random.uniform(low=-0.01, high=0.01 ), 0)
+            j.set_motor_torque(0)
+
     def calc_robot_keypoints(self):
         ''' gets hand position, target position and the vector in bewteen'''
         elbow_position = np.array(self.parts['robot_elbow'].pose().xyz())
         hand_position = np.array(self.parts['robot_hand'].pose().xyz())
         self.robot_key_points = np.concatenate((elbow_position[:2], hand_position[:2]))
 
+    def calc_reward(self, a):
+        return None
+
     def calc_state(self):
         j = np.array([j.current_relative_position()
-                      for j in self.robot_joints.values()],
-                     dtype=np.float32).flatten()
+                        for j in self.robot_joints.values()],
+                        dtype=np.float32).flatten()
         self.joints_at_limit = np.count_nonzero(np.abs(j[0::2]) > 0.99)
         self.joint_speeds = j[1::2]
         self.calc_robot_keypoints()  # calcs target_position, important_pos, to_target_vec

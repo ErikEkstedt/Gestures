@@ -65,8 +65,15 @@ class Results_single(object):
 
 
 class Results(object):
+    ''' Results
+    Class for storing the results during training.
+    Could/should be combine with vislogger/logger.
+    '''
     def __init__(self, max_n=200, max_u=200):
-        # Train
+        '''
+        :param max_n     :int, number of final episode rewards for averaging rewards
+        :param max_u     :int, number of updates for averaging training losses
+        '''
         self.episode_rewards = 0
         self.tmp_final_rewards = 0
         self.final_reward_list = []
@@ -100,6 +107,7 @@ class Results(object):
         self.n += 1
         if self.n > self.max_n:
             self.final_reward_list.pop()
+
     def update_loss(self, v, p, e):
         self.vloss.insert(0, v)
         self.ploss.insert(0, p)

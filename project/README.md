@@ -1,17 +1,28 @@
 # Todo
 
-# Writing Thesis
-
-## Jupyter notebook
-1. [ ] try vim-bindings
-	* vim-ipython
-	* vim-slimux-ipython-jupyter
-	* json-markdown-ipython_python
-	* vim-wiki
-
-This is basicly really structuring the code, writing good research documentation, future work portfolio.
-
 # Coding 
+
+
+
+* [ ] make environment stpe method to take target as input.
+	* env.step(a, target)
+* [x] 'test_combine.py',  see performance of loaded state_dict.
+* [ ] Gather trajectory.
+	* [ ] Collect complete episode trajectory
+* [ ] Script
+	* test script but deterministic targets
+	* loads a state dict 
+	* loads a target trajectory
+	* renders both
+
+
+
+
+# improvements
+
+* [ ] ReacherPlaneCombi environments take args and target as input. Uses targets to set video dims.
+
+
 
 ## Data Science: 
 * Data collection/result sampling

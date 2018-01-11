@@ -113,7 +113,8 @@ class ReacherPlaneDataset(Dataset):
             obs, state = self.transform(obs, state)
         return obs, state
 
-def load_reacherplane_data(path, batch_size=256, num_workers=4, shuffle=True):
+
+def load_reacherplane_data(path, batch_size=300, num_workers=4, shuffle=True):
     '''Dataset for Understanding model ReacherPlane
     (joints_speeds are omitted)
     :param path        : path to data

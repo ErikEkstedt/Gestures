@@ -1,16 +1,20 @@
 import argparse
+import os
 import torch
 
 def get_args():
     parser = argparse.ArgumentParser(description='PPOAgent')
     parser.add_argument('--num-processes', type=int, default=4)
     parser.add_argument('--dpoints', type=int, default=500000)
+    parser.add_argument('--episodes', type=int, help='complete episode trajectory to gather for mimic', default=10)
+    parser.add_argument('--update-target', type=int, default=10, help='Number of frames between target update (default: 10)')
 
     # === Environment ===
     parser.add_argument('--env-id', default='CustomReacher')
     parser.add_argument('--dof', type=int, default=2)
-    parser.add_argument('--video-w', type=int, default=100)
-    parser.add_argument('--video-h', type=int, default=100)
+    parser.add_argument('--video-w', type=int, default=40)
+    parser.add_argument('--video-h', type=int, default=40)
+    parser.add_argument('--video-c', type=int, default=3)
     parser.add_argument('--MAX_TIME', type=int, default=300)
     parser.add_argument('--gravity', type=float, default=9.81)
     parser.add_argument('--power', type=float, default=0.5)
@@ -18,6 +22,7 @@ def get_args():
     parser.add_argument('--COMBI', action='store_true', default=False)
     parser.add_argument('--video', action='store_true', default=False)
     parser.add_argument('--render', action='store_true', default=False)
+    parser.add_argument('--record', action='store_true', default=False)
 
     # === Reward =====
     parser.add_argument('--potential-constant',   type=float, default=100)
@@ -55,18 +60,25 @@ def get_args():
     parser.add_argument('--std-stop', type=float, default=-1.7, help='std stop (Hyperparams for Roboschool in paper)')
     parser.add_argument('--seed', type=int, default=10, help='random seed (default: 10)')
 
+
     # === TEST ===
     parser.add_argument('--no-test', action='store_true', default=False, help='disables test during training')
     parser.add_argument('--test-interval', type=int,  default=50, help='how many updates/test (default: 50)')
     parser.add_argument('--num-test', type=int, default=20, help='Number of test episodes during test (default: 20)')
     parser.add_argument('--test-thresh', type=int, default=1000000, help='number of frames before test (default: 1000000)')
-    parser.add_argument('--load-file', default='/tmp/', help='state_dict to load')
+
+
+    sdpath = os.path.join(os.path.dirname(__file__), "../results/BestDictCombi4710400_65.577.pt")
+    targetpath = os.path.join(os.path.dirname(__file__), "../results/trajectories.pt")
+    parser.add_argument('--state-dict-path', default=sdpath, help='Path to state_dict to load')
+    parser.add_argument('--target-path', default=targetpath, help='Path to target to load')
 
     # === LOG ===
     parser.add_argument('--vis-interval', type=int, default=1, help='vis interval, one log per n updates (default: 1)')
     parser.add_argument('--log-interval', type=int, default=1, help='log interval in console, one log per n updates (default: 1)')
-    parser.add_argument('--log-dir', default='/tmp/', help='directory to save agent logs (default: /tmp/)')
-    parser.add_argument('--data-dir', default='/home/erik/DATA/project/', help='directory to save generated data (default: /DATA/project/)')
+    parser.add_argument('--log-dir', default='/tmp', help='directory to save agent logs')
+    parser.add_argument('--data-dir', default='/tmp', help='directory to save generated data')
+
 
     # === Boolean ===
     parser.add_argument('--no-cuda', action='store_true', default=False, help='disables CUDA training')

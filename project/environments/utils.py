@@ -2,18 +2,19 @@ import cv2
 import torch
 import numpy as np
 import time
-
+from itertools import count
+from torchvision.utils import make_grid
 
 # ======================== #
 # Render                   #
 # ======================== #
+
 def rgb_render(obs, title='obs'):
     ''' cv2 as argument such that import is not done redundantly'''
     cv2.imshow(title, cv2.cvtColor(obs, cv2.COLOR_RGB2BGR))
     if cv2.waitKey(20) & 0xFF == ord('q'):
         print('Stop')
         return
-
 
 def rgb_tensor_render(obs, title='tensor_obs'):
     assert type(obs) is torch.Tensor
@@ -22,8 +23,17 @@ def rgb_tensor_render(obs, title='tensor_obs'):
     im = obs.numpy().astype('uint8')
     rgb_render(im, title)
 
+def render_and_scale(obs, scale=(1, 1), title='obs'):
+    ''' cv2 as argument such that import is not done redundantly'''
+    height, width = obs.shape[:2]
+    obs = cv2.resize(obs,(scale[0]*width, scale[0]*height), interpolation = cv2.INTER_CUBIC)
+    cv2.imshow(title, cv2.cvtColor(obs, cv2.COLOR_RGB2BGR))
+    if cv2.waitKey(20) & 0xFF == ord('q'):
+        print('Stop')
+        return
+
 # ======================== #
-# Run Episodes             #
+# Run Episodes: Reacher    #
 # ======================== #
 
 def print_state(Env, args):
@@ -220,6 +230,51 @@ def make_parallel_environments_combine(Env, args, Targets):
             return env
         return _thunk
     return SubprocVecEnv([multiple_envs(Env, args, Targets, i) for i in range(args.num_processes)])
+
+# ======================== #
+# Run Episodes: Reacher    #
+# ======================== #
+
+def social_random_episodes(env, dset, args, verbose=False):
+    env.reset()  # first init reset
+    t = 0
+    total_reward, episode_reward, best_episode_reward = 0, 0, -9999
+    while True:
+        ob_target, st_target = dset[t]
+        env.set_target(st_target, ob_target)
+        t += 1
+        state, s_target, obs, o_target = env.reset()
+        for j in count(1):
+            if args.render:
+                frame = torch.FloatTensor(obs.transpose((2,0,1)))
+                frame /= 255
+                imglist = [frame, o_target]
+                img = make_grid(imglist, padding=5).numpy()
+                img = img.transpose((1,2,0))
+                render_and_scale(img, scale=(9, 9))
+
+            if j % args.update_target == 0:
+                ob_target, st_target = dset[t]
+                env.set_target(st_target, ob_target)
+                t += 1
+
+            # Observe reward and next state
+            actions = env.action_space.sample()
+            state, s_target, obs, o_target, reward, done, info = env.step(actions)
+
+            # If done then update final rewards and reset episode reward
+            total_reward += reward
+            episode_reward += reward
+            if done:
+                if verbose: print(episode_reward)
+                episode_reward = 0
+                done = False
+                break
+
+    env.close()
+    del env
+    return total_reward/args.num_test, [Video, Targets]
+
 
 # ======================== #
 # Example Reward functions #

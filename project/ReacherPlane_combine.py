@@ -14,6 +14,7 @@ from utils.utils import make_log_dirs
 from utils.arguments import get_args
 from utils.vislogger import VisLogger
 from models.combine import CombinePolicy
+
 from agent.test import Test_and_Save_Video_Combi as Test_and_Save_Video
 from agent.train import explorationCombine as exploration
 from agent.train import trainCombine as train
@@ -51,6 +52,7 @@ def print_shapes(s, obs, CurrentState, CurrentStateTarget, CurrentObs, CurrentOb
 
 
 def get_targets(train_path='', test_path='', verbose=False):
+    ''' Return dataset (not loader)'''
     train_path = '/home/erik/DATA/project/ReacherPlaneNoTarget/obsdata_rgb40-40-3_n100000_0.pt'
     trainset, trainloader = load_reacherplane_data(train_path)
 
@@ -80,16 +82,17 @@ def main():
     ob_target_shape = ob_sample.shape
     st_target_shape = st_sample.shape[0]
 
-    if args.verbose:
-        print('ob shape: {}, st_shape: {}, COMBI: {}'.format(ob_sample.shape, st_sample.shape, args.COMBI))
-        print('args- Video_W: {}, Video_H: {}'.format(args.video_w, args.video_h))
-        input('Press Enter to continue')
 
     # Force Settings
     args.RGB = True
     args.COMBI = True
     args.video_w = ob_sample.shape[1]
     args.video_h = ob_sample.shape[2]
+
+    if args.verbose:
+        print('ob shape: {}, st_shape: {}, COMBI: {}'.format(ob_sample.shape, st_sample.shape, args.COMBI))
+        print('args- Video_W: {}, Video_H: {}'.format(args.video_w, args.video_h))
+        input('Press Enter to continue')
 
     # frames -> updates
     args.num_updates = int(args.num_frames) // args.num_steps // args.num_processes
