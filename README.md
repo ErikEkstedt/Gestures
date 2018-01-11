@@ -17,7 +17,6 @@ freedom, DoF. A limb then has a number of "important points" which purpose is
 to be as close to some target points as possible, these points are the
 definition of a pose.
 
-
 In reinforcement learning the reward function is what is going to define the
 behaviour of the trained agents. One part of this project is to find some
 suitable reward function which makes convergence as fast and the resulting
@@ -111,6 +110,7 @@ Pytorch Agent
         ├── ReacherPlaneNoTarget.xml
         └── ReacherPlane.xml
 ```
+
 # [data](project.data)
 ```
 .
