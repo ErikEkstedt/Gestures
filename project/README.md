@@ -11,14 +11,10 @@
 
 This is basicly really structuring the code, writing good research documentation, future work portfolio.
 
-
 # Coding 
 
 ## Data Science: 
 * Data collection/result sampling
-
-
-
 
 1. Training: 
 	* [x] Make RGB training results. Same rewards but just pixel info.
