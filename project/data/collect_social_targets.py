@@ -16,11 +16,13 @@ def generate_continous_data(env, args):
     '''
     trajectory = {'states': [], 'obs': []}  # dataset wants dict
     s, _, o, _ = env.reset()
+    s = s[:-2]  # remove speed
     for i in tqdm(range(args.dpoints)):
         trajectory['states'].append(s)
         trajectory['obs'].append(o)
         action = env.action_space.sample()
         s, _, o, _, r, d, _ = env.step(action)
+        s = s[:-2]  # remove speed
         if d:
             # if args.MAX_TIME == args.dpoints this should not happen
             print('DONE')
@@ -45,6 +47,7 @@ def get_filename(path='/tmp', s_shape=6, o_shape=(40,40,3), n=10000):
         run += 1
     return os.path.join("{}_{}.pt".format(filename, run))
 
+
 if __name__ == '__main__':
     args = get_args()
     args.MAX_TIME = args.dpoints  # no need to gather abrupt resets
@@ -57,7 +60,7 @@ if __name__ == '__main__':
 
     s, o = dset[0]
     filename = get_filename(args.filepath,
-                            s_shape=s.shape[0],
+                            s_shape=4,
                             o_shape=o.shape,
                             n=args.dpoints)
     print('Saving into:\n\t', filename)

@@ -163,7 +163,6 @@ class Social_Dataset_numpy(Dataset):
         assert type(data) is dict
         self.obs = data['obs']
         self.state = data['states']
-        self.transform = None
         self.obs_shape = self.obs[0].shape
         self.state_shape = self.state[0].shape
 
@@ -172,3 +171,4 @@ class Social_Dataset_numpy(Dataset):
 
     def __getitem__(self, idx):
         return self.state[idx], self.obs[idx]
+

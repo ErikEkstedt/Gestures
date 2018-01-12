@@ -69,15 +69,16 @@ def get_args():
 
 
     sdpath = os.path.join(os.path.dirname(__file__), "../results/BestDictCombi4710400_65.577.pt")
-    targetpath = os.path.join(os.path.dirname(__file__), "../results/trajectories.pt")
+    targetpath = os.path.join(os.path.dirname(__file__), "../results/socialtargets_s4_o40-40-3_n5000_1.pt")
     parser.add_argument('--state-dict-path', default=sdpath, help='Path to state_dict to load')
     parser.add_argument('--target-path', default=targetpath, help='Path to target to load')
+    parser.add_argument('--target-path2', default=targetpath, help='Path to target to load')
 
     # === LOG ===
     parser.add_argument('--vis-interval', type=int, default=1, help='vis interval, one log per n updates (default: 1)')
     parser.add_argument('--log-interval', type=int, default=1, help='log interval in console, one log per n updates (default: 1)')
     parser.add_argument('--log-dir', default='/tmp', help='directory to save agent logs')
-    parser.add_argument('--filepath', default='/tmp/file_created_by_project_args.txt', help='Filepath')
+    parser.add_argument('--filepath', default='/tmp/file_created_by_project_args', help='Filepath')
 
 
     # === Boolean ===

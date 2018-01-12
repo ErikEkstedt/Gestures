@@ -8,7 +8,6 @@ Write how everything her works in connection to other important parts.
 
 Reference original/inspirations
 '''
-
 from roboschool.scene_abstract import Scene, SingleRobotEmptyScene
 import os
 import numpy as np
@@ -120,17 +119,21 @@ class MyGymEnv(gym.Env):
             rgb, _, _, _, _ = self.human_camera.render(False, False, False) # render_depth, render_labeling, print_timing)
             rendered_rgb = np.fromstring(rgb, dtype=np.uint8).reshape( (self.Human_VIDEO_H, self.Human_VIDEO_W,3) )
             cv2_render(rendered_rgb, 'human')
+            return [True, False, False]
         elif mode=="machine":
             self.camera_adjust()
             rgb, _, _, _, _ = self.camera.render(False, False, False) # render_depth, render_labeling, print_timing)
             rendered_rgb = np.fromstring(rgb, dtype=np.uint8).reshape( (self.VIDEO_H,self.VIDEO_W,3) )
             cv2_render(rendered_rgb, 'machine')
+            return [False, True, False]
         elif mode=="target":
             cv2_render(self.obs_target, 'target')
+            return [False, False, True]
         elif mode=='all':
             self._render('human', False)
             self._render('machine', False)
             self._render('target', False)
+            return [True, True, True]
         elif mode=="all_rgb_array":
             self.camera_adjust()
             rgb, _, _, _, _ = self.camera.render(False, False, False) # render_depth, render_labeling, print_timing)
@@ -274,11 +277,17 @@ class Social(Base):
                       ac=2, st=6, args=args)
         print('I am', self.model_xml)
 
-    def set_target(self, state_target=None, obs_target=None):
-        ''' targets should be numpy.ndarray. obs.shape (W,H,C)'''
-        assert type(state_target) is np.ndarray, 'target must be numpy'
-        self.state_target = state_target
-        self.obs_target = obs_target
+    def set_target(self, targets):
+        ''' targets should be a
+        list [numpy.ndarray, numpy.ndarray]
+
+        state.shape (N,)
+        obs.shape (W,H,C)
+        '''
+        self.state_target = targets[0]
+        self.obs_target = targets[1]
+        assert type(targets[0]) is np.ndarray, 'state target must be numpy'
+        assert type(targets[1]) is np.ndarray, 'obs target must be numpy'
 
     def robot_specific_reset(self):
         self.motor_names = ["robot_shoulder_joint_z", "robot_elbow_joint"]
@@ -336,67 +345,29 @@ class Social(Base):
         self.human_camera.move_and_look_at( 0, 0, 1, 0, 0, 0.4)
 
 
-# Test functions
-def random_run(env, render=True):
-    ''' Executes random actions and renders '''
-    s, s_, o, o_ = env.reset()
-    while True:
-        action = env.action_space.sample()
-        s, s_, o, o_, r, d, _ = env.step(action)
-        if render:
-            env.render('all')
-            # env.render()  # same as env.render('human')
-            # env.render('machine')
-            # env.render('target')
-            # h, m, t = env.render('all_rgb_array')  # returns rgb arrays
-            # print(h.shape)
-            # print(m.shape)
-            # print(t.shape)
-        if d:
-            s, s_, o, o_ = env.reset()
+def Social_multiple(args):
+    from project.environments.SubProcEnv import SubprocVecEnv_Social as SubprocVecEnv
+    def multiple_envs(args, rank):
+        def _thunk():
+            env = Social(args)
+            env.seed(args.seed+rank*100)
+            return env
+        return _thunk
+    return SubprocVecEnv([multiple_envs(args, i) for i in range(args.num_processes)])
 
-def random_run_with_changing_targets(env, dset, args, verbose=False):
-    ''' Executes random actions and also changes the target.
-    targets are set in order from a project.data.dataset.
-    renders options:
-        'render.modes': ['human', 'machine', 'target', 'all', 'all_rgb_array']
-    '''
-    t = 0
-    while True:
-        ob_target, st_target = dset[t]; t += 1
-        env.set_target(st_target.numpy(), ob_target.numpy().transpose((1,2,0)))
 
-        state, s_target, obs, o_target = env.reset()
-        episode_reward = 0
-        for j in count(1):
-            if args.render:
-                env.render('all')
-
-            # update the target
-            if j % args.update_target == 0:
-                ob_target, st_target = dset[t]
-                env.set_target(st_target.numpy(), ob_target.numpy().transpose((1,2,0)))
-                t += 1
-
-            # Observe reward and next state
-            actions = env.action_space.sample()
-            state, s_target, obs, o_target, reward, done, info = env.step(actions)
-
-            # If done then update final rewards and reset episode reward
-            episode_reward += reward
-            if done:
-                if verbose: print(episode_reward)
-                break
-
-def project_test():
+# test functions
+def test_social():
     from project.utils.arguments import get_args
-    from project.data.dataset import load_reacherplane_data
+    from project.environments.utils import random_run
+    from project.environments.utils import random_run_with_changing_targets
+    from torch import load
     args = get_args()
 
     # === Targets ===
     print('\nLoading targets from:')
     print('path:\t', args.target_path)
-    dset, dloader = load_reacherplane_data(args.target_path, shuffle=False)
+    dset = load(args.target_path)
 
     env = Social(args)
     env.seed(args.seed)
@@ -404,12 +375,24 @@ def project_test():
     # random_run(env, render=args.render)
     random_run_with_changing_targets(env, dset, args)
 
-def test_env():
-    '''Works'''
-    env = Social()
-    env.seed(4)
-    random_run(env, render=True)
+def test_social_parallel():
+    from project.utils.arguments import get_args
+    from project.environments.utils import random_run_with_changing_targets_parallel
+    from project.environments.utils import random_run_parallel
+    from torch import load
+
+    args = get_args()
+    dset = load(args.target_path)
+
+    env = Social_multiple(args, dset)
+    print(env)
+    print('action space:', env.action_space)
+    print('state space:', env.state_space)
+    print('obs space:', env.observation_space)
+    # random_run_parallel(env, args)
+    random_run_with_changing_targets_parallel(env, dset, args)
+
 
 if __name__ == '__main__':
-    # test_env()
-    project_test()
+    test_social()
+    # test_social_parallel()

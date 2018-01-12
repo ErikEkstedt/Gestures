@@ -172,7 +172,7 @@ class SubprocVecEnv_RGB(VecEnv):
         return len(self.remotes)
 
 # -------------
-def worker_Combine(remote, parent_remote, env_fn_wrapper):
+def worker_social(remote, parent_remote, env_fn_wrapper):
     parent_remote.close()
     env = env_fn_wrapper.x()
     while True:
@@ -193,11 +193,15 @@ def worker_Combine(remote, parent_remote, env_fn_wrapper):
             break
         elif cmd == 'get_spaces':
             remote.send((env.action_space, env.state_space, env.observation_space))
+        elif cmd == 'render':
+            remote.send(( env.render(data) ))
+        elif cmd == 'set_target':
+            remote.send(( env.set_target(data) ))
         else:
             raise NotImplementedError
 
 
-class SubprocVecEnv_Combine(VecEnv):
+class SubprocVecEnv_Social(VecEnv):
     def __init__(self, env_fns):
         """
         envs: list of gym environments to run in subprocesses
@@ -205,7 +209,7 @@ class SubprocVecEnv_Combine(VecEnv):
         self.closed = False
         nenvs = len(env_fns)
         self.remotes, self.work_remotes = zip(*[Pipe() for _ in range(nenvs)])
-        self.ps = [Process(target=worker_Combine, args=(work_remote, remote, CloudpickleWrapper(env_fn)))
+        self.ps = [Process(target=worker_social, args=(work_remote, remote, CloudpickleWrapper(env_fn)))
             for (work_remote, remote, env_fn) in zip(self.work_remotes, self.remotes, env_fns)]
         for p in self.ps:
             p.daemon = True # if the main process crashes, we should not cause things to hang
@@ -228,6 +232,18 @@ class SubprocVecEnv_Combine(VecEnv):
                                 np.stack(dones), \
                                 infos
 
+    def render(self, modes):
+        for remote, mode in zip(self.remotes, modes):
+            remote.send(('render', mode))
+        results = [remote.recv() for remote in self.remotes]
+        human, machine, target = zip(*results)
+        return np.stack(human), np.stack(machine), np.stack(target)
+
+    def set_target(self, targets):
+        for remote, target in zip(self.remotes, targets):
+            remote.send(('set_target', target))
+        results = [remote.recv() for remote in self.remotes]
+
     def reset(self):
         for remote in self.remotes:
             remote.send(('reset', None))
@@ -239,6 +255,7 @@ class SubprocVecEnv_Combine(VecEnv):
         for remote in self.remotes:
             remote.send(('reset_task', None))
         return np.stack([remote.recv() for remote in self.remotes])
+
 
     def close(self):
         if self.closed:
