@@ -103,7 +103,6 @@ def init(args):
     CurrentStateTarget = StackedState(args.num_processes, args.num_stack, s_target_shape)
     CurrentObs         = StackedObs(args.num_processes, args.num_stack, ob_shape)
     CurrentObsTarget   = StackedObs(args.num_processes, args.num_stack, ob_shape)
-
     rollouts           = RolloutStorage(args.num_steps,
                                         args.num_processes,
                                         CurrentState.size()[1],
@@ -112,7 +111,6 @@ def init(args):
                                         ac_shape)
 
     # === Model ===
-    # CurrentObs.obs_shape - (C, W, H)
     pi = CombinePolicy(o_shape=CurrentObs.obs_shape,
                        o_target_shape=CurrentObs.obs_shape,
                        s_shape=s_shape,
@@ -123,7 +121,6 @@ def init(args):
                        strides=[2, 2, 2],
                        args=args)
 
-    pi.train()
     optimizer_pi = optim.Adam(pi.parameters(), lr=args.pi_lr)
     print('\nPOLICY:\n', pi)
     print('Total network parameters to train: ', pi.total_parameters())
@@ -134,7 +131,6 @@ def init(args):
     return pi, optimizer_pi, CurrentState, CurrentStateTarget, \
         CurrentObs, CurrentObsTarget, rollouts, \
         result, env, test_env, train_dset, test_dset
-
 
 def main():
     args = get_args()
@@ -151,8 +147,7 @@ def main():
 
     CurrentState.update(s)  # keep track of current state (num_proc, num_stack, state_shape)
     CurrentStateTarget.update(s_target)
-
-    CurrentObs.update(obs)  # keep track of current obs (num_proc, num_stack, obd_shape)
+    CurrentObs.update(obs)
     CurrentObsTarget.update(obs_target)
 
     rollouts.states[0].copy_(CurrentState())
@@ -171,6 +166,7 @@ def main():
         rollouts.cuda()
         pi.cuda()
 
+    pi.train()
 
     MAX_REWARD = -99999
     for j in range(args.num_updates):

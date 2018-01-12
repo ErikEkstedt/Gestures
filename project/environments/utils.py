@@ -275,6 +275,7 @@ def random_run_with_changing_targets_parallel(env, dset, args):
     '''
     t = 0
     targets = [dset[t]] * args.num_processes
+
     env.set_target(targets)
     t += 1
     state, s_target, obs, o_target = env.reset()
@@ -356,7 +357,6 @@ def random_run_with_changing_targets(env, dset, args):
             if done:
                 if args.verbose: print(episode_reward)
                 break
-
 
 
 
