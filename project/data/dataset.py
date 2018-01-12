@@ -3,6 +3,7 @@ import numpy as np
 from torch.utils.data import Dataset, DataLoader
 
 
+# Dynamic model ------------------
 class ToTensorSeq(object):
     def __call__(self, sample):
         rgb, state, action, rgb_target, state_target = sample.values()
@@ -71,6 +72,8 @@ class DynamicDataSet(Dataset):
         if self.transform:
             sample = self.transform(sample)
         return sample
+# --------------------------------
+
 
 
 class ToTensor(object):
@@ -146,17 +149,26 @@ def load_dataset(path, batch_size=256, num_workers=4, shuffle=True, transform=To
                          shuffle=shuffle)
     return dset, tloader
 
-if __name__ == '__main__':
-    from tqdm import tqdm_gui, tqdm
-    from project.environments.utils import rgb_tensor_render
-    path = '/home/erik/DATA/Project/ReacherPlaneNoTarget/obsdata_rgb40-40-3_n100000_0.pt'
-    dset, dloader = load_reacherplane_data(path)
-    for obs, state in dloader:
-        print(obs.shape)
-        print(state.shape)
-        im = obs[0]*255
-        rgb_tensor_render(im)
-        print(state[0])
-        input('Press Enter to continue')
 
+# Social ------------------
+class Social_Dataset_numpy(Dataset):
+    '''Dataset for trajectories for the Social environment class
 
+    No transformation. Data is collected from env and stored as is.
+
+    Arguments:
+        data:       {'obs': [obs_list], 'states': [states_list]}
+    '''
+    def __init__(self, data):
+        assert type(data) is dict
+        self.obs = data['obs']
+        self.state = data['states']
+        self.transform = None
+        self.obs_shape = self.obs[0].shape
+        self.state_shape = self.state[0].shape
+
+    def __len__(self):  # prediction data, next frame, AFTER sequence is target.
+        return len(self.obs)
+
+    def __getitem__(self, idx):
+        return self.state[idx], self.obs[idx]

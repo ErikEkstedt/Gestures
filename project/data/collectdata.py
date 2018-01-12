@@ -6,7 +6,7 @@ from tqdm import tqdm
 import pathlib
 
 
-def DataGenerator(env, args):
+def collect_data(env, args):
     """ DataGenerator runs some episodes and randomly saves rgb, state pairs
     :dpoints            : Number of data points to collect
     :Returns            : dict
@@ -40,57 +40,44 @@ def get_filename(Env, args):
         run += 1
     return os.path.join("{}_{}.pt".format(filename, run))
 
-def get_social_trajectory(Social, args):
-    ''' continuous state trajectory '''
-    env = Social(args)
-    env.seed(np.random.randint(0,2000))  # random seed
+def generate_continous_data(env, args):
+    ''' continuous state trajectory collection
 
-    env.reset ()  # init
-    env.set_target()
-    trajectory = {'states': [], 'obs': []}
-    for i in range(args.episodes):
-        s, _, o, _ = env.reset()
-        while True:
+    collects args.dpoints frames continuously and saves a dataset to disk.
+    '''
+    from project.data.dataset import Social_Dataset_numpy
+
+    trajectory = {'states': [], 'obs': []}  # dataset wants dict
+    s, _, o, _ = env.reset()
+    for i in range(args.dpoints):
+        trajectory['states'].append(s)
+        trajectory['obs'].append(o)
+        action = env.action_space.sample()
+        s, _, o, _, r, d, _ = env.step(action)
+        if d:
+            # if args.MAX_TIME == args.dpoints this should not happen
+            print('DONE')
             trajectory['states'].append(s)
             trajectory['obs'].append(o)
-            action = env.action_space.sample()
-            s, _, o, _, r, d, _ = env.step(action)
-
-            if d:
-                trajectory['states'].append(s)
-                trajectory['obs'].append(o)
-                break
+            break
     return trajectory
 
-def old(args):
-    from project.environments.reacher import ReacherPlaneNoTarget, ReacherPlane, Reacher3D
-    from project.environments.utils import make_parallel_environments
-    args = get_args()
-    args.RGB = True  # to be safe
-    args.video_W = 40
-    args.video_H = 40
-    Env = ReacherPlaneNoTarget
-    env = make_parallel_environments(Env, args)
 
-    print('Generate Data...')
-    data = DataGenerator(env, args)
-    print('Done')
-
-    # add in correct dir
-    filename = get_filename(Env, args)
-    print('Saving into: ', filename)
-    input('Press Enter to continue')
-    torch.save(data, filename)
-
+def collect_social_targets():
+    data = generate_continous_data()
 
 if __name__ == '__main__':
     from project.utils.arguments import get_args
     from project.environments.social import Social
     args = get_args()
 
-    data = get_social_trajectory(Social, args)
-    filename = get_filename(Social, args)
+    args.MAX_TIME = args.dpoints  # no need to gather abrupt resets
+    env = Social(args)
+    env.seed(np.random.randint(0,20000))  # random seed
 
+    data = get_trajectory(Social, args)
+
+    filename = get_filename(Social, args)
     print('Saving into: ', filename)
     input('Press Enter to continue')
     torch.save(data, filename)

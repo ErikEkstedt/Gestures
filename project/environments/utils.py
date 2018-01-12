@@ -236,48 +236,35 @@ def make_parallel_environments_combine(Env, args, Targets):
 # Run Episodes: Reacher    #
 # ======================== #
 
-def social_random_episodes(env, dset, args, verbose=False):
-    # env.reset()  # first init reset
+
+def random_run_with_changing_targets(env, dset, args, verbose=False):
     t = 0
-    total_reward, episode_reward, best_episode_reward = 0, 0, -9999
     while True:
-        ob_target, st_target = dset[t]
+        ob_target, st_target = dset[t]; t += 1
         env.set_target(st_target, ob_target)
-        t += 1
+
         state, s_target, obs, o_target = env.reset()
+        episode_reward = 0
         for j in count(1):
             if args.render:
-                env.render()
-                render_and_scale(obs, scale=(5,5), title='algo obs')
-                # frame = torch.FloatTensor(obs.transpose((2,0,1)))
-                # frame /= 255
-                # imglist = [frame, o_target]
-                # img = make_grid(imglist, padding=5).numpy()
-                # img = img.transpose((1,2,0))
-                # render_and_scale(img, scale=(9, 9))
+                env.render('all')
 
+            # update the target
             if j % args.update_target == 0:
                 ob_target, st_target = dset[t]
                 env.set_target(st_target, ob_target)
                 t += 1
-                rgb_tensor_render(ob_target*255, scale=(5,5),title='target')
 
             # Observe reward and next state
             actions = env.action_space.sample()
             state, s_target, obs, o_target, reward, done, info = env.step(actions)
 
             # If done then update final rewards and reset episode reward
-            total_reward += reward
             episode_reward += reward
             if done:
                 if verbose: print(episode_reward)
-                episode_reward = 0
-                done = False
                 break
 
-    env.close()
-    del env
-    return total_reward/args.num_test, [Video, Targets]
 
 
 # ======================== #

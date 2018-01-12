@@ -4,6 +4,9 @@
 
 
 * [ ] Clean social.py
+	* [x] render functions
+	* [x] target datatype - consistency. NUMPY IN ENV
+
 * [ ] Training loop for social.Social
 	* Different ways of getting the targets.
 	* [ ] record directly from test

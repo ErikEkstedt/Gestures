@@ -77,7 +77,7 @@ def get_args():
     parser.add_argument('--vis-interval', type=int, default=1, help='vis interval, one log per n updates (default: 1)')
     parser.add_argument('--log-interval', type=int, default=1, help='log interval in console, one log per n updates (default: 1)')
     parser.add_argument('--log-dir', default='/tmp', help='directory to save agent logs')
-    parser.add_argument('--data-dir', default='/tmp', help='directory to save generated data')
+    parser.add_argument('--filepath', default='/tmp/file_created_by_project_args.txt', help='Filepath')
 
 
     # === Boolean ===

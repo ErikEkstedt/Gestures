@@ -7,8 +7,6 @@ This will be the final environment script used.
 Write how everything her works in connection to other important parts.
 
 Reference original/inspirations
-
-
 '''
 
 from roboschool.scene_abstract import Scene, SingleRobotEmptyScene
@@ -19,9 +17,6 @@ from itertools import count
 from OpenGL import GLE # fix for opengl issues on desktop  / nvidia
 import cv2
 
-from project.data.dataset import load_reacherplane_data
-from project.environments.utils import social_random_episodes
-from project.environments.utils import render_and_scale
 
 PATH_TO_CUSTOM_XML = os.path.join(os.path.dirname(__file__), "xml_files")
 
@@ -35,10 +30,10 @@ class MyGymEnv(gym.Env):
         self._step  : steps, returns s, st, o, ot, reward, done, info
         self._seed  : sets seed. self.np_random
         self._render  : r
-
     '''
+
     metadata = {
-        'render.modes': ['human', 'rgb_array'],
+        'render.modes': ['human', 'machine', 'target', 'all', 'all_rgb_array'],
         'video.frames_per_second': 60
         }
     def __init__(self, action_dim=2, state_dim=7, obs_dim=(600, 400, 3)):
@@ -56,6 +51,9 @@ class MyGymEnv(gym.Env):
         self.state_space = gym.spaces.Box(-high, high)
 
         self.observation_space = gym.spaces.Box(low=0, high=255, shape=obs_dim)
+
+        self.state_target = None
+        self.obs_target = None
         if self.scene is None:
             ''' First reset '''
             self.scene = self.initialize_scene()
@@ -84,6 +82,11 @@ class MyGymEnv(gym.Env):
                                                                        self.Human_VIDEO_H,
                                                                        "human_video_camera")
 
+        if self.state_target is None:
+            print('Random Targets. Use "env.set_target(state, obs)"')
+            self.state_target = np.random.randint(4)
+            self.obs_target = np.random.randint(0, 255, (100,100,3)).astype('uint8')
+
         state_robot = self.calc_state()  # pos and speed
         self.potential = self.calc_potential()  # potential to target
         obs = self.get_rgb()  #observation
@@ -105,21 +108,38 @@ class MyGymEnv(gym.Env):
         return (state, self.state_target, obs, self.obs_target, reward, bool(done), {})
 
     def _render(self, mode, close):
+        def cv2_render(rgb, title='frame'):
+            cv2.imshow(title, cv2.cvtColor(rgb, cv2.COLOR_RGB2BGR))
+            if cv2.waitKey(1) & 0xFF == ord('q'):
+                print('Stop')
+                return
         if close:
             return
-        if mode=="human":
+        if mode=='human':
             self.human_camera_adjust()
             rgb, _, _, _, _ = self.human_camera.render(False, False, False) # render_depth, render_labeling, print_timing)
             rendered_rgb = np.fromstring(rgb, dtype=np.uint8).reshape( (self.Human_VIDEO_H, self.Human_VIDEO_W,3) )
-            cv2.imshow('Human Camera', cv2.cvtColor(rendered_rgb, cv2.COLOR_RGB2BGR))
-            if cv2.waitKey(20) & 0xFF == ord('q'):
-                print('Stop')
-                return
-        elif mode=="rgb_array":
+            cv2_render(rendered_rgb, 'human')
+        elif mode=="machine":
             self.camera_adjust()
             rgb, _, _, _, _ = self.camera.render(False, False, False) # render_depth, render_labeling, print_timing)
             rendered_rgb = np.fromstring(rgb, dtype=np.uint8).reshape( (self.VIDEO_H,self.VIDEO_W,3) )
-            return rendered_rgb
+            cv2_render(rendered_rgb, 'machine')
+        elif mode=="target":
+            cv2_render(self.obs_target, 'target')
+        elif mode=='all':
+            self._render('human', False)
+            self._render('machine', False)
+            self._render('target', False)
+        elif mode=="all_rgb_array":
+            self.camera_adjust()
+            rgb, _, _, _, _ = self.camera.render(False, False, False) # render_depth, render_labeling, print_timing)
+            machine = np.fromstring(rgb, dtype=np.uint8).reshape( (self.VIDEO_H,self.VIDEO_W,3) )
+
+            self.human_camera_adjust()
+            rgb, _, _, _, _ = self.human_camera.render(False, False, False) # render_depth, render_labeling, print_timing)
+            human = np.fromstring(rgb, dtype=np.uint8).reshape( (self.Human_VIDEO_H, self.Human_VIDEO_W,3) )
+            return human, machine, self.obs_target
         else:
             assert(0)
 
@@ -255,12 +275,10 @@ class Social(Base):
         print('I am', self.model_xml)
 
     def set_target(self, state_target=None, obs_target=None):
-        if state_target is None:
-            self.state_target = 0
-            self.obs_target = 0
-        else:
-            self.state_target = state_target.numpy()
-            self.obs_target = obs_target
+        ''' targets should be numpy.ndarray. obs.shape (W,H,C)'''
+        assert type(state_target) is np.ndarray, 'target must be numpy'
+        self.state_target = state_target
+        self.obs_target = obs_target
 
     def robot_specific_reset(self):
         self.motor_names = ["robot_shoulder_joint_z", "robot_elbow_joint"]
@@ -318,18 +336,61 @@ class Social(Base):
         self.human_camera.move_and_look_at( 0, 0, 1, 0, 0, 0.4)
 
 
-def run(env):
+# Test functions
+def random_run(env, render=True):
+    ''' Executes random actions and renders '''
     s, s_, o, o_ = env.reset()
     while True:
         action = env.action_space.sample()
         s, s_, o, o_, r, d, _ = env.step(action)
-        env.render('human')
-        render_and_scale(o, title='algor obs')
+        if render:
+            env.render('all')
+            # env.render()  # same as env.render('human')
+            # env.render('machine')
+            # env.render('target')
+            # h, m, t = env.render('all_rgb_array')  # returns rgb arrays
+            # print(h.shape)
+            # print(m.shape)
+            # print(t.shape)
         if d:
             s, s_, o, o_ = env.reset()
 
-if __name__ == '__main__':
+def random_run_with_changing_targets(env, dset, args, verbose=False):
+    ''' Executes random actions and also changes the target.
+    targets are set in order from a project.data.dataset.
+    renders options:
+        'render.modes': ['human', 'machine', 'target', 'all', 'all_rgb_array']
+    '''
+    t = 0
+    while True:
+        ob_target, st_target = dset[t]; t += 1
+        env.set_target(st_target.numpy(), ob_target.numpy().transpose((1,2,0)))
+
+        state, s_target, obs, o_target = env.reset()
+        episode_reward = 0
+        for j in count(1):
+            if args.render:
+                env.render('all')
+
+            # update the target
+            if j % args.update_target == 0:
+                ob_target, st_target = dset[t]
+                env.set_target(st_target.numpy(), ob_target.numpy().transpose((1,2,0)))
+                t += 1
+
+            # Observe reward and next state
+            actions = env.action_space.sample()
+            state, s_target, obs, o_target, reward, done, info = env.step(actions)
+
+            # If done then update final rewards and reset episode reward
+            episode_reward += reward
+            if done:
+                if verbose: print(episode_reward)
+                break
+
+def project_test():
     from project.utils.arguments import get_args
+    from project.data.dataset import load_reacherplane_data
     args = get_args()
 
     # === Targets ===
@@ -339,8 +400,16 @@ if __name__ == '__main__':
 
     env = Social(args)
     env.seed(args.seed)
-    social_random_episodes(env, dset, args)
 
-    # ob_target, st_target = dset[3]
-    # env.set_target(st_target, ob_target)
-    # run(env)
+    # random_run(env, render=args.render)
+    random_run_with_changing_targets(env, dset, args)
+
+def test_env():
+    '''Works'''
+    env = Social()
+    env.seed(4)
+    random_run(env, render=True)
+
+if __name__ == '__main__':
+    # test_env()
+    project_test()
