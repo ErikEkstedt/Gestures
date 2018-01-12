@@ -16,12 +16,13 @@ def rgb_render(obs, title='obs'):
         print('Stop')
         return
 
-def rgb_tensor_render(obs, title='tensor_obs'):
+def rgb_tensor_render(obs, scale=(1,1), title='tensor_obs'):
     assert type(obs) is torch.Tensor
     assert len(obs.shape) == 3
     obs = obs.permute(1,2,0)
     im = obs.numpy().astype('uint8')
-    rgb_render(im, title)
+    # rgb_render(im, title)
+    render_and_scale(im, scale=scale, title=title)
 
 def render_and_scale(obs, scale=(1, 1), title='obs'):
     ''' cv2 as argument such that import is not done redundantly'''
@@ -236,7 +237,7 @@ def make_parallel_environments_combine(Env, args, Targets):
 # ======================== #
 
 def social_random_episodes(env, dset, args, verbose=False):
-    env.reset()  # first init reset
+    # env.reset()  # first init reset
     t = 0
     total_reward, episode_reward, best_episode_reward = 0, 0, -9999
     while True:
@@ -246,17 +247,20 @@ def social_random_episodes(env, dset, args, verbose=False):
         state, s_target, obs, o_target = env.reset()
         for j in count(1):
             if args.render:
-                frame = torch.FloatTensor(obs.transpose((2,0,1)))
-                frame /= 255
-                imglist = [frame, o_target]
-                img = make_grid(imglist, padding=5).numpy()
-                img = img.transpose((1,2,0))
-                render_and_scale(img, scale=(9, 9))
+                env.render()
+                render_and_scale(obs, scale=(5,5), title='algo obs')
+                # frame = torch.FloatTensor(obs.transpose((2,0,1)))
+                # frame /= 255
+                # imglist = [frame, o_target]
+                # img = make_grid(imglist, padding=5).numpy()
+                # img = img.transpose((1,2,0))
+                # render_and_scale(img, scale=(9, 9))
 
             if j % args.update_target == 0:
                 ob_target, st_target = dset[t]
                 env.set_target(st_target, ob_target)
                 t += 1
+                rgb_tensor_render(ob_target*255, scale=(5,5),title='target')
 
             # Observe reward and next state
             actions = env.action_space.sample()

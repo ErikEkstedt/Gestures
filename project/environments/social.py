@@ -1,17 +1,42 @@
+''' social movement environment (basically just a robot physics simulator)
+
+Write documentation.
+
+This will be the final environment script used.
+
+Write how everything her works in connection to other important parts.
+
+Reference original/inspirations
+
+
+'''
+
 from roboschool.scene_abstract import Scene, SingleRobotEmptyScene
 import os
 import numpy as np
 import gym
 from itertools import count
 from OpenGL import GLE # fix for opengl issues on desktop  / nvidia
+import cv2
 
 from project.data.dataset import load_reacherplane_data
 from project.environments.utils import social_random_episodes
+from project.environments.utils import render_and_scale
 
 PATH_TO_CUSTOM_XML = os.path.join(os.path.dirname(__file__), "xml_files")
 
 
 class MyGymEnv(gym.Env):
+    ''' OpenAI zGym wrapper
+
+    functions:
+
+        self._reset   : resets the environment (robot)
+        self._step  : steps, returns s, st, o, ot, reward, done, info
+        self._seed  : sets seed. self.np_random
+        self._render  : r
+
+    '''
     metadata = {
         'render.modes': ['human', 'rgb_array'],
         'video.frames_per_second': 60
@@ -21,6 +46,9 @@ class MyGymEnv(gym.Env):
         self.VIDEO_W = obs_dim[0]
         self.VIDEO_H = obs_dim[1]
 
+        self.Human_VIDEO_W = 600   # for human render
+        self.Human_VIDEO_H = 400
+
         high = np.ones([action_dim])
         self.action_space = gym.spaces.Box(-high, high)
 
@@ -28,20 +56,18 @@ class MyGymEnv(gym.Env):
         self.state_space = gym.spaces.Box(-high, high)
 
         self.observation_space = gym.spaces.Box(low=0, high=255, shape=obs_dim)
-
-    def _seed(self, seed=None):
-        self.np_random, seed = gym.utils.seeding.np_random(seed)
-        return [seed]
-
-    def _reset(self):
         if self.scene is None:
             ''' First reset '''
             self.scene = self.initialize_scene()
             # If load_xml_get_robot() is moved outside this condition after
             # env.reset all states become nan
             self.load_xml_get_robot()
-            return (None, None, None, None)
 
+    def _seed(self, seed=None):
+        self.np_random, seed = gym.utils.seeding.np_random(seed)
+        return [seed]
+
+    def _reset(self):
         self.get_joint_dicts()
         self.robot_specific_reset()
         for r in self.mjcf:
@@ -51,7 +77,12 @@ class MyGymEnv(gym.Env):
         self.done = False
         self.frame = 0
         self.reward = 0
-        self.camera = self.scene.cpp_world.new_camera_free_float(self.VIDEO_W, self.VIDEO_H, "video_camera")
+        self.camera = self.scene.cpp_world.new_camera_free_float(self.VIDEO_W,
+                                                                 self.VIDEO_H,
+                                                                 "video_camera")
+        self.human_camera = self.scene.cpp_world.new_camera_free_float(self.Human_VIDEO_W,
+                                                                       self.Human_VIDEO_H,
+                                                                       "human_video_camera")
 
         state_robot = self.calc_state()  # pos and speed
         self.potential = self.calc_potential()  # potential to target
@@ -77,8 +108,13 @@ class MyGymEnv(gym.Env):
         if close:
             return
         if mode=="human":
-            self.scene.human_render_detected = True
-            return self.scene.cpp_world.test_window()
+            self.human_camera_adjust()
+            rgb, _, _, _, _ = self.human_camera.render(False, False, False) # render_depth, render_labeling, print_timing)
+            rendered_rgb = np.fromstring(rgb, dtype=np.uint8).reshape( (self.Human_VIDEO_H, self.Human_VIDEO_W,3) )
+            cv2.imshow('Human Camera', cv2.cvtColor(rendered_rgb, cv2.COLOR_RGB2BGR))
+            if cv2.waitKey(20) & 0xFF == ord('q'):
+                print('Stop')
+                return
         elif mode=="rgb_array":
             self.camera_adjust()
             rgb, _, _, _, _ = self.camera.render(False, False, False) # render_depth, render_labeling, print_timing)
@@ -92,14 +128,13 @@ class Base(MyGymEnv):
     def __init__(self, XML_PATH=PATH_TO_CUSTOM_XML,
                  robot_name='robot',
                  model_xml='NOT/A/FILE.xml',
-                 ac=2, st=6, obs=(40,40,3),
+                 ac=2, st=6,
                  args=None):
         self.XML_PATH    = XML_PATH
         self.model_xml   = model_xml
         self.robot_name  = robot_name
         if args is None:
             ''' Defaults '''
-            MyGymEnv.__init__(self, action_dim=ac, state_dim=st, obs_dim=obs)
             self.MAX_TIME             = 300
             self.potential_constant   = 100
             self.electricity_cost     = -2.0  # cost for using motors -- this parameter should be carefully tuned against reward for making progress, other values less improtant
@@ -116,8 +151,8 @@ class Base(MyGymEnv):
 
             # Robot
             self.power                = 0.5
+            MyGymEnv.__init__(self, action_dim=ac, state_dim=st)
         else:
-            MyGymEnv.__init__(self, action_dim=ac, state_dim=st, obs_dim=obs)
             self.MAX_TIME=args.MAX_TIME
 
             # Reward penalties/values
@@ -136,6 +171,10 @@ class Base(MyGymEnv):
 
             # Robot
             self.power                = args.power # 0.5
+            MyGymEnv.__init__(self,
+                              action_dim=ac,
+                              state_dim=st,
+                              obs_dim=(args.video_w, args.video_h, args.video_c))
 
     def initialize_scene(self):
         return Scene(self.gravity, self.timestep, self.frame_skip)
@@ -212,7 +251,7 @@ class Social(Base):
         Base.__init__(self, XML_PATH=PATH_TO_CUSTOM_XML,
                       robot_name='robot_arm',
                       model_xml='reacher/ReacherPlaneNoTarget.xml',
-                      ac=2, st=6, obs=(40, 40, 3), args=args)
+                      ac=2, st=6, args=args)
         print('I am', self.model_xml)
 
     def set_target(self, state_target=None, obs_target=None):
@@ -274,6 +313,20 @@ class Social(Base):
         ''' Vision from straight above '''
         self.camera.move_and_look_at( 0, 0, 1, 0, 0, 0.4)
 
+    def human_camera_adjust(self):
+        ''' Vision from straight above '''
+        self.human_camera.move_and_look_at( 0, 0, 1, 0, 0, 0.4)
+
+
+def run(env):
+    s, s_, o, o_ = env.reset()
+    while True:
+        action = env.action_space.sample()
+        s, s_, o, o_, r, d, _ = env.step(action)
+        env.render('human')
+        render_and_scale(o, title='algor obs')
+        if d:
+            s, s_, o, o_ = env.reset()
 
 if __name__ == '__main__':
     from project.utils.arguments import get_args
@@ -282,10 +335,12 @@ if __name__ == '__main__':
     # === Targets ===
     print('\nLoading targets from:')
     print('path:\t', args.target_path)
-    dset, dloader = load_reacherplane_data(args.target_path,
-                                                   batch_size=300,
-                                                   shuffle=False)
+    dset, dloader = load_reacherplane_data(args.target_path, shuffle=False)
 
     env = Social(args)
     env.seed(args.seed)
     social_random_episodes(env, dset, args)
+
+    # ob_target, st_target = dset[3]
+    # env.set_target(st_target, ob_target)
+    # run(env)

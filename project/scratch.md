@@ -1,4 +1,5 @@
 # Writing Thesis
+
 ## Jupyter notebook
 1. [ ] try vim-bindings
 	* Tried to add extensions to jupyter. not fun. and its clonky to write in browser :/

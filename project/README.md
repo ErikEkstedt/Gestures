@@ -3,18 +3,10 @@
 # Coding 
 
 
-
-* [ ] make environment stpe method to take target as input.
-	* env.step(a, target)
-* [x] 'test_combine.py',  see performance of loaded state_dict.
-* [ ] Gather trajectory.
-	* [ ] Collect complete episode trajectory
-* [ ] Script
-	* test script but deterministic targets
-	* loads a state dict 
-	* loads a target trajectory
-	* renders both
-
+* [ ] Clean social.py
+* [ ] Training loop for social.Social
+	* Different ways of getting the targets.
+	* [ ] record directly from test
 
 
 
