@@ -171,4 +171,3 @@ class Social_Dataset_numpy(Dataset):
 
     def __getitem__(self, idx):
         return self.state[idx], self.obs[idx]
-

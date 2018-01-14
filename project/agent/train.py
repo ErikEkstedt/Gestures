@@ -308,12 +308,7 @@ def trainCombine(pi, args, rollouts, optimizer_pi):
     return vloss, ploss, ent
 
 # === Social ===
-# TODO
-# Change  this so dynamic target trajectories may be set.
-
-
-# === Social ===
-def explorationSocial(pi, CurrentState, CurrentStateTarget, CurrentObs,  CurrentObsTarget, rollouts, args, result,  env):
+def explorationSocial(pi, current, targets, rollouts, args, result,  env):
     ''' Exploration part of PPO training:
     1. Sample actions and gather rewards trajectory for num_steps.
     2. Reset states and rewards if some environments are done.
@@ -321,15 +316,13 @@ def explorationSocial(pi, CurrentState, CurrentStateTarget, CurrentObs,  Current
     visualizing progress.
     '''
     stds = []
+    s, st, o, ot = current()
     for step in range(args.num_steps):
         # add step count
         pi.n += 1
 
         # Sample actions
-        value, action, action_log_prob, a_std = pi.sample(CurrentObs(),
-                                                          CurrentObsTarget(),
-                                                          CurrentState(),
-                                                          CurrentStateTarget())
+        value, action, action_log_prob, a_std = pi.sample(s, st, o, ot)
         cpu_actions = action.data.squeeze(1).cpu().numpy()
 
         # Observe reward and next state
@@ -339,10 +332,7 @@ def explorationSocial(pi, CurrentState, CurrentStateTarget, CurrentObs,  Current
         result.episode_rewards += reward
 
         if args.render:
-            rgb_render(obs[0], '0')
-            rgb_render(obs[1], '1')
-            rgb_render(obs[2], '2')
-            rgb_render(obs[3], '3')
+            env.render()
 
         if sum(done) > 0:
             # Clear episode reward and update final rewards
@@ -351,27 +341,18 @@ def explorationSocial(pi, CurrentState, CurrentStateTarget, CurrentObs,  Current
             result.episode_rewards *= masks
             result.update_list()
 
-            if args.cuda:
-                masks = masks.cuda()
-            # update targets
-            CurrentStateTarget.check_and_reset_target(masks, s_target)
-            CurrentObsTarget.check_and_reset_target(masks, o_target)
+            # Here
+            env.set_target(targets())
 
         if args.cuda:
             masks = masks.cuda()
 
         # Reset current states for envs done and
         # update current state and add data to rollouts
-        CurrentState.check_and_reset(masks)
-        CurrentState.update(state)
-
-        CurrentObs.check_and_reset(masks)
-        CurrentObs.update(obs)
-        rollouts.insert(step,
-                        CurrentState(),
-                        CurrentStateTarget(),
-                        CurrentObs(),
-                        CurrentObsTarget(),
+        current.check_and_reset(masks)
+        current.update(state, s_target, obs, o_target)
+        s, st, o, ot = current()
+        rollouts.insert(step, s, st, o, ot,
                         action.data,
                         action_log_prob.data,
                         value.data,

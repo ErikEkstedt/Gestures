@@ -16,7 +16,7 @@ from agent.test import Test_and_Save_Video_Combi as Test_and_Save_Video
 from agent.train import explorationSocial as exploration
 from agent.train import trainSocial as train
 from agent.memory import RolloutStorageCombi as RolloutStorage
-from agent.memory import Results, Current
+from agent.memory import Results, Current, Targets
 from agent.memory import StackedObs, StackedState
 from environments.social import Social, Social_multiple
 
@@ -43,93 +43,6 @@ def print_shapes(s, obs, CurrentState, CurrentStateTarget, CurrentObs, CurrentOb
     print('CurrentStateTarget().mean()', CurrentStateTarget().mean())
     input('Press Enter to continue')
 
-def init(args):
-    ''' initializer
-    Initializes:
-    1. Environments
-    2. Data handling classes.
-    3. Loads targets and
-    4. Checks correct dimensions.
-    5. Policy network w/ Optimizer
-    '''
-    # === Targets ===
-    print('Loading target labels...')
-    train_dset = torch.load(args.target_path)
-    test_dset = torch.load(args.target_path2)
-
-    s_target, o_target = train_dset[4]  # choose random data point
-    s_te, o_te = test_dset[4]  # check to have same dims as training set
-    assert s_target.shape == s_te.shape, 'training and test shapes do not match'
-    assert o_target.shape == o_te.shape, 'training and test shapes do not match'
-
-    # Force Settings
-    args.video_w = o_target.shape[0]  # (W,H,C)
-    args.video_h = o_target.shape[1]
-
-    if args.verbose:
-        print('ob shape: {}, st_shape: {}, COMBI: {}'.format(
-            o_target.shape, s_target.shape, args.COMBI))
-        print('args- Video_W: {}, Video_H: {}'.format(args.video_w, args.video_h))
-        input('Press Enter to continue')
-
-    # frames -> updates
-    args.num_updates = int(args.num_frames) // args.num_steps // args.num_processes
-    args.test_thresh = int(args.test_thresh) // args.num_steps // args.num_processes
-
-    make_log_dirs(args)
-    if not args.no_vis:
-        vis = VisLogger(args)
-
-    # === Environment ===
-    Env = Social  # using Env as variable so I only need to change this line between experiments
-
-    # trainWarning
-    env = Social_multiple(args)
-
-    s_target_shape = s_target.shape[0]
-    s_shape = env.state_space.shape[0]    # Joints state
-    ob_shape = env.observation_space.shape  # RGB
-    ac_shape = env.action_space.shape[0]   # Actions
-
-    # test environment
-    test_env = Env(args)
-    test_env.seed(np.random.randint(0, 20000))
-
-    # === Memory ===
-    result = Results(200, 10)
-    CurrentState = StackedState(args.num_processes, args.num_stack, s_shape)
-    CurrentStateTarget = StackedState(args.num_processes, args.num_stack, s_target_shape)
-    CurrentObs = StackedObs(args.num_processes, args.num_stack, ob_shape)
-    CurrentObsTarget = StackedObs(args.num_processes, args.num_stack, ob_shape)
-    rollouts = RolloutStorage(args.num_steps,
-                              args.num_processes,
-                              CurrentState.size()[1],
-                              CurrentStateTarget.size()[1],
-                              CurrentObs.size()[1:],
-                              ac_shape)
-
-    # === Model ===
-    pi = CombinePolicy(o_shape=CurrentObs.obs_shape,
-                       o_target_shape=CurrentObs.obs_shape,
-                       s_shape=s_shape,
-                       s_target_shape=s_target_shape,
-                       a_shape=ac_shape,
-                       feature_maps=[64, 64, 8],
-                       kernel_sizes=[5, 5, 5],
-                       strides=[2, 2, 2],
-                       args=args)
-
-    optimizer_pi = optim.Adam(pi.parameters(), lr=args.pi_lr)
-    print('\nPOLICY:\n', pi)
-    print('Total network parameters to train: ', pi.total_parameters())
-
-    print('Learning {}(ac: {}, st: {}, ob: {})'.format(args.env_id, ac_shape, s_shape, ob_shape))
-    print('\nTraining for %d Updates' % args.num_updates)
-
-    return pi, optimizer_pi, CurrentState, CurrentStateTarget, \
-        CurrentObs, CurrentObsTarget, rollouts, \
-        result, env, test_env, train_dset, test_dset
-
 def main():
     args = get_args()
     print('Social')
@@ -154,6 +67,7 @@ def main():
         print('args- Video_W: {}, Video_H: {}'.format(args.video_w, args.video_h))
         input('Press Enter to continue')
 
+    targets = Targets(n=args.num_processes, dset=train_dset)
     # frames -> updates
     args.num_updates = int(args.num_frames) // args.num_steps // args.num_processes
     args.test_thresh = int(args.test_thresh) // args.num_steps // args.num_processes
@@ -180,20 +94,16 @@ def main():
     # === Memory ===
     result = Results(200, 10)
     current = Current(args, s_shape, s_target_shape, ob_shape, ob_shape)
-    CurrentState = StackedState(args.num_processes, args.num_stack, s_shape)
-    CurrentStateTarget = StackedState(args.num_processes, args.num_stack, s_target_shape)
-    CurrentObs = StackedObs(args.num_processes, args.num_stack, ob_shape)
-    CurrentObsTarget = StackedObs(args.num_processes, args.num_stack, ob_shape)
     rollouts = RolloutStorage(args.num_steps,
                               args.num_processes,
-                              CurrentState.size()[1],
-                              CurrentStateTarget.size()[1],
-                              CurrentObs.size()[1:],
+                              current.state.size()[1],
+                              current.target_state.size()[1],
+                              current.obs.size()[1:],
                               ac_shape)
 
     # === Model ===
-    pi = CombinePolicy(o_shape=CurrentObs.obs_shape,
-                       o_target_shape=CurrentObs.obs_shape,
+    pi = CombinePolicy(o_shape=current.obs.obs_shape,
+                       o_target_shape=current.obs.obs_shape,
                        s_shape=s_shape,
                        s_target_shape=s_target_shape,
                        a_shape=ac_shape,
@@ -203,43 +113,33 @@ def main():
                        args=args)
 
     optimizer_pi = optim.Adam(pi.parameters(), lr=args.pi_lr)
+    print('Environment', args.env_id)
+    print('Actions:', ac_shape)
+    print('State:', s_shape)
+    print('State target:', s_target_shape)
+    print('Obs:', ob_shape)
+    print('Obs target:', ob_shape)
     print('\nPOLICY:\n', pi)
     print('Total network parameters to train: ', pi.total_parameters())
 
-    print('Learning {}(ac: {}, st: {}, ob: {})'.format(args.env_id, ac_shape, s_shape, ob_shape))
+
     print('\nTraining for %d Updates' % args.num_updates)
 
-
-    # # ==== Initialize ====
-    # pi, optimizer_pi, CurrentState, CurrentStateTarget, CurrentObs, CurrentObsTarget, \
-    #     rollouts, result, env, test_env, train_dset, test_dset = init(args)
-
     # ==== Training ====
-    init_target = [train_dset[0]] * args.num_processes
-    env.set_target(init_target)
+
+    # init_target = [train_dset[0]] * args.num_processes
+    env.set_target(targets())
+
     s, s_target, obs, obs_target = env.reset()
-
-    CurrentState.update(s)  # keep track of current state (num_proc, num_stack, state_shape)
-    CurrentStateTarget.update(s_target)
-    CurrentObs.update(obs)
-    CurrentObsTarget.update(obs_target)
-
     current.update(s, s_target, obs, obs_target)
-    print('size current:', current.size())
-    print('current.state():', current.state())
-    input('Press Enter to continue')
 
-    rollouts.states[0].copy_(CurrentState())
-    rollouts.target_states[0].copy_(CurrentStateTarget())
-
-    rollouts.observations[0].copy_(CurrentObs())
-    rollouts.target_observations[0].copy_(CurrentObsTarget())
+    rollouts.states[0].copy_(current.state())
+    rollouts.observations[0].copy_(current.obs())
+    rollouts.target_states[0].copy_(current.target_state())
+    rollouts.target_observations[0].copy_(current.target_obs())
 
     if args.cuda:
-        CurrentState.cuda()
-        CurrentStateTarget.cuda()
-        CurrentObs.cuda()
-        CurrentObsTarget.cuda()
+        current.cuda()
         rollouts.cuda()
         pi.cuda()
 
@@ -247,8 +147,7 @@ def main():
 
     MAX_REWARD = -99999
     for j in range(args.num_updates):
-        exploration(pi, CurrentState, CurrentStateTarget,
-                    CurrentObs, CurrentObsTarget, rollouts, args, result, env)
+        exploration(pi, current, targets, rollouts, args, result, env)
         vloss, ploss, ent = train(pi, args, rollouts, optimizer_pi)
 
         rollouts.last_to_first()

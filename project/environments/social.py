@@ -355,7 +355,6 @@ def Social_multiple(args):
         return _thunk
     return SubprocVecEnv([multiple_envs(args, i) for i in range(args.num_processes)])
 
-
 # test functions
 def test_social(args):
     from project.environments.utils import random_run

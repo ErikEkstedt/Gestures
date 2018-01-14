@@ -49,7 +49,7 @@ class Policy(object):
         dist_entropy = dist_entropy.sum(-1).mean()
         return v, action_log_probs, dist_entropy
 
-    def sample(self, o, o_target, s, s_target):
+    def sample(self, s, s_target, o, o_target):
         ''' volatile input here during exploration. We want gradients at training'''
         o, o_target = Variable(o, volatile=True), Variable(o_target, volatile=True)
         s, s_target = Variable(s, volatile=True), Variable(s_target, volatile=True)

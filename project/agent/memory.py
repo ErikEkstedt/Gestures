@@ -1,5 +1,6 @@
 import torch
 from torch.utils.data.sampler import BatchSampler, SubsetRandomSampler
+from torch.utils.data import Dataset, DataLoader
 import numpy as np
 import time
 
@@ -75,7 +76,7 @@ class Results(object):
         :param max_u     :int, number of updates for averaging training losses
         '''
         self.episode_rewards = 0
-        self.tmp_final_rewards = None
+        self.tmp_final_rewards = 0
         self.final_reward_list = []
         self.n = 0
         self.max_n = max_n
@@ -348,34 +349,36 @@ class StackedState(object):
 
 class Current(object):
     """Current holds all relevant current information"""
-    def __init__(self,
-                 args,
-                 state_dims,
-                 starget_dims,
-                 obs_dims,
-                 otarget_dims):
-        self.state        = StackedState(args.num_processes, args.num_stack, state_dims)
-        self.obs          = StackedObs(args.num_processes, args.num_stack, obs_dims)
+    def __init__(self, args, state_dims, starget_dims, obs_dims, otarget_dims):
+        self.state = StackedState(args.num_processes, args.num_stack, state_dims)
+        self.obs = StackedObs(args.num_processes, args.num_stack, obs_dims)
         self.target_state = StackedState(args.num_processes, args.num_stack, starget_dims)
-        self.target_obs   = StackedObs(args.num_processes, args.num_stack, otarget_dims)
+        self.target_obs = StackedObs(args.num_processes, args.num_stack, otarget_dims)
 
+        self.targets = []
         self.use_cuda = False
 
     def update(self, state=None, s_target=None, obs=None, o_target=None):
-        if state:
+        if state is not None:
             self.state.update(state)
-        if s_target:
+        if s_target is not None:
             self.target_state.update(s_target)
-        if obs:
+        if obs is not None:
             self.obs.update(obs)
-        if target_obs:
+        if o_target is not None:
             self.target_obs.update(o_target)
 
     def check_and_reset(self, mask):
         self.state.check_and_reset(mask)
         self.obs.check_and_reset(mask)
         self.target_state.check_and_reset(mask)
-        self.target_state.check_and_reset(mask)
+        self.target_obs.check_and_reset(mask)
+
+    def __call__(self):
+        return self.state(), self.target_state(), self.obs(), self.target_obs()
+
+    def add_target_dataset(self, dset):
+        self.targets.append(dset)
 
     def size(self):
         ''' Returns torch.Size '''
@@ -716,7 +719,7 @@ class RolloutStorageCombi(object):
     def get_last(self):
         o, o_target = self.get_last_obs()
         s, s_target = self.get_last_state()
-        return o, o_target, s, s_target
+        return s, s_target, o, o_target,
 
     def get_last_state(self):
         '''
@@ -1064,15 +1067,36 @@ def test_RolloutStorageCombi(Env, args):
                 input('Press Enter to continue')
 
 
+class Targets(object):
+    """ Targets
+    1. Holds the target dataset
+    2. returns a self.n-sized list (num proc)
+    """
+    def __init__(self, n, dset, shuffle=True):
+        self.n = n
+        self.dset = dset
+        self.loader = DataLoader(dset, batch_size=n, shuffle=shuffle)
+
+    def __call__(self):
+        ret = []
+        idx = np.random.randint(0,len(self.dset), self.n)
+        for i in range(self.n):
+            ret.append(self.dset[idx[i]])
+        return ret
+
+
 if __name__ == '__main__':
     from arguments import get_args
-    from environments.Reacher import ReacherPlane as Env
-    from environments.utils import make_parallel_environments
-    from environments.utils import rgb_render, rgb_tensor_render
+    # from environments.Reacher import ReacherPlane as Env
+    # from environments.utils import make_parallel_environments
+    # from environments.utils import rgb_render, rgb_tensor_render
 
     args = get_args()
     args.RGB = True
 
     # test_StackedObs(Env, args)
-    test_RolloutStorageMulti(Env, args)
-
+    # test_RolloutStorageMulti(Env, args)
+    path = '/home/erik/com_sci/Master_code/project/project/results/socialtargets_s4_o40-40-3_n5000_1.pt'
+    dset = torch.load(path)
+    targets = Targets(n=4, dset=dset)
+    targets.loader
