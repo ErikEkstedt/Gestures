@@ -75,7 +75,7 @@ class Results(object):
         :param max_u     :int, number of updates for averaging training losses
         '''
         self.episode_rewards = 0
-        self.tmp_final_rewards = 0
+        self.tmp_final_rewards = None
         self.final_reward_list = []
         self.n = 0
         self.max_n = max_n
@@ -321,7 +321,6 @@ class StackedState(object):
             if not int(mask[i]):
                 self.current_state[i] = torch.from_numpy(new_target[i])
 
-
     def reset(self):
         self.current_state = torch.zeros(self.current_state.size())
         if self.use_cuda:
@@ -344,6 +343,57 @@ class StackedState(object):
 
     def cpu(self):
         self.state = self.state.cpu()
+        self.use_cuda = False
+
+
+class Current(object):
+    """Current holds all relevant current information"""
+    def __init__(self,
+                 args,
+                 state_dims,
+                 starget_dims,
+                 obs_dims,
+                 otarget_dims):
+        self.state        = StackedState(args.num_processes, args.num_stack, state_dims)
+        self.obs          = StackedObs(args.num_processes, args.num_stack, obs_dims)
+        self.target_state = StackedState(args.num_processes, args.num_stack, starget_dims)
+        self.target_obs   = StackedObs(args.num_processes, args.num_stack, otarget_dims)
+
+        self.use_cuda = False
+
+    def update(self, state=None, s_target=None, obs=None, o_target=None):
+        if state:
+            self.state.update(state)
+        if s_target:
+            self.target_state.update(s_target)
+        if obs:
+            self.obs.update(obs)
+        if target_obs:
+            self.target_obs.update(o_target)
+
+    def check_and_reset(self, mask):
+        self.state.check_and_reset(mask)
+        self.obs.check_and_reset(mask)
+        self.target_state.check_and_reset(mask)
+        self.target_state.check_and_reset(mask)
+
+    def size(self):
+        ''' Returns torch.Size '''
+        return self.state.size(), self.target_state.size(), \
+            self.obs.size(), self.target_obs.size()
+
+    def cuda(self):
+        self.state.cuda()
+        self.target_state.cuda()
+        self.obs.cuda()
+        self.target_obs.cuda()
+        self.use_cuda = True
+
+    def cpu(self):
+        self.state.cpu()
+        self.target_state.cpu()
+        self.obs.cpu()
+        self.target_obs.cpu()
         self.use_cuda = False
 
 

@@ -310,7 +310,10 @@ def trainCombine(pi, args, rollouts, optimizer_pi):
 # === Social ===
 # TODO
 # Change  this so dynamic target trajectories may be set.
-def explorationCombine(pi, CurrentState, CurrentStateTarget, CurrentObs,  CurrentObsTarget, rollouts, args, result,  env):
+
+
+# === Social ===
+def explorationSocial(pi, CurrentState, CurrentStateTarget, CurrentObs,  CurrentObsTarget, rollouts, args, result,  env):
     ''' Exploration part of PPO training:
     1. Sample actions and gather rewards trajectory for num_steps.
     2. Reset states and rewards if some environments are done.
@@ -375,7 +378,7 @@ def explorationCombine(pi, CurrentState, CurrentStateTarget, CurrentObs,  Curren
                         reward,
                         masks)
 
-def trainCombine(pi, args, rollouts, optimizer_pi):
+def trainSocial(pi, args, rollouts, optimizer_pi):
     last_value, _, _, _ = pi.sample(*rollouts.get_last())
     rollouts.compute_returns(last_value.data, args.no_gae, args.gamma, args.tau)
 

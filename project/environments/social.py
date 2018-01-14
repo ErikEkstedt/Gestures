@@ -357,12 +357,10 @@ def Social_multiple(args):
 
 
 # test functions
-def test_social():
-    from project.utils.arguments import get_args
+def test_social(args):
     from project.environments.utils import random_run
     from project.environments.utils import random_run_with_changing_targets
     from torch import load
-    args = get_args()
 
     # === Targets ===
     print('\nLoading targets from:')
@@ -372,19 +370,17 @@ def test_social():
     env = Social(args)
     env.seed(args.seed)
 
-    # random_run(env, render=args.render)
-    random_run_with_changing_targets(env, dset, args)
+    random_run(env, render=args.render)
+    # random_run_with_changing_targets(env, dset, args)
 
-def test_social_parallel():
-    from project.utils.arguments import get_args
+def test_social_parallel(args):
     from project.environments.utils import random_run_with_changing_targets_parallel
     from project.environments.utils import random_run_parallel
     from torch import load
 
-    args = get_args()
     dset = load(args.target_path)
 
-    env = Social_multiple(args, dset)
+    env = Social_multiple(args)
     print(env)
     print('action space:', env.action_space)
     print('state space:', env.state_space)
@@ -394,5 +390,10 @@ def test_social_parallel():
 
 
 if __name__ == '__main__':
-    test_social()
-    # test_social_parallel()
+    from project.utils.arguments import get_args
+    args = get_args()
+
+    if args.num_processes > 1:
+        test_social(args)
+    else:
+        test_social_parallel(args)
