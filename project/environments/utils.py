@@ -236,9 +236,6 @@ def make_parallel_environments_combine(Env, args, Targets):
 # Run Episodes: Social     #
 # ======================== #
 
-
-
-
 def random_run_parallel(env, args):
     ''' Executes random actions and renders '''
     from itertools import count
