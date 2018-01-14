@@ -300,12 +300,8 @@ def random_run_with_changing_targets_parallel(env, dset, args):
 
 
 # Single Test functions
-def random_run(env=None, render=False, verbose=False):
+def random_run(env, render=False, verbose=False):
     ''' Executes random actions and renders '''
-    from itertools import count
-    if env is None:
-        env = Social()
-        env.seed(4)
     s, s_, o, o_ = env.reset()
     for i in count(1):
         action = env.action_space.sample()

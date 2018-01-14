@@ -370,7 +370,7 @@ def test_social(args):
     env = Social(args)
     env.seed(args.seed)
 
-    random_run(env, render=args.render)
+    random_run(env, render=args.render, verbose=args.verbose)
     # random_run_with_changing_targets(env, dset, args)
 
 def test_social_parallel(args):
@@ -394,6 +394,6 @@ if __name__ == '__main__':
     args = get_args()
 
     if args.num_processes > 1:
-        test_social(args)
-    else:
         test_social_parallel(args)
+    else:
+        test_social(args)
