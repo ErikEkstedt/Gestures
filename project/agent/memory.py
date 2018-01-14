@@ -93,7 +93,6 @@ class Results(object):
         self.t = 0
         self.max_t = max_n  # same as training for comparison
 
-
     def time(self):
         return time.time() - self.start_time
 
@@ -349,11 +348,11 @@ class StackedState(object):
 
 class Current(object):
     """Current holds all relevant current information"""
-    def __init__(self, args, state_dims, starget_dims, obs_dims, otarget_dims):
-        self.state = StackedState(args.num_processes, args.num_stack, state_dims)
-        self.obs = StackedObs(args.num_processes, args.num_stack, obs_dims)
-        self.target_state = StackedState(args.num_processes, args.num_stack, starget_dims)
-        self.target_obs = StackedObs(args.num_processes, args.num_stack, otarget_dims)
+    def __init__(self, num_processes, num_stack, state_dims, starget_dims, obs_dims, otarget_dims):
+        self.state = StackedState(num_processes, num_stack, state_dims)
+        self.obs = StackedObs(num_processes, num_stack, obs_dims)
+        self.target_state = StackedState(num_processes, num_stack, starget_dims)
+        self.target_obs = StackedObs(num_processes, num_stack, otarget_dims)
 
         self.targets = []
         self.use_cuda = False

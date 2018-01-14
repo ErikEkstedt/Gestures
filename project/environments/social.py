@@ -313,7 +313,7 @@ class Social(Base):
         ''' Difference potential as reward '''
         potential_old = self.potential
         self.potential = self.calc_potential()
-        r = self.reward_constant1 * float(self.potential - potential_old) # elbow
+        r = self.reward_constant1 * float(self.potential - potential_old)
         return r
 
     def calc_potential(self):

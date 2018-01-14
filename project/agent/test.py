@@ -2,7 +2,7 @@ from itertools import count
 import numpy as np
 import torch
 from tqdm import tqdm, trange
-from project.agent.memory import StackedState, StackedObs
+from project.agent.memory import StackedState, StackedObs, Current
 
 def Test_and_Save_Video(test_env, Model, state_dict, args, verbose=False):
     '''
@@ -168,6 +168,82 @@ def Test_and_Save_Video_Combi(test_env, testset, Model, state_dict, args, verbos
             # Observe reward and next state
             state, _, obs, _, reward, done, info = test_env.step(cpu_actions)
             if j % 2 == 0:
+                Video.append(obs)
+
+            # If done then update final rewards and reset episode reward
+            total_reward += reward
+            episode_reward += reward
+            if done:
+                if verbose: print(episode_reward)
+                episode_reward = 0
+                done = False
+                break
+    test_env.close()
+    del test_env
+    return total_reward/args.num_test, [Video, Targets]
+
+
+def Test_and_Save_Video_Social(test_env, testset, Model, state_dict, args, verbose=False):
+    '''
+    WARNING: Init values for CombinePolicy are hardcoded here....
+
+    Test with video
+    :param test_env   - Reacher/HUmanoid environment
+    :param testset    - Dataset of targets
+    :param Model      - The policy network
+    :param state_dict - nn.Module.state_dict
+    :param verbose    - Boolean, be verbose
+
+    :output           - Float, average complete episodic reward
+    :output           - List, containing all videoframes
+    '''
+    # === Target dims ===
+    st_sample, ob_sample = testset[4]  #random index
+    o_target_shape = ob_sample.shape
+    s_target_shape = st_sample.shape[0]
+
+    # == Model
+    s_shape = test_env.state_space.shape[0]    # Joints state
+    o_shape = test_env.observation_space.shape # RGB
+    ac_shape = test_env.action_space.shape[0]   # Actions
+
+    current = Current(num_processes=1,
+                      num_stack=args.num_stack,
+                      state_dims=s_shape,
+                      starget_dims=s_target_shape,
+                      obs_dims=o_shape,
+                      otarget_dims=o_target_shape)
+
+    pi = Model(o_shape=current.obs.obs_shape,
+               o_target_shape=current.obs.obs_shape,
+               s_shape=s_shape,
+               s_target_shape=s_target_shape,
+               a_shape=ac_shape,
+               feature_maps=[64, 64, 8],
+               kernel_sizes=[5, 5, 5],
+               strides=[2, 2, 2],
+               args=args)
+
+    pi.load_state_dict(state_dict)
+
+
+    total_reward, episode_reward, best_episode_reward = 0, 0, -9999
+    Video, Targets = [], []
+    for i in trange(args.num_test):
+        idx = np.random.randint(0,len(testset))
+        test_env.set_target(testset[idx])
+        state, s_target, obs, o_target = test_env.reset()
+        for j in count(1):
+            current.update(state, s_target, obs, o_target)
+
+            s, st, o, ot = current()
+            value, action = pi.act(o, ot, s, st)
+            cpu_actions = action.data.cpu().numpy()[0]
+
+            # Observe reward and next state
+            state, s_target, obs, o_target, reward, done, info = test_env.step(cpu_actions)
+            if j % 2 == 0:
+                Targets.append((o_target, s_target))
                 Video.append(obs)
 
             # If done then update final rewards and reset episode reward

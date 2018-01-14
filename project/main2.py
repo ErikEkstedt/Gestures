@@ -12,7 +12,7 @@ from utils.arguments import get_args
 from utils.vislogger import VisLogger
 from models.combine import CombinePolicy
 
-from agent.test import Test_and_Save_Video_Combi as Test_and_Save_Video
+from agent.test import Test_and_Save_Video_Social as Test_and_Save_Video
 from agent.train import explorationSocial as exploration
 from agent.train import trainSocial as train
 from agent.memory import RolloutStorageCombi as RolloutStorage
@@ -93,7 +93,13 @@ def main():
 
     # === Memory ===
     result = Results(200, 10)
-    current = Current(args, s_shape, s_target_shape, ob_shape, ob_shape)
+    current = Current(args.num_processes,
+                      args.num_stack,
+                      s_shape,
+                      s_target_shape,
+                      ob_shape,
+                      ob_shape)
+
     rollouts = RolloutStorage(args.num_steps,
                               args.num_processes,
                               current.state.size()[1],
@@ -178,14 +184,11 @@ def main():
             test_reward = test_reward_list.mean()
 
             result.update_test(test_reward_list)
-
             # Plot result
             print('Average Test Reward: {}\n '.format(round(test_reward)))
             if args.vis:
-                vis.line_update(Xdata=frame,
-                                Ydata=test_reward, name='Test Score')
-                # vis.scatter_update(Xdata=frame,
-                #                 Ydata=test_reward, name='Test Score Scatter')
+                # vis.line_update(Xdata=frame, Ydata=test_reward, name='Test Score')
+                vis.scatter_update(Xdata=frame, Ydata=test_reward, name='Test Score Scatter')
             #  ==== Save best model ======
             if test_reward > MAX_REWARD:
                 print('--' * 45)

@@ -10,10 +10,8 @@ def to_numpy(x):
         x = x.cpu().numpy()
     elif type(x) is torch.autograd.Variable:
         x = x.data.cpu().numpy()
-    elif type(x) is float or type(x) is int:
-        x = np.array([x])
     else:
-        x = np.array(x)
+        x = np.array([x])
     return x
 
 
