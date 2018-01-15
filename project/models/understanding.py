@@ -21,7 +21,6 @@ def total_params(p):
 
 class VanillaCNN(nn.Module):
     ''' Simple CNN model RGB -> state
-
     - 3 Conv w/ stride 2
     - MLP Hidden layer
     - MLP output
@@ -148,21 +147,6 @@ class CLSTM(nn.Module):
 
     def reset_hidden(self):
         self.hidden_states = None
-
-
-class CNNAutoencoder(nn.Module):
-    def __init__(self, input_size, action_shape,
-                    hidden=128,
-                    std_start=-0.6,
-                    std_stop=-1.7,
-                    total_frames=1e6):
-        super(CNNAutoencoder, self).__init__()
-        self.input_size = input_size
-        self.conv1 = nn.Conv2d(input, hidden)
-        self.conv2 = nn.Conv2d()
-
-    def forward(self, input):
-        pass
 
 
 def test_VanillaCNN(args):

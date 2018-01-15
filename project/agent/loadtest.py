@@ -106,15 +106,13 @@ def main():
     st_shape = env.state_space.shape[0]
     ac_shape = env.action_space.shape[0]
 
-
     print('num_stack:', args.num_stack)
-    CurrentState = StackedState(1, args.num_stack, ob_shape)
+    CurrentState = StackedState(1, args.num_stack, st_shape)
     pi = MLPPolicy(CurrentState.state_shape, ac_shape, hidden=args.hidden)
 
     # Load state dict
     print(args.load_file)
     saved_state_dict = torch.load(args.load_file)
-
     pi.load_state_dict(saved_state_dict)
 
     print('\nRunning trained model...')

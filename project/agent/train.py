@@ -307,6 +307,7 @@ def trainCombine(pi, args, rollouts, optimizer_pi):
     # return value_loss, action_loss, dist_entropy
     return vloss, ploss, ent
 
+
 # === Social ===
 def explorationSocial(pi, current, targets, rollouts, args, result,  env):
     ''' Exploration part of PPO training:

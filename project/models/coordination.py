@@ -209,24 +209,37 @@ def test_MLPPolicy(args):
     ''' WORKS '''
     from project.environments.utils import rgb_tensor_render
     from project.agent.memory import StackedState
+    from project.environments.social import Social
     import numpy as np
 
-    st_shape = (22,)
-    ac_shape = 2
-    CurrentState = StackedState(args.num_processes, args.num_stack, st_shape[0])
-    pi = MLPPolicy(CurrentState.state_shape, ac_shape, args)
+    env = Social(args)
+    env.seed(args.seed)
 
-    state = np.random.rand(*(args.num_processes,*st_shape))  # env returns numpy
-    CurrentState.update(state)
+    o_shape = env.observation_space.shape
+    s_shape = env.state_space.shape[0]
+    a_shape = env.action_space.shape[0]
+    env.set_target([np.array(s_shape), np.array((2,2,2))])
 
-    print('-'*55)
-    print('\nIN:\n', CurrentState().size())
+    CurrentState = StackedState(args.num_processes, args.num_stack, s_shape)
+    pi = MLPPolicy(CurrentState.state_shape, a_shape, args)
+    optimizer_pi = optim.Adam(pi.parameters(), lr=args.pi_lr)
 
-    if True:
+    if args.cuda:
         CurrentState.cuda()
         pi.cuda()
 
-    v, action_mean, action_logstd, action_std = pi.sample(CurrentState())
+    s, st, o ,ot = env.reset()
+    for i in range(100):
+        CurrentState.update(s)
+        # v, action_mean, action_logstd, action_std = pi.sample(CurrentState())
+        value, action, action_log_prob, a_std = pi.sample(CurrentState())
+        cpu_actions = action.data.squeeze(1).cpu().numpy()
+
+        s, st, o, ot, r, d, _ = env.step(cpu_actions)
+        if args.verbose:
+            print('state:', s)
+
+
     print('OUT:\n')
     print('Value:\n'         , v.size())
     print('Action_mean:\n'   , action_mean.size())
@@ -269,7 +282,7 @@ def test_roboschool(args):
 
 
 if __name__ == '__main__':
-    from project.agent.arguments import get_args
+    from project.utils.arguments import get_args
     args = get_args()
-    test_CNNPolicy(args)
-    # test_MLPPolicy(args)
+    # test_CNNPolicy(args)
+    test_MLPPolicy(args)
