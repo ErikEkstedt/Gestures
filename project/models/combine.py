@@ -32,12 +32,12 @@ class Policy(object):
 
     Superclass for the different policies (CNN/MLP) containing common funcs.
     """
-    def evaluate_actions(self, o, o_target, s, s_target, actions):
+    def evaluate_actions(self, s, s_target, o , o_target, actions):
         ''' requires_Grad=True for all in training'''
         actions = Variable(actions)
         o, o_target = Variable(o), Variable(o_target)
         s, s_target = Variable(s), Variable(s_target)
-        v, action_mean, action_logstd = self(o, o_target, s, s_target)
+        v, action_mean, action_logstd = self(s, s_target, o, o_target)
         action_std = action_logstd.exp()
 
         # calculate `old_log_probs` directly in exploration.
@@ -51,10 +51,10 @@ class Policy(object):
 
     def sample(self, s, s_target, o, o_target):
         ''' volatile input here during exploration. We want gradients at training'''
-        o, o_target = Variable(o, volatile=True), Variable(o_target, volatile=True)
         s, s_target = Variable(s, volatile=True), Variable(s_target, volatile=True)
+        o, o_target = Variable(o, volatile=True), Variable(o_target, volatile=True)
 
-        v, action_mean, action_logstd = self(o, o_target, s, s_target)
+        v, action_mean, action_logstd = self(s, s_target, o, o_target)
         action_std = action_logstd.exp()
 
         noise = Variable(torch.randn(action_std.size()))
@@ -71,10 +71,10 @@ class Policy(object):
         dist_entropy = dist_entropy.sum(-1).mean()
         return v, action, action_log_probs, action_std
 
-    def act(self, o, o_target, s, s_target):
+    def act(self, s, s_target, o , o_target):
         o, o_target = Variable(o, volatile=True), Variable(o_target, volatile=True)
         s, s_target = Variable(s, volatile=True), Variable(s_target, volatile=True)
-        v, action, _ = self(o, o_target, s, s_target)
+        v, action, _ = self(s, s_target, o, o_target)
         return v, action
 
 
@@ -100,7 +100,7 @@ class PixelEmbedding(nn.Module):
     - 3 Conv w/ stride 2
     '''
     def __init__(self,
-                 input_szhape=(3,100,100),
+                 input_shape=(3,100,100),
                  state_shape=22,
                  feature_maps=[16, 32, 64],
                  kernel_sizes=[5, 5, 5],
@@ -130,29 +130,101 @@ class PixelEmbedding(nn.Module):
 
 
 class CombinePolicy(nn.Module, Policy):
-    ''' Policy that uses both state and obs
-    self(o, o_, s, s_)  : o,s = current state/obs, o_,s_ = target state/obs
-    '''
+        ''' Policy that uses both state and obs
+        self(o, o_, s, s_)  : o,s = current state/obs, o_,s_ = target state/obs
+        '''
+        def __init__(self,
+                    s_shape,
+                    st_shape,
+                    o_shape,
+                    ot_shape,
+                    a_shape,
+                    feature_maps=[64, 32, 16],
+                    kernel_sizes=[5, 5, 5],
+                    strides=[2, 2, 2],
+                    args=None):
+
+            super(CombinePolicy, self).__init__()
+            self.o_shape = o_shape
+            self.s_shape = s_shape
+            self.a_shape = a_shape
+
+            self.ot_shape = ot_shape
+            self.st_shape = st_shape
+
+            self.in_channels_cat = o_shape[0]+ot_shape[0]
+            self.obs_shape = (self.in_channels_cat, *o_shape[1:])
+
+            self.cnn = PixelEmbedding(self.obs_shape,
+                                    feature_maps=feature_maps,
+                                    kernel_sizes=kernel_sizes,
+                                    strides=strides,
+                                    args=None)
+
+            self.nparams_emb = self.cnn.n_out + s_shape + st_shape
+            self.mlp = MLP(self.nparams_emb, a_shape, args)
+            self.train()
+
+            # self.n         = self.mlp.n
+            self.n         = 0
+            self.total_n   = args.num_frames
+            self.std_start = args.std_start
+            self.std_stop  = args.std_stop
+
+        def forward(self, s, st, o, ot):
+            o_cat = torch.cat((o, ot), dim=1)
+            s_cat = torch.cat((s, st), dim=1)
+            x = self.cnn(o_cat)
+
+            x = torch.cat((x, s_cat), dim=1)
+            v, ac_mean = self.mlp(x)
+            ac_std = self.std(ac_mean)
+            return v, ac_mean, ac_std
+
+        def std(self, x):
+            ''' linearly decreasing standard deviation '''
+            ratio = self.n/self.total_n
+            self.log_std_value = self.std_start - (self.std_start - self.std_stop)*ratio
+            std = torch.FloatTensor([self.log_std_value])
+            ones = torch.ones(x.data.size())
+            if x.is_cuda:
+                std = std.cuda()
+                ones=ones.cuda()
+            std = std*ones
+            std = Variable(std)
+            return std
+
+        def get_std(self):
+            return math.exp(self.log_std_value)
+
+        def total_parameters(self):
+            p = 0
+            for parameter in self.parameters():
+                tmp_params = reduce(operator.mul, parameter.shape)
+                p += tmp_params
+            return p
+
+class Combine_NoTargetState(nn.Module, Policy):
     def __init__(self,
-                 o_shape,
-                 o_target_shape,
                  s_shape,
-                 s_target_shape,
+                 st_shape,
+                 o_shape,
+                 ot_shape,
                  a_shape,
                  feature_maps=[64, 32, 16],
                  kernel_sizes=[5, 5, 5],
                  strides=[2, 2, 2],
                  args=None):
 
-        super(CombinePolicy, self).__init__()
+        super(Combine_NoTargetState, self).__init__()
         self.o_shape = o_shape
         self.s_shape = s_shape
         self.a_shape = a_shape
 
-        self.o_target_shape = o_target_shape
-        self.s_target_shape = s_target_shape
+        self.ot_shape = ot_shape
+        self.st_shape = st_shape
 
-        self.in_channels_cat = o_shape[0]+o_target_shape[0]
+        self.in_channels_cat = o_shape[0]+ot_shape[0]
         self.obs_shape = (self.in_channels_cat, *o_shape[1:])
 
         self.cnn = PixelEmbedding(self.obs_shape,
@@ -161,7 +233,7 @@ class CombinePolicy(nn.Module, Policy):
                                   strides=strides,
                                   args=None)
 
-        self.nparams_emb = self.cnn.n_out + s_shape + s_target_shape
+        self.nparams_emb = self.cnn.n_out + s_shape
         self.mlp = MLP(self.nparams_emb, a_shape, args)
         self.train()
 
@@ -171,12 +243,10 @@ class CombinePolicy(nn.Module, Policy):
         self.std_start = args.std_start
         self.std_stop  = args.std_stop
 
-    def forward(self, o, o_target, s, s_target):
-        o_cat = torch.cat((o, o_target), dim=1)
-        s_cat = torch.cat((s, s_target), dim=1)
+    def forward(self, s, st, o, ot):
+        o_cat = torch.cat((o, ot), dim=1)
         x = self.cnn(o_cat)
-
-        x = torch.cat((x, s_cat), dim=1)
+        x = torch.cat((x, s), dim=1)
         v, ac_mean = self.mlp(x)
         ac_std = self.std(ac_mean)
         return v, ac_mean, ac_std
@@ -204,31 +274,32 @@ class CombinePolicy(nn.Module, Policy):
             p += tmp_params
         return p
 
+
 def test_combinepolicy(args):
     ''' Test for CombinePolicy '''
     s_shape        = 22
     o_shape        = (3, 40, 40)
-    o_target_shape = o_shape
-    s_target_shape = 4
+    ot_shape = o_shape
+    st_shape = 4
     a_shape        = 2
 
     # Tensors
     s  = torch.rand(s_shape).unsqueeze(0)
-    s_ = torch.rand(s_target_shape).unsqueeze(0)
+    s_ = torch.rand(st_shape).unsqueeze(0)
     o  = torch.rand(o_shape).unsqueeze(0)
-    o_ = torch.rand(o_target_shape).unsqueeze(0)
+    o_ = torch.rand(ot_shape).unsqueeze(0)
 
-    pi = CombinePolicy(o_shape, o_target_shape, s_shape, s_target_shape, a_shape, args)
+    pi = CombinePolicy(o_shape, ot_shape, s_shape, st_shape, a_shape, args)
 
     print('pi.sample()')
-    v, a, a_logprobs, a_std = pi.sample(o, o_, s, s_)
+    v, a, a_logprobs, a_std = pi.sample(s, s_target, o, o_target)
     print('Value:', v.shape)
     print('a_mean:', a.shape)
     print('a_logprobs:', a_logprobs.shape)
     print('a_std:', a_std.shape)
 
     print('pi.act()')
-    v, a = pi.act(o, o_, s, s_)
+    v, a = pi.act(s, s_, o, o_)
     print('Value:', v.shape)
     print('a:', a.shape)
 

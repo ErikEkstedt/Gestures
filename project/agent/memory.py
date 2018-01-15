@@ -354,6 +354,11 @@ class Current(object):
         self.target_state = StackedState(num_processes, num_stack, starget_dims)
         self.target_obs = StackedObs(num_processes, num_stack, otarget_dims)
 
+        self.o_shape = self.obs.obs_shape
+        self.ot_shape = self.target_obs.obs_shape
+        self.s_shape = self.state.state_shape
+        self.st_shape = self.target_state.state_shape
+
         self.targets = []
         self.use_cuda = False
 

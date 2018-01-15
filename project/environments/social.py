@@ -111,7 +111,7 @@ class MyGymEnv(gym.Env):
             cv2.imshow(title, cv2.cvtColor(rgb, cv2.COLOR_RGB2BGR))
             if cv2.waitKey(1) & 0xFF == ord('q'):
                 print('Stop')
-                return
+            return
         if close:
             return
         if mode=='human':

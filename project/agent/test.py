@@ -123,8 +123,8 @@ def Test_and_Save_Video_Combi(test_env, testset, Model, state_dict, args, verbos
 
     # === Target dims ===
     ob_sample, st_sample, = testset[4]  #random index
-    ob_target_shape = ob_sample.shape
-    st_target_shape = st_sample.shape[0]
+    ot_shape = ob_sample.shape
+    st_shape = st_sample.shape[0]
 
     # == Model
     st_shape = test_env.state_space.shape[0]    # Joints state
@@ -132,14 +132,14 @@ def Test_and_Save_Video_Combi(test_env, testset, Model, state_dict, args, verbos
     ac_shape = test_env.action_space.shape[0]   # Actions
 
     CurrentState       = StackedState(1, args.num_stack, st_shape)
-    CurrentStateTarget = StackedState(1, args.num_stack, st_target_shape)
+    CurrentStateTarget = StackedState(1, args.num_stack, st_shape)
     CurrentObs         = StackedObs(1, args.num_stack, ob_shape)
-    CurrentObsTarget   = StackedObs(1, args.num_stack, ob_target_shape)
+    CurrentObsTarget   = StackedObs(1, args.num_stack, ot_shape)
 
     pi = Model(o_shape=CurrentObs.obs_shape,
-               o_target_shape=CurrentObs.obs_shape,
+               ot_shape=CurrentObs.obs_shape,
                s_shape=st_shape,
-               s_target_shape=st_target_shape,
+               st_shape=st_target_shape,
                a_shape=ac_shape,
                feature_maps=[64, 64, 8],
                kernel_sizes=[5, 5, 5],
@@ -198,8 +198,8 @@ def Test_and_Save_Video_Social(test_env, testset, Model, state_dict, args, verbo
     '''
     # === Target dims ===
     st_sample, ob_sample = testset[4]  #random index
-    o_target_shape = ob_sample.shape
-    s_target_shape = st_sample.shape[0]
+    ot_shape = ob_sample.shape
+    st_shape = st_sample.shape[0]
 
     # == Model
     s_shape = test_env.state_space.shape[0]    # Joints state
@@ -209,14 +209,14 @@ def Test_and_Save_Video_Social(test_env, testset, Model, state_dict, args, verbo
     current = Current(num_processes=1,
                       num_stack=args.num_stack,
                       state_dims=s_shape,
-                      starget_dims=s_target_shape,
+                      starget_dims=st_shape,
                       obs_dims=o_shape,
-                      otarget_dims=o_target_shape)
+                      otarget_dims=ot_shape)
 
     pi = Model(o_shape=current.obs.obs_shape,
-               o_target_shape=current.obs.obs_shape,
+               ot_shape=current.obs.obs_shape,
                s_shape=s_shape,
-               s_target_shape=s_target_shape,
+               st_shape=st_shape,
                a_shape=ac_shape,
                feature_maps=args.feature_maps,
                kernel_sizes=args.kernel_sizes,
@@ -236,7 +236,7 @@ def Test_and_Save_Video_Social(test_env, testset, Model, state_dict, args, verbo
             current.update(state, s_target, obs, o_target)
 
             s, st, o, ot = current()
-            value, action = pi.act(o, ot, s, st)
+            value, action = pi.act(s, st, o, ot)
             cpu_actions = action.data.cpu().numpy()[0]
 
             # Observe reward and next state

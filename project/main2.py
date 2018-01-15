@@ -10,23 +10,23 @@ import torch.optim as optim
 from utils.utils import make_log_dirs
 from utils.arguments import get_args
 from utils.vislogger import VisLogger
-from models.combine import CombinePolicy
+from models.combine import CombinePolicy, Combine_NoTargetState
 
 from agent.test import Test_and_Save_Video_Social as Test_and_Save_Video
 from agent.train import explorationSocial as exploration
 from agent.train import trainSocial as train
 from agent.memory import RolloutStorageCombi as RolloutStorage
 from agent.memory import Results, Current, Targets
-from agent.memory import StackedObs, StackedState
 from environments.social import Social, Social_multiple
 
 
 args = get_args()
 
-# === Targets ===
-print('Loading target labels...')
+print('\n=== Loading Targets ===')
 train_dset = torch.load(args.target_path)
+print('\nTraining:', args.target_path)
 test_dset = torch.load(args.target_path2)
+print('\nTesting:', args.target_path2)
 
 s_target, o_target = train_dset[4]  # choose random data point
 s_te, o_te = test_dset[5]  # check to have same dims as training set
@@ -35,9 +35,8 @@ assert o_target.shape == o_te.shape, 'training and test shapes do not match'
 
 targets = Targets(n=args.num_processes, dset=train_dset)
 
-
 args.video_w = o_target.shape[0]  # Environment will use these values
-args.video_h = o_target.shape[1]  # (W,H,C)
+args.video_h = o_target.shape[1]
 
 # frames -> updates
 args.num_updates = int(args.num_frames) // args.num_steps // args.num_processes
@@ -47,13 +46,15 @@ make_log_dirs(args)  # create dirs for training logging
 if not args.no_vis:
     vis = VisLogger(args)
 
-# === Environment ===
+print('\n=== Create Environment ===')
 Env = Social  # Env as variabe then change this line between experiments
 env = Social_multiple(args)
 
-s_target_shape = s_target.shape[0]
+st_shape = s_target.shape[0]  # targets
+ot_shape = o_target.shape
+
 s_shape = env.state_space.shape[0]    # Joints state
-ob_shape = env.observation_space.shape  # RGB
+o_shape = env.observation_space.shape  # RGB (W,H,C)
 ac_shape = env.action_space.shape[0]   # Actions
 
 test_env = Env(args)
@@ -61,43 +62,53 @@ test_env.seed(np.random.randint(0, 20000))
 
 # === Memory ===
 result = Results(200, 10)
-current = Current(args.num_processes, args.num_stack, s_shape, s_target_shape, ob_shape, ob_shape)
-
+current = Current(args.num_processes, args.num_stack, s_shape, st_shape, o_shape, o_shape)
 rollouts = RolloutStorage(args.num_steps, args.num_processes, current.state.size()[1], current.target_state.size()[1], current.obs.size()[1:], ac_shape)
 
 # === Model ===
-pi = CombinePolicy(o_shape=current.obs.obs_shape,
-                   o_target_shape=current.obs.obs_shape,
-                   s_shape=s_shape,
-                   s_target_shape=s_target_shape,
-                   a_shape=ac_shape,
-                   feature_maps=args.feature_maps,
-                   kernel_sizes=args.kernel_sizes,
-                   strides=args.strides,
-                   args=args)
+# model o_shape: (C, W, H)
+if args.use_target_state:
+    print('All inputs to policy')
+    Model = CombinePolicy
+    pi = CombinePolicy(s_shape=current.s_shape,
+                       st_shape=current.st_shape,
+                       o_shape=current.o_shape,
+                       ot_shape=current.ot_shape,
+                       a_shape=ac_shape,
+                       feature_maps=args.feature_maps,
+                       kernel_sizes=args.kernel_sizes,
+                       strides=args.strides,
+                       args=args)
+else:
+    print('No target state input to policy')
+    Model = Combine_NoTargetState
+    pi = Combine_NoTargetState(s_shape=current.s_shape,
+                               st_shape=current.st_shape,
+                               o_shape=current.o_shape,
+                               ot_shape=current.ot_shape,
+                               a_shape=ac_shape,
+                               feature_maps=args.feature_maps,
+                               kernel_sizes=args.kernel_sizes,
+                               strides=args.strides,
+                               args=args)
+
 optimizer_pi = optim.Adam(pi.parameters(), lr=args.pi_lr)
+print('\n=== Training ===')
+print('\nEnvironment', args.env_id)
+print('Actions:', ac_shape)
+print('State:', s_shape)
+print('State target:', st_shape)
+print('Obs:', o_shape)
+print('Obs target:', ot_shape)
+print('\nPOLICY:\n', pi)
+print('Total network parameters to train: ', pi.total_parameters())
+print('\nTraining for %d Updates' % args.num_updates)
 
-
-# ==== Training ====
 env.set_target(targets())  # set initial targets
 s, s_target, obs, obs_target = env.reset()
-
 current.update(s, s_target, obs, obs_target)
 s, st, o ,ot = current()
-
 rollouts.first_insert(s, st, o, ot)
-
-
-if args.verbose:
-    print('Environment', args.env_id)
-    print('Actions:', ac_shape)
-    print('State:', s_shape)
-    print('State target:', s_target_shape)
-    print('Obs:', ob_shape)
-    print('Obs target:', ob_shape)
-    print('\nPOLICY:\n', pi)
-    print('Total network parameters to train: ', pi.total_parameters())
-    print('\nTraining for %d Updates' % args.num_updates)
 
 if args.cuda:
     current.cuda()
@@ -132,7 +143,7 @@ for j in range(args.num_updates):
 
         pi.cpu()
         sd = pi.cpu().state_dict()
-        test_reward_list, bestvideo = Test_and_Save_Video(test_env, test_dset, CombinePolicy, sd, args)
+        test_reward_list, bestvideo = Test_and_Save_Video(test_env, test_dset, Model, sd, args)
 
         test_reward_list = np.array(test_reward_list)
         test_reward = test_reward_list.mean()

@@ -58,7 +58,7 @@ def get_args():
     parser.add_argument('--kernel-sizes', type=list, default=[5, 5, 5])
     parser.add_argument('--strides', type=list, default=[2, 2, 2])
     parser.add_argument('--hidden', type=int, default=128, help='Number of hidden neurons in policy (default: 128)')
-
+    parser.add_argument('--use_target_state', action='store_true', default=False)
 
     # === TEST ===
     parser.add_argument('--no-test', action='store_true', default=False, help='disables test during training')
@@ -68,8 +68,10 @@ def get_args():
 
 
     sdpath = os.path.join(os.path.dirname(__file__), "../results/BestDictCombi4710400_65.577.pt")
-    targetpath = os.path.join(os.path.dirname(__file__), "../results/socialtargets_s4_o40-40-3_n5000_1.pt")
     parser.add_argument('--state-dict-path', default=sdpath, help='Path to state_dict to load')
+    parser.add_argument('--scale', type=int, default=1, help='scale image for enjoy.py')
+
+    targetpath = os.path.join(os.path.dirname(__file__), "../results/socialtargets_s4_o40-40-3_n5000_1.pt")
     parser.add_argument('--target-path', default=targetpath, help='Path to target to load')
     parser.add_argument('--target-path2', default=targetpath, help='Path to target to load')
 
