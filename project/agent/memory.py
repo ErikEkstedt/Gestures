@@ -715,6 +715,12 @@ class RolloutStorageCombi(object):
         self.states[0].copy_(self.states[-1])
         self.masks[0].copy_(self.masks[-1])
 
+    def first_insert(self, s, st, o, ot):
+        self.states[0].copy_(s)
+        self.target_states[0].copy_(st)
+        self.observations[0].copy_(o)
+        self.target_observations[0].copy_(ot)
+
     def get_last(self):
         o, o_target = self.get_last_obs()
         s, s_target = self.get_last_state()
