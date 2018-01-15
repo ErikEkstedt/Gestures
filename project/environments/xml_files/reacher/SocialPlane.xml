@@ -1,4 +1,4 @@
-<mujoco model="ReacherPlaneNoTarget">
+<mujoco model="SocialPlane">
 	<compiler angle="radian" inertiafromgeom="true"/>
 	<default>
 		<joint armature="1" damping="1" limited="false"/>

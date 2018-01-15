@@ -273,7 +273,7 @@ class Social(Base):
     def __init__(self, args=None):
         Base.__init__(self, XML_PATH=PATH_TO_CUSTOM_XML,
                       robot_name='robot_arm',
-                      model_xml='reacher/ReacherPlaneNoTarget.xml',
+                      model_xml='reacher/SocialPlane.xml',
                       ac=2, st=6, args=args)
         print('I am', self.model_xml)
 
@@ -345,6 +345,168 @@ class Social(Base):
         self.human_camera.move_and_look_at( 0, 0, 1, 0, 0, 0.4)
 
 
+class Social3D(Base):
+    def __init__(self, args=None):
+        Base.__init__(self, XML_PATH=PATH_TO_CUSTOM_XML,
+                      robot_name='robot_arm',
+                      model_xml='reacher/SocialPlane.xml',
+                      ac=2, st=6, args=args)
+        print('I am', self.model_xml)
+
+    def set_target(self, targets):
+        ''' targets should be a
+        list [numpy.ndarray, numpy.ndarray]
+
+        state.shape (N,)
+        obs.shape (W,H,C)
+        '''
+        self.state_target = targets[0]
+        self.obs_target = targets[1]
+        assert type(targets[0]) is np.ndarray, 'state target must be numpy'
+        assert type(targets[1]) is np.ndarray, 'obs target must be numpy'
+
+    def robot_specific_reset(self):
+        self.motor_names = ["robot_shoulder_joint_z", "robot_elbow_joint"]
+        self.motor_power = [100, 100]
+        self.motors = [self.jdict[n] for n in self.motor_names]
+
+        self.robot_reset()
+        self.calc_robot_keypoints()
+
+    def robot_reset(self):
+        ''' self.np_random for correct seed. '''
+        for j in self.robot_joints.values():
+            j.reset_current_position(self.np_random.uniform(low=-0.01, high=0.01 ), 0)
+            j.set_motor_torque(0)
+
+    def calc_robot_keypoints(self):
+        ''' gets hand position, target position and the vector in bewteen'''
+        elbow_position = np.array(self.parts['robot_elbow'].pose().xyz())[:2]
+        hand_position = np.array(self.parts['robot_hand'].pose().xyz())[:2]
+        self.robot_key_points = np.concatenate((elbow_position, hand_position))
+
+    def calc_reward(self, a):
+        ''' Difference potential as reward '''
+        potential_old = self.potential
+        self.potential = self.calc_potential()
+        r = self.reward_constant1 * float(self.potential - potential_old)
+        return r
+
+    def calc_potential(self):
+        self.diff_key_points = self.state_target - self.robot_key_points
+        p = -self.potential_constant*np.linalg.norm(self.diff_key_points)
+        return np.array(p)
+
+    def calc_state(self):
+        j = np.array([j.current_relative_position()
+                      for j in self.robot_joints.values()],
+                     dtype=np.float32).flatten()
+        self.joints_at_limit = np.count_nonzero(np.abs(j[0::2]) > 0.99)
+        self.joint_speeds = j[1::2]
+        self.calc_robot_keypoints()  # calcs target_position, important_pos, to_target_vec
+        return np.concatenate((self.robot_key_points, self.joint_speeds))
+
+    def get_rgb(self):
+        self.camera_adjust()
+        rgb, _, _, _, _ = self.camera.render(False, False, False) # render_depth, render_labeling, print_timing)
+        rendered_rgb = np.fromstring(rgb, dtype=np.uint8).reshape( (self.VIDEO_H,self.VIDEO_W,3) )
+        return rendered_rgb
+
+    def camera_adjust(self):
+        ''' Vision from straight above '''
+        self.camera.move_and_look_at( 0, 0, 1, 0, 0, 0.4)
+
+    def human_camera_adjust(self):
+        ''' Vision from straight above '''
+        self.human_camera.move_and_look_at( 0, 0, 1, 0, 0, 0.4)
+
+
+class SocialHumanoid(Base):
+    def __init__(self, args=None):
+        Base.__init__(self, XML_PATH=PATH_TO_CUSTOM_XML,
+                      robot_name='robot',
+                      model_xml='humanoid/HumanoidNoTarget.xml',
+                      ac=6, st=18, args=args)
+        print('I am', self.model_xml)
+
+    def set_target(self, targets):
+        ''' targets should be a
+        list [numpy.ndarray, numpy.ndarray]
+
+        state.shape (N,)
+        obs.shape (W,H,C)
+        '''
+        self.state_target = targets[0]
+        self.obs_target = targets[1]
+        assert type(targets[0]) is np.ndarray, 'state target must be numpy'
+        assert type(targets[1]) is np.ndarray, 'obs target must be numpy'
+
+    def robot_specific_reset(self):
+        self.motor_names = ["robot_right_shoulder1",
+                            "robot_right_shoulder2",
+                            "robot_right_elbow",
+                            "robot_left_shoulder1",
+                            "robot_left_shoulder2",
+                            "robot_left_elbow"]
+
+        self.motor_power = [1000] * len(self.motor_names)
+        self.motors = [self.jdict[n] for n in self.motor_names]
+
+        self.robot_reset()
+        self.calc_robot_keypoints()
+
+    def robot_reset(self):
+        ''' self.np_random for correct seed. '''
+        for j in self.robot_joints.values():
+            j.reset_current_position(self.np_random.uniform(low=-1.1, high=1.1 ), 0)
+            j.set_motor_torque(0)
+
+    def calc_robot_keypoints(self):
+        ''' gets hand position, target position and the vector in bewteen'''
+        left_elbow_position = np.array(self.parts['robot_left_elbow'].pose().xyz())
+        left_hand_position = np.array(self.parts['robot_left_hand'].pose().xyz())
+        right_elbow_position = np.array(self.parts['robot_right_elbow'].pose().xyz())
+        right_hand_position = np.array(self.parts['robot_right_hand'].pose().xyz())
+        self.robot_key_points = np.concatenate((left_elbow_position,
+                                                left_hand_position,
+                                                right_elbow_position,
+                                                right_hand_position ))
+
+    def calc_reward(self, a):
+        ''' Difference potential as reward '''
+        potential_old = self.potential
+        self.potential = self.calc_potential()
+        r = self.reward_constant1 * float(self.potential - potential_old)
+        return r
+
+    def calc_potential(self):
+        self.diff_key_points = self.state_target - self.robot_key_points
+        p = -self.potential_constant*np.linalg.norm(self.diff_key_points)
+        return np.array(p)
+
+    def calc_state(self):
+        j = np.array([j.current_relative_position()
+                      for j in self.robot_joints.values()],
+                     dtype=np.float32).flatten()
+        self.joints_at_limit = np.count_nonzero(np.abs(j[0::2]) > 0.99)
+        self.joint_speeds = j[1::2]
+        self.calc_robot_keypoints()  # important_pos
+        return np.concatenate((self.robot_key_points, self.joint_speeds))
+
+    def get_rgb(self):
+        self.camera_adjust()
+        rgb, _, _, _, _ = self.camera.render(False, False, False) # render_depth, render_labeling, print_timing)
+        rendered_rgb = np.fromstring(rgb, dtype=np.uint8).reshape( (self.VIDEO_H,self.VIDEO_W,3) )
+        return rendered_rgb
+
+    def camera_adjust(self):
+        ''' Vision from straight above '''
+        self.camera.move_and_look_at(1, 0, 1, 0, 0, 0.4)
+
+    def human_camera_adjust(self):
+        ''' Vision from straight above '''
+        self.human_camera.move_and_look_at(1, 0, 1, 0, 0, 0.4)
+
 def Social_multiple(args):
     from project.environments.SubProcEnv import SubprocVecEnv_Social as SubprocVecEnv
     def multiple_envs(args, rank):
@@ -355,6 +517,15 @@ def Social_multiple(args):
         return _thunk
     return SubprocVecEnv([multiple_envs(args, i) for i in range(args.num_processes)])
 
+class dummy_dset(object):
+    def __init__(self, s, o):
+        import torch
+        self.s = torch.zeros(s)
+        self.o = torch.zeros(*o)
+
+    def __call__(self, nop):
+        return self.s, self.t
+
 # test functions
 def test_social(args):
     from project.environments.utils import random_run
@@ -363,10 +534,11 @@ def test_social(args):
 
     # === Targets ===
     print('\nLoading targets from:')
-    print('path:\t', args.target_path)
-    dset = load(args.target_path)
-
-    env = Social(args)
+    # print('path:\t', args.target_path)
+    # dset = load(args.target_path)
+    dset = dummy_dset(18, (3,40,40))
+    # env = Social(args)
+    env = SocialHumanoid(args)
     env.seed(args.seed)
 
     random_run(env, render=args.render, verbose=args.verbose)
