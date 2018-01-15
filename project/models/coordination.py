@@ -211,16 +211,18 @@ def test_MLPPolicy(args):
     from project.agent.memory import StackedState
     from project.environments.social import Social
     import numpy as np
+    args.num_processes = 1
 
     env = Social(args)
     env.seed(args.seed)
 
     o_shape = env.observation_space.shape
     s_shape = env.state_space.shape[0]
+    print(s_shape)
     a_shape = env.action_space.shape[0]
     env.set_target([np.array(s_shape), np.array((2,2,2))])
 
-    CurrentState = StackedState(args.num_processes, args.num_stack, s_shape)
+    CurrentState = StackedState(1, args.num_stack, s_shape)
     pi = MLPPolicy(CurrentState.state_shape, a_shape, args)
     optimizer_pi = optim.Adam(pi.parameters(), lr=args.pi_lr)
 
@@ -229,11 +231,16 @@ def test_MLPPolicy(args):
         pi.cuda()
 
     s, st, o ,ot = env.reset()
+    print(s.shape)
     for i in range(100):
         CurrentState.update(s)
         # v, action_mean, action_logstd, action_std = pi.sample(CurrentState())
         value, action, action_log_prob, a_std = pi.sample(CurrentState())
-        cpu_actions = action.data.squeeze(1).cpu().numpy()
+        if args.num_processes == 1:
+            cpu_actions = action.data.cpu().numpy()[0]
+        else:
+            cpu_actions = action.data.squeeze(1).cpu().numpy()
+
 
         s, st, o, ot, r, d, _ = env.step(cpu_actions)
         if args.verbose:
@@ -241,10 +248,10 @@ def test_MLPPolicy(args):
 
 
     print('OUT:\n')
-    print('Value:\n'         , v.size())
-    print('Action_mean:\n'   , action_mean.size())
-    print('Action_logstd:\n' , action_logstd.size())
-    print('Action_std:\n'    , action_std.size())
+    print('Value:\n'         , value.size())
+    print('Action_mean:\n'   , action.size())
+    print('Action_logstd:\n' , a_std.size())
+    print('Action_std:\n'    , action_log_prob.size())
     if False:
         print('\n\nDATA:')
         print('Value:\n'         , v)
@@ -279,7 +286,6 @@ def test_roboschool(args):
         s, r, done, _ = env.step(ac[0].data.numpy())
         s = torch.from_numpy(s).float()
         print(r)
-
 
 if __name__ == '__main__':
     from project.utils.arguments import get_args

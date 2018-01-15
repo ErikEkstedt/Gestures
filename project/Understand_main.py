@@ -6,33 +6,35 @@ from torch.autograd import Variable
 
 from utils.arguments import get_args
 from utils.utils import make_log_dirs
+from models.understanding import VanillaCNN
+from torch.utils.data import DataLoader
 from data.dataset import load_reacherplane_data
 
-from models.understanding import VanillaCNN
 
-def train_understand(model, Loss, opt, dloader, vloader, args, vis=None):
+def train_understand(model, Loss, opt, tloader, vloader, args, vis=None):
     model.train()
-    for ep in range(args.understand_epochs):
-        # Training
-        for obs, states in dloader:
-            obs, states = Variable(obs), Variable(states, volatile=True)
+    for ep in range(args.epochs):
+        for states, obs in tloader:
+            opt.zero_grad()
+            obs = obs.permute(0,3,1,2).float()
+            obs = obs / 255
+            obs, states = Variable(obs.float()), Variable(states.float(), requires_grad=False)
             if args.cuda:
                 obs, states = obs.cuda(), states.cuda()
-
             predicted_states = model(obs)
             loss = Loss(predicted_states, states)
-            opt.zero_grad()
             loss.backward()
             opt.step()
-
         # Validation
-        for obs, states in dloader:
-            obs, states = Variable(obs), Variable(states, volatile=True)
+        for states, obs in vloader:
+            obs = obs.permute(0,3,1,2).float()
+            obs = obs / 255
+            obs, states = Variable(obs.float()), Variable(states.float(), requires_grad=False)
             if args.cuda:
                 obs, states = obs.cuda(), states.cuda()
             predicted_states = model(obs)
             vloss = Loss(predicted_states, states)
-        if vis:
+        if vis and ep > 10:
             # Draw plots
             vis.line_update(Xdata=ep, Ydata=loss.data[0], name='Training Loss')
             vis.line_update(Xdata=ep, Ydata=vloss.data[0], name='Validation Loss')
@@ -45,27 +47,36 @@ def train_understand(model, Loss, opt, dloader, vloader, args, vis=None):
             if args.cuda:
                 model.cuda()
         print('Epoch: {}/{}\t loss: {}\t Vloss:{}'.format(ep,
-                                                          args.understand_epochs,
+                                                          args.epochs,
                                                           loss.data[0],
                                                           vloss.data[0]))
 
 
 def test_understand(model, tloader, args):
     model.eval()
-    for ep in range(args.num_test):
-        for obs, states in tloader:
-            obs, states = Variable(obs), Variable(states, volatile=True)
-            if args.cuda:
-                obs, states = obs.cuda(), states.cuda()
-            predicted_states = model(obs)
-            for i in range(5):
-                print('State:', states[i])
-                print('Pred :', predicted_states[i])
-                print('Diff :', (predicted_states[i]-states[i]).abs())
-            input('Press Enter to continue')
+    for obs, states in tloader:
+        obs, states = Variable(obs), Variable(states, volatile=True)
+        if args.cuda:
+            obs, states = obs.cuda(), states.cuda()
+        predicted_states = model(obs)
+        for i in range(5):
+            print('State:', states[i])
+            print('Pred :', predicted_states[i])
+            print('Diff :', (predicted_states[i]-states[i]).abs())
+        input('Press Enter to continue')
 
+
+def obstotensor(obs):
+    if len(obs.shape) > 3:
+        obs = obs.transpose((0, 3,1,2))
+    else:
+        obs = obs.transpose((2, 0, 1))
+    return torch.from_numpy(obs)
 
 def main():
+    '''
+    TODO
+    '''
     args = get_args()
     make_log_dirs(args)
     args.num_updates   = int(args.num_frames) // args.num_steps // args.num_processes
@@ -74,16 +85,35 @@ def main():
         from utils.vislogger import VisLogger
         vis = VisLogger(args)
 
-    # === Load Data ===
-    train_path = '/home/erik/DATA/project/ReacherPlaneNoTarget/obsdata_rgb40-40-3_n500000_0.pt'
-    dset, dloader = load_reacherplane_data(train_path)
+    # # === Load Data ===
+    train_dset = torch.load(args.target_path)
+    val_dset = torch.load(args.target_path2)
 
-    val_path = '/home/erik/DATA/project/ReacherPlaneNoTarget/obsdata_rgb40-40-3_n100000_0.pt'
-    val_dset, vloader = load_reacherplane_data(val_path)
+    # busted dataset
+    t = -1
+    for i, (s, o) in enumerate(train_dset):
+        if s.shape[0] is not 4:
+            t = i
+    train_dset.state.pop(t)
+    train_dset.obs.pop(t)
+
+    v = -1
+    for i, (s, o) in enumerate(train_dset):
+        if s.shape[0] is not 4:
+            v = i
+    val_dset.state.pop(v)
+    val_dset.obs.pop(v)
+    print('train: ', t)
+    print('val: ', v)
+
+    trainloader = DataLoader(train_dset, batch_size=args.batch_size, shuffle=True)
+    valloader = DataLoader(val_dset, batch_size=args.batch_size, shuffle=True)
 
     # Check dims
-    ob, st = dset[0]
-    vob, vst = val_dset[0]
+    st, ob = train_dset[0]
+    vst, vob = val_dset[0]
+    vob, vst = obstotensor(vob), torch.from_numpy(vst)
+    ob, vst = obstotensor(ob), torch.from_numpy(st)
     assert vob.shape == ob.shape
     assert vst.shape == st.shape
     if args.verbose:
@@ -93,29 +123,31 @@ def main():
         print('st.shape', vst.shape)
         input('Press Enter to continue')
 
+
     # === Model ===
     model = VanillaCNN(input_shape=ob.shape,
-                       state_shape=st.shape[0],
-                       feature_maps=[64, 32, 32],
-                       kernel_sizes=[5, 5, 5],
-                       strides=[2, 2, 2],
+                       s_shape=st.shape[0],
+                       feature_maps=args.feature_maps,
+                       kernel_sizes=args.kernel_sizes,
+                       strides=args.strides,
                        args=args)
     Loss = nn.MSELoss()
-    opt = optim.Adam(model.parameters(), lr=args.understand_lr)
-
+    opt = optim.Adam(model.parameters(), lr=args.cnn_lr)
+    print(model)
 
     if args.cuda:
         model.cuda()
-
     # === Training ===
     if not args.no_vis:
-        train_understand(model, Loss, opt, dloader, vloader, args, vis)
+        train_understand(model, Loss, opt, trainloader, valloader, args, vis)
     else:
-        train_understand(model, Loss, opt, dloader, vloader, args)
+        train_understand(model, Loss, opt, trainloader, valloader, args)
 
     test_path = '/home/erik/DATA/project/ReacherPlaneNoTarget/obsdata_rgb40-40-3_n100000_1.pt'
-    test_dset, tloader = load_reacherplane_data(val_path)
-    test_understand(model, tloader, args)
+    # test_dset, tloader = load_reacherplane_data(val_path)
+    test_dset = torch.load(args.target_path3)
+    valloader = DataLoader(test_dset, batch_size=args.batch_size, shuffle=True)
+    # test_understand(model, tloader, args)
 
 
 if __name__ == '__main__':

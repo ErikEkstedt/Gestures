@@ -60,6 +60,10 @@ def get_args():
     parser.add_argument('--hidden', type=int, default=128, help='Number of hidden neurons in policy (default: 128)')
     parser.add_argument('--use_target_state', action='store_true', default=False)
 
+    parser.add_argument('--epochs', type=int, default=200, help='Epochs used for understanding training(default: 128)')
+    parser.add_argument('--cnn-lr', type=float, default=3e-4, help='cnn learning rate (default: 3e-4)')
+    parser.add_argument('--save-interval', type=float, default=10, help='Save interval (default: 10)')
+
     # === TEST ===
     parser.add_argument('--no-test', action='store_true', default=False, help='disables test during training')
     parser.add_argument('--test-interval', type=int,  default=50, help='how many updates/test (default: 50)')
@@ -74,6 +78,7 @@ def get_args():
     targetpath = os.path.join(os.path.dirname(__file__), "../results/socialtargets_s4_o40-40-3_n5000_1.pt")
     parser.add_argument('--target-path', default=targetpath, help='Path to target to load')
     parser.add_argument('--target-path2', default=targetpath, help='Path to target to load')
+    parser.add_argument('--target-path3', default=targetpath, help='Path to target to load')
 
     # === LOG ===
     parser.add_argument('--vis-interval', type=int, default=1, help='vis interval, one log per n updates (default: 1)')

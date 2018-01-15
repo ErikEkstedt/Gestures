@@ -27,27 +27,27 @@ class VanillaCNN(nn.Module):
     '''
     def __init__(self,
                  input_shape=(3,100,100),
-                 state_shape=22,
+                 s_shape=22,
                  feature_maps=[16, 32, 64],
                  kernel_sizes=[5, 5, 5],
                  strides=[2, 2, 2],
                  args=None):
         super(VanillaCNN, self).__init__()
         self.input_shape    = input_shape
-        self.state_shape    = state_shape
+        self.s_shape        = s_shape
         self.feature_maps   = feature_maps
         self.kernel_sizes   = kernel_sizes
         self.strides        = strides
 
-        self.conv1          = nn.Conv2d(input_shape[0], feature_maps[0], kernel_size  = kernel_sizes[0], stride = strides[0])
-        self.out_shape1     = Conv2d_out_shape(self.conv1, input_shape)
-        self.conv2          = nn.Conv2d(feature_maps[0], feature_maps[1], kernel_size = kernel_sizes[1], stride = strides[1])
-        self.out_shape2     = Conv2d_out_shape(self.conv2, self.out_shape1)
-        self.conv3          = nn.Conv2d(feature_maps[1], feature_maps[2], kernel_size = kernel_sizes[2], stride = strides[2])
-        self.out_shape3     = Conv2d_out_shape(self.conv3, self.out_shape2)
-        self.total_conv_out = total_params(self.out_shape3)
-        self.head           = nn.Linear(self.total_conv_out, args.hidden)
-        self.out            = nn.Linear(args.hidden, state_shape)
+        self.conv1        = nn.Conv2d(input_shape[0], feature_maps[0], kernel_size  = kernel_sizes[0], stride = strides[0])
+        self.out_shape1   = Conv2d_out_shape(self.conv1, input_shape)
+        self.conv2        = nn.Conv2d(feature_maps[0], feature_maps[1], kernel_size = kernel_sizes[1], stride = strides[1])
+        self.out_shape2   = Conv2d_out_shape(self.conv2, self.out_shape1)
+        self.conv3        = nn.Conv2d(feature_maps[1], feature_maps[2], kernel_size = kernel_sizes[2], stride = strides[2])
+        self.out_shape3   = Conv2d_out_shape(self.conv3, self.out_shape2)
+        self.n_out        = total_params(self.out_shape3)
+        self.head           = nn.Linear(self.n_out, args.hidden)
+        self.out            = nn.Linear(args.hidden, s_shape)
 
     def forward(self, x):
         x = F.relu(self.conv1(x))
@@ -151,21 +151,22 @@ class CLSTM(nn.Module):
 
 def test_VanillaCNN(args):
     from project.agent.memory import StackedObs
+    from project.environments.social import Social
     import numpy as np
 
-    ob_shape = (64,64,3)
-    st_shape = 22
+    env = Social(args)
+    env.seed(args.seed)
+
     CurrentObs = StackedObs(args.num_processes, args.num_stack, ob_shape)
     obs = np.random.rand(*(args.num_processes,*ob_shape))*255  # env returns numpy
     CurrentObs.update(obs)
 
     model = VanillaCNN(input_shape=CurrentObs.obs_shape,
-                       state_shape=st_shape,
-                       feature_maps=[64, 64, 64],
-                       kernel_sizes=[5, 5, 5],
-                       strides=[2, 2, 2],
+                       s_shape=s_shape,
+                       feature_maps=args.feature_maps,
+                       kernel_sizes=args.kernel_sizes,
+                       strides=args.strides,
                        args=args)
-
     if True:
         CurrentObs.cuda()
         model.cuda()

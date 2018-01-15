@@ -16,19 +16,19 @@ def generate_continous_data(env, args):
     '''
     trajectory = {'states': [], 'obs': []}  # dataset wants dict
     s, _, o, _ = env.reset()
-    s = s[:-2]  # remove speed
+    env.set_target([np.array(s.shape), np.array(s.shape)])  #set random targets
+
     for i in tqdm(range(args.dpoints)):
+        s = s[:-2]  # remove speed
         trajectory['states'].append(s)
         trajectory['obs'].append(o)
         action = env.action_space.sample()
         s, _, o, _, r, d, _ = env.step(action)
-        s = s[:-2]  # remove speed
         if d:
-            # if args.MAX_TIME == args.dpoints this should not happen
             print('DONE')
             trajectory['states'].append(s)
             trajectory['obs'].append(o)
-            break
+            s, _, o, _ = env.reset()
     return trajectory
 
 
@@ -59,9 +59,6 @@ if __name__ == '__main__':
     dset = Social_Dataset_numpy(data)
 
     s, o = dset[0]
-    filename = get_filename(args.filepath,
-                            s_shape=4,
-                            o_shape=o.shape,
-                            n=args.dpoints)
+    filename = get_filename(args.filepath, s_shape=4, o_shape=o.shape, n=args.dpoints)
     print('Saving into:\n\t', filename)
     save(dset, filename)

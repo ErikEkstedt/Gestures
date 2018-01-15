@@ -11,7 +11,9 @@ def collect_data(env, args):
     :dpoints            : Number of data points to collect
     :Returns            : dict
     """
-    s, obs = env.reset()
+    s, st, o, ot = env.reset()
+    env.set_target([np.array(s.shape), np.array(s.shape)])
+
     states, obs_list = [], []
     steps = args.dpoints // args.num_processes
     print('start collecting')
@@ -40,13 +42,12 @@ def get_filename(Env, args):
         run += 1
     return os.path.join("{}_{}.pt".format(filename, run))
 
+
 def generate_continous_data(env, args):
     ''' continuous state trajectory collection
-
     collects args.dpoints frames continuously and saves a dataset to disk.
     '''
     from project.data.dataset import Social_Dataset_numpy
-
     trajectory = {'states': [], 'obs': []}  # dataset wants dict
     s, _, o, _ = env.reset()
     for i in range(args.dpoints):
@@ -62,9 +63,9 @@ def generate_continous_data(env, args):
             break
     return trajectory
 
-
 def collect_social_targets():
     data = generate_continous_data()
+
 
 if __name__ == '__main__':
     from project.utils.arguments import get_args
@@ -75,15 +76,13 @@ if __name__ == '__main__':
     env = Social(args)
     env.seed(np.random.randint(0,20000))  # random seed
 
-    data = get_trajectory(Social, args)
+    # data = get_trajectory(Social, args)
+
+    env = Social(args)
+    env.seed(args.seed)
+    data = collect_data(env, args)
 
     filename = get_filename(Social, args)
     print('Saving into: ', filename)
     input('Press Enter to continue')
     torch.save(data, filename)
-
-
-
-
-
-
