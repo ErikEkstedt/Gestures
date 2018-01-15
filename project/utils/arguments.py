@@ -32,12 +32,6 @@ def get_args():
     parser.add_argument('--r1', type=float, default=1.0)
     parser.add_argument('--r2', type=float, default=1.0)
 
-    # === Understanding ===
-    parser.add_argument('--understand-lr', type=float, default=3e-4, help='Understanding learning rate (default: 3e-4)')
-    parser.add_argument('--understand-epochs', type=int, default=100, help='Epochs for Understand training (default: 100)')
-    parser.add_argument('--understand-batch', type=int, default=256, help='Batch size for Understand training (default: 256)')
-    parser.add_argument('--save-interval', type=int,  default=5, help='Epoch interval for save(default: 10)')
-
     # === PPO Loss ===
     parser.add_argument('--pi-lr', type=float, default=3e-4, help='policy learning rate (default: 3e-4)')
     parser.add_argument('--eps', type=float, default=1e-8, help='epsilon value(default: 1e-8)')
@@ -55,10 +49,15 @@ def get_args():
     parser.add_argument('--max-episode-length', type=int, default=1000, help='maximum steps in one episode (default: 1000)')
     parser.add_argument('--ppo-epoch', type=int, default=8, help='number of ppo epochs, K in paper (default: 8)')
     parser.add_argument('--num-stack', type=int, default=1, help='number of frames to stack (default: 1)')
-    parser.add_argument('--hidden', type=int, default=128, help='Number of hidden neurons in policy (default: 128)')
     parser.add_argument('--std-start', type=float, default=-0.6, help='std-start (Hyperparams for Roboschool in paper)')
     parser.add_argument('--std-stop', type=float, default=-1.7, help='std stop (Hyperparams for Roboschool in paper)')
     parser.add_argument('--seed', type=int, default=10, help='random seed (default: 10)')
+
+    # === MODEL ===
+    parser.add_argument('--feature-maps', type=list, default=[64, 64, 8])
+    parser.add_argument('--kernel-sizes', type=list, default=[5, 5, 5])
+    parser.add_argument('--strides', type=list, default=[2, 2, 2])
+    parser.add_argument('--hidden', type=int, default=128, help='Number of hidden neurons in policy (default: 128)')
 
 
     # === TEST ===

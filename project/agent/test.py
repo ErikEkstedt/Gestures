@@ -185,7 +185,6 @@ def Test_and_Save_Video_Combi(test_env, testset, Model, state_dict, args, verbos
 
 def Test_and_Save_Video_Social(test_env, testset, Model, state_dict, args, verbose=False):
     '''
-    WARNING: Init values for CombinePolicy are hardcoded here....
 
     Test with video
     :param test_env   - Reacher/HUmanoid environment
@@ -219,9 +218,9 @@ def Test_and_Save_Video_Social(test_env, testset, Model, state_dict, args, verbo
                s_shape=s_shape,
                s_target_shape=s_target_shape,
                a_shape=ac_shape,
-               feature_maps=[64, 64, 8],
-               kernel_sizes=[5, 5, 5],
-               strides=[2, 2, 2],
+               feature_maps=args.feature_maps,
+               kernel_sizes=args.kernel_sizes,
+               strides=args.strides,
                args=args)
 
     pi.load_state_dict(state_dict)
