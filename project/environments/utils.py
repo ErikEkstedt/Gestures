@@ -284,12 +284,12 @@ def random_run_with_changing_targets_parallel(env, dset, args):
 
         # update the target
         if j % args.update_target == 0:
-            targets = [dset[t]] * args.num_processes
+            targets = [dset[gt]] * args.num_processes
             env.set_target(targets)
             t += 1
 
         # Observe reward and next state
-        actions = np.random.rand(*(args.num_processes, *env.action_space.shape))
+        actions = -1 + 2*np.random.rand(*(args.num_processes, *env.action_space.shape))
         state, s_target, obs, o_target, reward, done, info = env.step(actions)
 
         # If done then update final rewards and reset episode reward
@@ -307,7 +307,10 @@ def random_run(env, render=False, verbose=False):
         action = env.action_space.sample()
         s, s_, o, o_, r, d, _ = env.step(action)
         if verbose:
-            print('frame:', i)
+            print('\nframe: {}\ts: {}\to: {}'.format(i, s.shape, o.shape ))
+            print('action:', action)
+            # print('absolute mean:', np.abs(np.array(action)).mean())
+
         if render:
             env.render('all')
             # env.render()  # same as env.render('human')
@@ -350,7 +353,6 @@ def random_run_with_changing_targets(env, dset, args):
             if done:
                 if args.verbose: print(episode_reward)
                 break
-
 
 
 # ======================== #
