@@ -2,6 +2,11 @@
 
 # Coding 
 
+* Model
+	* [ ] tranlsation in cobine training
+	* [ ] using stateless targets
+
+
 
 * [ ] Clean social.py
 	* [x] render functions

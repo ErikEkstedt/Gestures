@@ -64,7 +64,6 @@ def make_log_dirs(args):
     args.result_dir = result_dir
     args.checkpoint_dir = checkpoint_dir
 
-
 def train(args, dloader, ):
     step = 0
     for epoch in range(args.epochs):
@@ -143,8 +142,8 @@ def main():
     epoch_imgs = []
 
     train(args, dloader)
-
     logger._flush()
+    model.cpu()
     model.save_state_dict(logpath+'/model_params.pt')
 
 

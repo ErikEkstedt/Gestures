@@ -100,12 +100,13 @@ class PixelEmbedding(nn.Module):
     - 3 Conv w/ stride 2
     '''
     def __init__(self,
-                 input_shape=(3,100,100),
+                 input_szhape=(3,100,100),
                  state_shape=22,
                  feature_maps=[16, 32, 64],
                  kernel_sizes=[5, 5, 5],
                  strides=[2, 2, 2],
                  args=None):
+
         super(PixelEmbedding, self).__init__()
         self.input_shape  = input_shape
         self.state_shape  = state_shape
@@ -174,6 +175,7 @@ class CombinePolicy(nn.Module, Policy):
         o_cat = torch.cat((o, o_target), dim=1)
         s_cat = torch.cat((s, s_target), dim=1)
         x = self.cnn(o_cat)
+
         x = torch.cat((x, s_cat), dim=1)
         v, ac_mean = self.mlp(x)
         ac_std = self.std(ac_mean)

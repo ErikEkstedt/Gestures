@@ -3,7 +3,6 @@ import time
 import torch
 from itertools import count
 from torchvision.utils import make_grid
-import cv2
 import os
 
 from project.utils.arguments import get_args
@@ -16,27 +15,24 @@ from project.environments.utils import render_and_scale
 
 def mimic(env, dset, Model, state_dict, args, verbose=False):
     ob_sample, st_sample = dset[4]  #random index
-    ob_target_shape      = ob_sample.shape
-    st_target_shape      = st_sample.shape[0]
+    ot_shape      = ob_sample.shape
+    st_shape      = st_sample.shape[0]
 
-    st_shape             = env.state_space.shape[0]    # Joints state
-    ob_shape             = env.observation_space.shape # RGB
+    s_shape             = env.state_space.shape[0]    # Joints state
+    o_shape             = env.observation_space.shape # RGB
     ac_shape             = env.action_space.shape[0]   # Actions
 
-    CurrentStateTarget   = StackedState(1, args.num_stack, st_target_shape)
-    CurrentObsTarget     = StackedObs(1, args.num_stack, ob_target_shape)
-    CurrentState         = StackedState(1, args.num_stack, st_shape)
-    CurrentObs           = StackedObs(1, args.num_stack, ob_shape)
+    current = Current(1, args.num_stack, s_shape, st_shape, o_shape, o_shape)
 
-    pi = Model(o_shape=CurrentObs.obs_shape,
-               o_target_shape=CurrentObs.obs_shape,
-               s_shape=st_shape,
-               s_target_shape=st_target_shape,
-               a_shape=ac_shape,
-               feature_maps=[64, 64, 8],
-               kernel_sizes=[5, 5, 5],
-               strides=[2, 2, 2],
-               args=args)
+    pi = CombinePolicy(o_shape=current.obs.obs_shape,
+                       o_target_shape=current.obs.obs_shape,
+                       s_shape=s_shape,
+                       s_target_shape=s_target_shape,
+                       a_shape=ac_shape,
+                       feature_maps=[64, 64, 8],
+                       kernel_sizes=[5, 5, 5],
+                       strides=[2, 2, 2],
+                       args=args)
 
     pi.load_state_dict(state_dict)
 
@@ -46,6 +42,7 @@ def mimic(env, dset, Model, state_dict, args, verbose=False):
         CurrentState.cuda()
         CurrentObs.cuda()
         pi.cuda()
+
 
     if args.record:
         video = []
@@ -64,12 +61,9 @@ def mimic(env, dset, Model, state_dict, args, verbose=False):
 
         value, action = pi.act(CurrentObs(), CurrentObsTarget(), CurrentState(), CurrentStateTarget())
         if args.render:
-            target_im = CurrentObsTarget()[0].cpu()
-            frame = CurrentObs()[0].cpu()
-            imglist = [frame, target_im]
-            img = make_grid(imglist, padding=5).numpy()
-            img = img.transpose((1,2,0))
-            render_and_scale(img, scale=(9, 9))
+            env.render()
+            env.render('target')
+
 
         if args.record:
             target_im = CurrentObsTarget()[0].cpu()
