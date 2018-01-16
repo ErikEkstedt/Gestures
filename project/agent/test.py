@@ -4,6 +4,7 @@ import torch
 from tqdm import tqdm, trange
 from project.agent.memory import StackedState, StackedObs, Current
 
+
 def Test_and_Save_Video(test_env, Model, state_dict, args, verbose=False):
     '''
     Test with video
@@ -183,19 +184,21 @@ def Test_and_Save_Video_Combi(test_env, testset, Model, state_dict, args, verbos
     return total_reward/args.num_test, [Video, Targets]
 
 
-def Test_and_Save_Video_Social(test_env, testset, Model, state_dict, args, verbose=False):
+def Test_and_Save_Video_Social(test_env, testset, Model, state_dict, args, update, verbose=False):
     '''
-
     Test with video
     :param test_env   - Reacher/HUmanoid environment
     :param testset    - Dataset of targets
     :param Model      - The policy network
     :param state_dict - nn.Module.state_dict
     :param verbose    - Boolean, be verbose
-
-    :output           - Float, average complete episodic reward
-    :output           - List, containing all videoframes
     '''
+    if args.record:
+        import skvideo.io
+        name = "{}-test_update{}.mp4".format(args.env_id, update )
+        name = os.path.join(args.result_dir, name)
+        writer = skvideo.io.FFmpegWriter(name)
+
     # === Target dims ===
     st_sample, ob_sample = testset[4]  #random index
     ot_shape = ob_sample.shape
@@ -225,7 +228,6 @@ def Test_and_Save_Video_Social(test_env, testset, Model, state_dict, args, verbo
 
     pi.load_state_dict(state_dict)
 
-
     total_reward, episode_reward, best_episode_reward = 0, 0, -9999
     Video, Targets = [], []
     for i in trange(args.num_test):
@@ -245,6 +247,19 @@ def Test_and_Save_Video_Social(test_env, testset, Model, state_dict, args, verbo
                 Targets.append((o_target, s_target))
                 Video.append(obs)
 
+            if args.record:
+                human, _, target = env.render('all_rgb_array')  # (W, H, C)
+                height, width = target.shape[:2]
+                target = cv2.resize(target,(15*width, 10*height), interpolation = cv2.INTER_CUBIC)
+                # target: (40,40,3) -> (3, 600,400)
+                # human: (600,400, 3) -> (3, 600,400)
+                target = target.transpose((2,0,1))
+                human = human.transpose((2,0,1))
+                imglist = [torch.from_numpy(human), torch.from_numpy(target)]
+                img = make_grid(imglist, padding=5).numpy()
+                img = img.transpose((1,2,0))
+                writer.writeFrame(img)
+
             # If done then update final rewards and reset episode reward
             total_reward += reward
             episode_reward += reward
@@ -253,6 +268,6 @@ def Test_and_Save_Video_Social(test_env, testset, Model, state_dict, args, verbo
                 episode_reward = 0
                 done = False
                 break
-    test_env.close()
-    del test_env
+    if args.record:
+        writer.close()
     return total_reward/args.num_test, [Video, Targets]

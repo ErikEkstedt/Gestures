@@ -40,7 +40,8 @@ from project.environments.utils import render_and_scale
 def enjoy(env, dset, pi, args):
     if args.record:
         import skvideo.io
-        writer = skvideo.io.FFmpegWriter("enjoy.mp4")
+        name = "mimic_{}_update{}.mp4".format(args.env_id, args.update_target)
+        writer = skvideo.io.FFmpegWriter(name)
 
     # Test environments
     t = 0
@@ -50,7 +51,6 @@ def enjoy(env, dset, pi, args):
     state, s_target, obs, o_target = env.reset()
 
     tt = time.time()
-    # for j in count(1):
     for j in tqdm(range(args.MAX_TIME)):
         current.update(state, s_target, obs, o_target)
         s ,st, o, ot = current()
@@ -62,17 +62,15 @@ def enjoy(env, dset, pi, args):
 
         if args.record:
             human, _, target = env.render('all_rgb_array')  # (W, H, C)
-            height, width = obs.shape[:2]
+            height, width = target.shape[:2]
+            target = cv2.resize(target,(15*width, 10*height), interpolation = cv2.INTER_CUBIC)
             # target: (40,40,3) -> (3, 600,400)
             # human: (600,400, 3) -> (3, 600,400)
-            target = cv2.resize(target,(15*width, 10*height), interpolation = cv2.INTER_CUBIC)
             target = target.transpose((2,0,1))
             human = human.transpose((2,0,1))
             imglist = [torch.from_numpy(human), torch.from_numpy(target)]
             img = make_grid(imglist, padding=5).numpy()
             img = img.transpose((1,2,0))
-            img *= 255
-
             writer.writeFrame(img)
 
         if j % args.update_target == 0:
@@ -127,7 +125,7 @@ if __name__ == '__main__':
     current = Current(1, args.num_stack, s_shape, st_shape, o_shape, o_shape)
 
     pi = CombinePolicy(o_shape=current.o_shape,
-                    o_target_shape=current.ot_shape,
+                    ot_shape=current.ot_shape,
                     s_shape=current.s_shape,
                     st_shape=current.st_shape,
                     a_shape=ac_shape,

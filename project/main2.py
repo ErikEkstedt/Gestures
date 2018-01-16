@@ -143,26 +143,33 @@ for j in range(args.num_updates):
 
         pi.cpu()
         sd = pi.cpu().state_dict()
-        test_reward_list, bestvideo = Test_and_Save_Video(test_env, test_dset, Model, sd, args)
+        test_reward_list, bestvideo = Test_and_Save_Video(test_env,
+                                                          test_dset,
+                                                          Model,
+                                                          sd,
+                                                          args,
+                                                          j)
 
         test_reward_list = np.array(test_reward_list)
         test_reward = test_reward_list.mean()
 
         result.update_test(test_reward_list)
+
         # Plot result
         print('Average Test Reward: {}\n '.format(round(test_reward)))
         if args.vis:
-            # vis.line_update(Xdata=frame, Ydata=test_reward, name='Test Score')
             vis.scatter_update(Xdata=frame, Ydata=test_reward, name='Test Score Scatter')
         #  ==== Save best model ======
         if test_reward > MAX_REWARD:
             print('--' * 45)
             print('New High Score!\n')
             print('Avg. Reward: ', test_reward)
-            name = os.path.join(args.result_dir,
-                'BestVideo_targets{}_{}.pt'.format(round(test_reward, 1), frame))
-            print('Saving Best Video')
-            torch.save(bestvideo, name)
+            # name = os.path.join(args.result_dir,
+            #     'BestVideo_targets{}_{}.pt'.format(round(test_reward, 1), frame))
+            # print('Saving Best Video')
+            # torch.save(bestvideo, name)
+
+            # save state dict
             name = os.path.join(
                 args.checkpoint_dir,
                 'BestDictCombi{}_{}.pt'.format(frame, round(test_reward, 3)))

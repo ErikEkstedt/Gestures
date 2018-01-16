@@ -10,7 +10,7 @@ def get_args():
     parser.add_argument('--update-target', type=int, default=10, help='Number of frames between target update (default: 10)')
 
     # === Environment ===
-    parser.add_argument('--env-id', default='CustomReacher')
+    parser.add_argument('--env-id', default='Social')
     parser.add_argument('--dof', type=int, default=2)
     parser.add_argument('--video-w', type=int, default=40)
     parser.add_argument('--video-h', type=int, default=40)
