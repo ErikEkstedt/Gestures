@@ -46,7 +46,7 @@ make_log_dirs(args)  # create dirs for training logging
 if not args.no_vis:
     vis = VisLogger(args)
 
-print('\n=== Create Environment ===')
+print('\n=== Create Environment ===\n')
 Env = Social  # Env as variabe then change this line between experiments
 env = Social_multiple(args)
 

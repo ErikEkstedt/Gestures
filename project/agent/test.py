@@ -1,6 +1,9 @@
 from itertools import count
+import os
 import numpy as np
+import cv2
 import torch
+from torchvision.utils import make_grid
 from tqdm import tqdm, trange
 from project.agent.memory import StackedState, StackedObs, Current
 
@@ -184,10 +187,10 @@ def Test_and_Save_Video_Combi(test_env, testset, Model, state_dict, args, verbos
     return total_reward/args.num_test, [Video, Targets]
 
 
-def Test_and_Save_Video_Social(test_env, testset, Model, state_dict, args, update, verbose=False):
+def Test_and_Save_Video_Social(env, testset, Model, state_dict, args, update, verbose=False):
     '''
     Test with video
-    :param test_env   - Reacher/HUmanoid environment
+    :param env   - Reacher/HUmanoid environment
     :param testset    - Dataset of targets
     :param Model      - The policy network
     :param state_dict - nn.Module.state_dict
@@ -205,9 +208,9 @@ def Test_and_Save_Video_Social(test_env, testset, Model, state_dict, args, updat
     st_shape = st_sample.shape[0]
 
     # == Model
-    s_shape = test_env.state_space.shape[0]    # Joints state
-    o_shape = test_env.observation_space.shape # RGB
-    ac_shape = test_env.action_space.shape[0]   # Actions
+    s_shape = env.state_space.shape[0]    # Joints state
+    o_shape = env.observation_space.shape # RGB
+    ac_shape = env.action_space.shape[0]   # Actions
 
     current = Current(num_processes=1,
                       num_stack=args.num_stack,
@@ -232,8 +235,8 @@ def Test_and_Save_Video_Social(test_env, testset, Model, state_dict, args, updat
     Video, Targets = [], []
     for i in trange(args.num_test):
         idx = np.random.randint(0,len(testset))
-        test_env.set_target(testset[idx])
-        state, s_target, obs, o_target = test_env.reset()
+        env.set_target(testset[idx])
+        state, s_target, obs, o_target = env.reset()
         for j in count(1):
             current.update(state, s_target, obs, o_target)
 
@@ -242,7 +245,7 @@ def Test_and_Save_Video_Social(test_env, testset, Model, state_dict, args, updat
             cpu_actions = action.data.cpu().numpy()[0]
 
             # Observe reward and next state
-            state, s_target, obs, o_target, reward, done, info = test_env.step(cpu_actions)
+            state, s_target, obs, o_target, reward, done, info = env.step(cpu_actions)
             if j % 2 == 0:
                 Targets.append((o_target, s_target))
                 Video.append(obs)
