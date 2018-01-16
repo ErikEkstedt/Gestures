@@ -232,7 +232,7 @@ def Test_and_Save_Video_Social(env, testset, Model, state_dict, args, update, ve
     pi.load_state_dict(state_dict)
 
     total_reward, episode_reward, best_episode_reward = 0, 0, -9999
-    Video, Targets = [], []
+    # Video, Targets = [], []
     for i in trange(args.num_test):
         idx = np.random.randint(0,len(testset))
         env.set_target(testset[idx])
@@ -247,21 +247,20 @@ def Test_and_Save_Video_Social(env, testset, Model, state_dict, args, update, ve
             # Observe reward and next state
             state, s_target, obs, o_target, reward, done, info = env.step(cpu_actions)
             if j % 2 == 0:
-                Targets.append((o_target, s_target))
-                Video.append(obs)
-
-            if args.record:
-                human, _, target = env.render('all_rgb_array')  # (W, H, C)
-                height, width = target.shape[:2]
-                target = cv2.resize(target,(15*width, 10*height), interpolation = cv2.INTER_CUBIC)
-                # target: (40,40,3) -> (3, 600,400)
-                # human: (600,400, 3) -> (3, 600,400)
-                target = target.transpose((2,0,1))
-                human = human.transpose((2,0,1))
-                imglist = [torch.from_numpy(human), torch.from_numpy(target)]
-                img = make_grid(imglist, padding=5).numpy()
-                img = img.transpose((1,2,0))
-                writer.writeFrame(img)
+                # Targets.append((o_target, s_target))
+                # Video.append(obs)
+                if args.record:
+                    human, _, target = env.render('all_rgb_array')  # (W, H, C)
+                    height, width = target.shape[:2]
+                    target = cv2.resize(target,(15*width, 10*height), interpolation = cv2.INTER_CUBIC)
+                    # target: (40,40,3) -> (3, 600,400)
+                    # human: (600,400, 3) -> (3, 600,400)
+                    target = target.transpose((2,0,1))
+                    human = human.transpose((2,0,1))
+                    imglist = [torch.from_numpy(human), torch.from_numpy(target)]
+                    img = make_grid(imglist, padding=5).numpy()
+                    img = img.transpose((1,2,0))
+                    writer.writeFrame(img)
 
             # If done then update final rewards and reset episode reward
             total_reward += reward
@@ -273,4 +272,5 @@ def Test_and_Save_Video_Social(env, testset, Model, state_dict, args, update, ve
                 break
     if args.record:
         writer.close()
-    return total_reward/args.num_test, [Video, Targets]
+    # return total_reward/args.num_test, [Video, Targets]
+    return total_reward/args.num_test, [0 ,0 ]
