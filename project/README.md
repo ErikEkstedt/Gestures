@@ -1,26 +1,45 @@
 # Todo
 
 * Model
-	* [x] Translation in combine training
 	* [ ] Results from trained model + cnn_translation
-	* [ ] Using stateless targets. See results.
+	* [ ] Using stateless targets. See results. training now
+	* [x] Translation in combine training
 
 * [ ] Clean social.py
 	* [x] render functions
 	* [x] target datatype - consistency. NUMPY IN ENV
 
 * [x] Training loop for social.Social
-	* Different ways of getting the targets.
-	* [ ] record directly from test
+	* [x] record directly from test
 
 
-## main2
+## Training
 
 ```bash
-python main2.py 
+python main2.py \
+--test-thresh=1000000 \       # threshold to not test (save computation)
+--num-frames=5000000 \        # total number of frames in training
+--num-test=5 \                # how many episodes during each test
+--test-interval=30 \          # updates in between tests
+--target-path="../results/" \ # path to targets
+--record \                    # records all tests
+--use-state-target \          # uses the target state as input
+
 ```
 
-Run without test or visdom logger
+Run without test or visdom logger and using standard settings
 ```bash
 python main2.py --no-vis --no-test
+```
+
+## Enjoy
+
+```bash
+cd agent
+python enjoy.py \
+--MAX_TIME=3000\          # Number of frames to record/render/run
+--update-target=3\        # Agent gets 3 frames before target is updated
+--state-dict-path=/path/to/statedict/ \ # state dict to use
+--target-path=/path/to/target  \  # Path to target dataset to mimic
+
 ```

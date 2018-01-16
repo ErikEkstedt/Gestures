@@ -37,6 +37,21 @@ from project.environments.social import Social
 from project.data.dataset import load_reacherplane_data
 from project.environments.utils import render_and_scale
 
+
+def record(env, writer, scale=(15,10)):
+    human, _, target = env.render('all_rgb_array')  # (W, H, C)
+    height, width = target.shape[:2]
+    target = cv2.resize(target,(scale[0]*width, scale[1]*height),
+                        interpolation = cv2.INTER_CUBIC)
+    # target: (40,40,3) -> (3, 600,400)
+    # human: (600,400, 3) -> (3, 600,400)
+    target = target.transpose((2,0,1))
+    human = human.transpose((2,0,1))
+    imglist = [torch.from_numpy(human), torch.from_numpy(target)]
+    img = make_grid(imglist, padding=5).numpy()
+    img = img.transpose((1,2,0))
+    writer.writeFrame(img)
+
 def enjoy(env, dset, pi, args):
     if args.record:
         import skvideo.io
@@ -61,17 +76,7 @@ def enjoy(env, dset, pi, args):
             env.render('target')
 
         if args.record:
-            human, _, target = env.render('all_rgb_array')  # (W, H, C)
-            height, width = target.shape[:2]
-            target = cv2.resize(target,(15*width, 10*height), interpolation = cv2.INTER_CUBIC)
-            # target: (40,40,3) -> (3, 600,400)
-            # human: (600,400, 3) -> (3, 600,400)
-            target = target.transpose((2,0,1))
-            human = human.transpose((2,0,1))
-            imglist = [torch.from_numpy(human), torch.from_numpy(target)]
-            img = make_grid(imglist, padding=5).numpy()
-            img = img.transpose((1,2,0))
-            writer.writeFrame(img)
+            record(env, writer)
 
         if j % args.update_target == 0:
             env.set_target(dset[t]); t += 1
@@ -114,16 +119,15 @@ if __name__ == '__main__':
     st_shape = s_target.shape[0]  # targets
     ot_shape = o_target.shape
 
-        # === Environment ===
+    # === Environment ===
     env = Social(args)
     env.seed(np.random.randint(0,20000))  # random seed
 
+    # Model
     s_shape = env.state_space.shape[0]    # Joints state
     o_shape = env.observation_space.shape  # RGB (W,H,C)
     ac_shape = env.action_space.shape[0]   # Actions
-
     current = Current(1, args.num_stack, s_shape, st_shape, o_shape, o_shape)
-
     pi = CombinePolicy(o_shape=current.o_shape,
                     ot_shape=current.ot_shape,
                     s_shape=current.s_shape,
