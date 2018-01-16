@@ -33,7 +33,7 @@ def episodes_and_target(env, args):
 
 
 if __name__ == '__main__':
-    from project.agent.arguments import get_args
+    from project.utils.arguments import get_args
     args = get_args()
     args.video_W = 100
     args.video_H = 100

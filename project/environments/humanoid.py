@@ -383,7 +383,7 @@ class Humanoid(Base):
 
 
 if __name__ == '__main__':
-    from project.agent.arguments import get_args
+    from project.utils.arguments import get_args
     from utils import single_episodes, parallel_episodes
 
     args = get_args()

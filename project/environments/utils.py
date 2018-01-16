@@ -284,7 +284,7 @@ def random_run_with_changing_targets_parallel(env, dset, args):
 
         # update the target
         if j % args.update_target == 0:
-            targets = [dset[gt]] * args.num_processes
+            targets = [dset[t]] * args.num_processes
             env.set_target(targets)
             t += 1
 
@@ -332,7 +332,6 @@ def random_run_with_changing_targets(env, dset, args):
     t = 0
     while True:
         env.set_target(dset[t]); t += 1
-
         state, s_target, obs, o_target = env.reset()
         episode_reward = 0
         for j in count(1):
