@@ -33,7 +33,6 @@ def get_args():
     parser.add_argument('--r2', type=float, default=1.0)
 
     # === PPO Loss ===
-    parser.add_argument('--pi-lr', type=float, default=3e-4, help='policy learning rate (default: 3e-4)')
     parser.add_argument('--eps', type=float, default=1e-8, help='epsilon value(default: 1e-8)')
     parser.add_argument('--no-gae', action='store_true', default=False, help='use generalized advantage estimation')
     parser.add_argument('--gamma', type=float, default=0.99, help='discount factor for rewards (default: 0.99)')
@@ -43,6 +42,7 @@ def get_args():
     parser.add_argument('--max-grad-norm', type=float, default=5, help='ppo clip parameter (default: 5)')
 
     # === PPO Training ===
+    parser.add_argument('--continue-training', action='store_true', default=False)
     parser.add_argument('--num-frames', type=int, default=int(3e6), help='number of frames to train (default: 3e6)')
     parser.add_argument('--num-steps', type=int, default=2048, help='number of exploration steps in ppo (default: ?)')
     parser.add_argument('--batch-size', type=int, default=256, help='ppo batch size (default: 256)')
@@ -51,7 +51,13 @@ def get_args():
     parser.add_argument('--num-stack', type=int, default=1, help='number of frames to stack (default: 1)')
     parser.add_argument('--std-start', type=float, default=-0.6, help='std-start (Hyperparams for Roboschool in paper)')
     parser.add_argument('--std-stop', type=float, default=-1.7, help='std stop (Hyperparams for Roboschool in paper)')
-    parser.add_argument('--seed', type=int, default=10, help='random seed (default: 10)')
+    parser.add_argument('--seed', type=int, default=99, help='random seed (default: 99)')
+
+    parser.add_argument('--pi-lr', type=float, default=3e-4, help='policy learning rate (default: 3e-5)')
+    parser.add_argument('--adjust-lr', action='store_true', default=False)
+    parser.add_argument('--adjust-lr-interval', type=int, default=20, help='Updates (default: 20)')
+    parser.add_argument('--lr-decay', type=float, default=0.9, help='decay factor for learning rate (default: 0.9)')
+    parser.add_argument('--pi-end-lr', type=float, default=3e-5, help='policy learning rate (default: 3e-5)')
 
     # === MODEL ===
     parser.add_argument('--feature-maps', type=list, default=[64, 64, 8])
@@ -79,6 +85,7 @@ def get_args():
     parser.add_argument('--target-path', default=targetpath, help='Path to target to load')
     parser.add_argument('--target-path2', default=targetpath, help='Path to target to load')
     parser.add_argument('--target-path3', default=targetpath, help='Path to target to load')
+    parser.add_argument('--random-targets', action='store_true', default=False)
 
     # === LOG ===
     parser.add_argument('--vis-interval', type=int, default=1, help='vis interval, one log per n updates (default: 1)')

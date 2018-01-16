@@ -342,7 +342,6 @@ def explorationSocial(pi, current, targets, rollouts, args, result,  env):
             result.episode_rewards *= masks
             result.update_list()
 
-            # Here
             env.set_target(targets())
 
         if args.cuda:

@@ -35,11 +35,14 @@ python main2.py --no-vis --no-test
 ## Enjoy
 
 ```bash
-cd agent
 python enjoy.py \
---MAX_TIME=3000\          # Number of frames to record/render/run
---update-target=3\        # Agent gets 3 frames before target is updated
+--render \                      
+--record \                      
+--MAX_TIME=3000\                        # Number of frames to record/render/run
+--update-target=3\                      # Agent gets 3 frames before target is updated
+--random-targets \                      # Use if the targets are random and not sequential
 --state-dict-path=/path/to/statedict/ \ # state dict to use
---target-path=/path/to/target  \  # Path to target dataset to mimic
-
+--target-path=/path/to/target  \        # Path to target dataset to mimic
 ```
+
+

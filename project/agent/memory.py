@@ -1085,7 +1085,6 @@ class Targets(object):
     def __init__(self, n, dset, shuffle=True):
         self.n = n
         self.dset = dset
-        self.loader = DataLoader(dset, batch_size=n, shuffle=shuffle)
 
     def __call__(self):
         ret = []
@@ -1094,19 +1093,10 @@ class Targets(object):
             ret.append(self.dset[idx[i]])
         return ret
 
-
 if __name__ == '__main__':
     from arguments import get_args
-    # from environments.Reacher import ReacherPlane as Env
-    # from environments.utils import make_parallel_environments
-    # from environments.utils import rgb_render, rgb_tensor_render
-
     args = get_args()
     args.RGB = True
 
-    # test_StackedObs(Env, args)
-    # test_RolloutStorageMulti(Env, args)
-    path = '/home/erik/com_sci/Master_code/project/project/results/socialtargets_s4_o40-40-3_n5000_1.pt'
-    dset = torch.load(path)
+    dset = torch.load(args.target_path)
     targets = Targets(n=4, dset=dset)
-    targets.loader
