@@ -102,9 +102,9 @@ def enjoy(env, dset, pi, args):
         writer.close()
 
 if __name__ == '__main__':
+    print('Social Mimic')
     args = get_args()
 
-    print('Social Mimic')
     print('Loading state dict from:')
     print('path:\t', args.state_dict_path)
     state_dict = torch.load(args.state_dict_path)
@@ -112,12 +112,14 @@ if __name__ == '__main__':
     print('\nLoading targets from:')
     print('path:\t', args.target_path)
     dset = torch.load(args.target_path)
+
     s_target, o_target = dset[4]  # choose random data point
     st_shape = s_target.shape[0]  # targets
     ot_shape = o_target.shape
 
     # === Environment ===
-    env = Social(args)
+    # env = Social(args)
+    env = SocialHumanoid(args)
     env.seed(np.random.randint(0,20000))  # random seed
 
     # Model

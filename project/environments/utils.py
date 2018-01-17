@@ -236,69 +236,6 @@ def make_parallel_environments_combine(Env, args, Targets):
 # Run Episodes: Social     #
 # ======================== #
 
-def random_run_parallel(env, args):
-    ''' Executes random actions and renders '''
-    from itertools import count
-    s, s_, o, o_ = env.reset()
-    for i in count(1):
-        action = np.random.rand(*(args.num_processes, *env.action_space.shape))
-        s, s_, o, o_, r, d, _ = env.step(action)
-        if args.verbose:
-            print('frame:', i)
-        if args.render:
-            # env.render()  # same as env.render('human')
-            # env.render('machine')
-            # env.render('target')
-            # h, m, t = env.render('all_rgb_array')  # returns rgb arrays
-            mode = ['all_rgb_array'] * args.num_processes
-            H, M, T = env.render(mode)
-            print(H.shape)
-            print(M.shape)
-            print(T.shape)
-
-        if sum(d) > 0:
-            print('one env is finished')
-
-def random_run_with_changing_targets_parallel(env, dset, args):
-    ''' Executes random actions and also changes the target.
-    targets are set in order from a project.data.dataset.
-    renders options:
-
-        'render.modes': ['human', 'machine', 'target', 'all', 'all_rgb_array']
-
-        example of parallel render:
-
-            modes = ['all'] * args.num_processes
-    '''
-    t = 0
-    targets = [dset[t]] * args.num_processes
-
-    env.set_target(targets)
-    t += 1
-    state, s_target, obs, o_target = env.reset()
-    episode_reward = 0
-    for j in count(1):
-        if args.render:
-            modes = ['all'] * args.num_processes
-            env.render(modes)
-
-        # update the target
-        if j % args.update_target == 0:
-            targets = [dset[t]] * args.num_processes
-            env.set_target(targets)
-            t += 1
-
-        # Observe reward and next state
-        actions = -1 + 2*np.random.rand(*(args.num_processes, *env.action_space.shape))
-        state, s_target, obs, o_target, reward, done, info = env.step(actions)
-
-        # If done then update final rewards and reset episode reward
-        episode_reward += reward
-        if sum(done) > 0:
-            if args.verbose:
-                print(episode_reward)
-
-
 # Single Test functions
 def random_run(env, render=False, verbose=False):
     ''' Executes random actions and renders '''
@@ -352,6 +289,70 @@ def random_run_with_changing_targets(env, dset, args):
             if done:
                 if args.verbose: print(episode_reward)
                 break
+
+# Parallel
+def random_run_parallel(env, args):
+    ''' Executes random actions and renders '''
+    from itertools import count
+    s, s_, o, o_ = env.reset()
+    for i in count(1):
+        action = np.random.rand(*(args.num_processes, *env.action_space.shape))
+        s, s_, o, o_, r, d, _ = env.step(action)
+        if args.verbose:
+            print('frame:', i)
+        if args.render:
+            env.render(['human']*args.num_processes)  # same as env.render('human')
+            # env.render('all')  # everything
+            # env.render('machine')
+            # env.render('target')
+            # h, m, t = env.render('all_rgb_array')  # returns rgb arrays
+            # mode = ['all_rgb_array'] * args.num_processes
+            # H, M, T = env.render(mode)
+            # print('H: {}\tM: {}\tT: {}'.format(H.shape, M.shape, T.shape))
+
+        if sum(d) > 0:
+            print('one env is finished')
+
+def random_run_with_changing_targets_parallel(env, dset, args):
+    ''' Executes random actions and also changes the target.
+    targets are set in order from a project.data.dataset.
+    renders options:
+
+        'render.modes': ['human', 'machine', 'target', 'all', 'all_rgb_array']
+
+        example of parallel render:
+
+            modes = ['all'] * args.num_processes
+    '''
+    t = 0
+    targets = [dset[t]] * args.num_processes
+
+    env.set_target(targets)
+    t += 1
+    state, s_target, obs, o_target = env.reset()
+    episode_reward = 0
+    for j in count(1):
+        if args.render:
+            modes = ['all'] * args.num_processes
+            env.render(modes)
+
+        # update the target
+        if j % args.update_target == 0:
+            targets = [dset[t]] * args.num_processes
+            env.set_target(targets)
+            t += 1
+
+        # Observe reward and next state
+        actions = -1 + 2*np.random.rand(*(args.num_processes, *env.action_space.shape))
+        state, s_target, obs, o_target, reward, done, info = env.step(actions)
+
+        # If done then update final rewards and reset episode reward
+        episode_reward += reward
+        if sum(done) > 0:
+            if args.verbose:
+                print(episode_reward)
+
+
 
 
 # ======================== #

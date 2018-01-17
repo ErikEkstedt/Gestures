@@ -16,8 +16,12 @@ from agent.train import explorationSocial as exploration
 from agent.train import trainSocial as train
 from agent.memory import RolloutStorageCombi as RolloutStorage
 from agent.memory import Results, Current, Targets
-from environments.social import Social, Social_multiple
+from environments.social import Social, Social_multiple, SocialHumanoid
 
+def remove_speed(dset, n):
+    for i, (s, _) in enumerate(dset):
+        dset.state[i] = s[:-n]
+    return dset
 
 args = get_args()
 
@@ -26,6 +30,9 @@ train_dset = torch.load(args.target_path)
 print('\nTraining:', args.target_path)
 test_dset = torch.load(args.target_path2)
 print('\nTesting:', args.target_path2)
+
+train_dset = remove_speed(train_dset, 6)
+test_dset = remove_speed(test_dset, 6)
 
 s_target, o_target = train_dset[4]  # choose random data point
 s_te, o_te = test_dset[5]  # check to have same dims as training set
@@ -46,8 +53,9 @@ if not args.no_vis:
     vis = VisLogger(args)
 
 print('\n=== Create Environment ===\n')
-Env = Social  # Env as variabe then change this line between experiments
-env = Social_multiple(args)
+# Env = Social  # Env as variabe then change this line between experiments
+Env = SocialHumanoid
+env = Social_multiple(Env, args)
 
 st_shape = s_target.shape[0]  # targets
 ot_shape = o_target.shape
@@ -154,10 +162,8 @@ for j in range(args.num_updates):
         print('Testing...')
         pi.cpu()
         sd = pi.cpu().state_dict()
-        test_reward_list = Test_and_Save_Video(test_env, test_dset, Model, sd, args, frame)
-        test_reward_np = np.array(test_reward_list)
-        result.update_test(test_reward_list)
-        test_reward = test_reward_list.mean()
+        test_reward = Test_and_Save_Video(test_env, test_dset, Model, sd, args, frame)
+        result.update_test(test_reward)
 
         print('Average Test Reward: {}\n '.format(round(test_reward)))
         if args.vis:
@@ -167,9 +173,8 @@ for j in range(args.num_updates):
             print('--' * 45)
             print('New High Score!\nAvg. Reward:', test_reward)
             print('--' * 45)
-            name = os.path.join(
-                args.checkpoint_dir,
-                'BestDictCombi{}_{}.pt'.format(frame, round(test_reward, 3)))
+            name = os.path.join(args.checkpoint_dir,
+                                'BestDictCombi{}_{}.pt'.format(frame, round(test_reward, 3)))
             torch.save(sd, name)
             MAX_REWARD = test_reward
         else:

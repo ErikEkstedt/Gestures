@@ -1,5 +1,5 @@
 from project.utils.arguments import get_args
-from project.environments.social import Social
+from project.environments.social import Social, SocialHumanoid
 from project.data.dataset import Social_Dataset_numpy
 
 from tqdm import tqdm
@@ -18,12 +18,12 @@ def generate_continous_data(env, args):
     s, _, o, _ = env.reset()
     env.set_target([np.array(s.shape), np.array(s.shape)])  #set random targets
     for i in tqdm(range(args.dpoints)):
-        s = s[:-2]  # remove speed
         trajectory['states'].append(s)
         trajectory['obs'].append(o)
         action = env.action_space.sample()
         s, _, o, _, r, d, _ = env.step(action)
         if d:
+            env.seed(np.random.randint(0,20000))  # random seed
             print('DONE')
             trajectory['states'].append(s)
             trajectory['obs'].append(o)
@@ -50,13 +50,14 @@ if __name__ == '__main__':
     args = get_args()
     args.MAX_TIME = args.dpoints  # no need to gather abrupt resets
 
-    env = Social(args)
-    env.seed(np.random.randint(0,20000))  # random seed
+    # env = Social(args)
+    env = SocialHumanoid(args)
+    env.seed(args.seed)
 
     data = generate_continous_data(env, args)
     dset = Social_Dataset_numpy(data)
-
     s, o = dset[0]
-    filename = get_filename(args.filepath, s_shape=4, o_shape=o.shape, n=args.dpoints, args=args)
+    filename = get_filename(args.filepath, s_shape=s.shape, o_shape=o.shape, n=args.dpoints, args=args)
     print('Saving into:\n\t', filename)
     save(dset, filename)
+

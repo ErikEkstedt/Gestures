@@ -156,10 +156,10 @@ class CombinePolicy(nn.Module, Policy):
             self.obs_shape = (self.in_channels_cat, *o_shape[1:])
 
             self.cnn = PixelEmbedding(self.obs_shape,
-                                    feature_maps=feature_maps,
-                                    kernel_sizes=kernel_sizes,
-                                    strides=strides,
-                                    args=None)
+                                      feature_maps=feature_maps,
+                                      kernel_sizes=kernel_sizes,
+                                      strides=strides,
+                                      args=None)
 
             self.nparams_emb = self.cnn.n_out + s_shape + st_shape
             self.mlp = MLP(self.nparams_emb, a_shape, args)
@@ -199,8 +199,8 @@ class CombinePolicy(nn.Module, Policy):
 
         def total_parameters(self):
             p = 0
-            for parameter in self.parameters():
-                tmp_params = reduce(operator.mul, parameter.shape)
+            for param in self.parameters():
+                tmp_params = reduce(operator.mul, param.size())
                 p += tmp_params
             return p
 
@@ -277,11 +277,11 @@ class Combine_NoTargetState(nn.Module, Policy):
 
 def test_combinepolicy(args):
     ''' Test for CombinePolicy '''
-    s_shape        = 22
-    o_shape        = (3, 40, 40)
+    s_shape = 18
+    o_shape = (3, 64, 64)
     ot_shape = o_shape
-    st_shape = 4
-    a_shape        = 2
+    st_shape = 12
+    a_shape = 6
 
     # Tensors
     s  = torch.rand(s_shape).unsqueeze(0)
@@ -289,7 +289,19 @@ def test_combinepolicy(args):
     o  = torch.rand(o_shape).unsqueeze(0)
     o_ = torch.rand(ot_shape).unsqueeze(0)
 
-    pi = CombinePolicy(o_shape, ot_shape, s_shape, st_shape, a_shape, args)
+    pi = CombinePolicy(s_shape=s_shape,
+                       st_shape=st_shape,
+                       o_shape=o_shape,
+                       ot_shape=ot_shape,
+                       a_shape=a_shape,
+                       feature_maps=args.feature_maps,
+                       kernel_sizes=args.kernel_sizes,
+                       strides=args.strides,
+                       args=args)
+    print('Model')
+    print(pi)
+    print('Total network parameters to train: ', pi.total_parameters())
+    input('Press Enter to continue')
 
     print('pi.sample()')
     v, a, a_logprobs, a_std = pi.sample(s, s_target, o, o_target)

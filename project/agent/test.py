@@ -226,7 +226,6 @@ def Test_and_Save_Video_Social(env, testset, Model, state_dict, args, frames):
     s_shape = env.state_space.shape[0]    # Joints state
     o_shape = env.observation_space.shape # RGB
     ac_shape = env.action_space.shape[0]   # Actions
-
     current = Current(num_processes=1,
                       num_stack=args.num_stack,
                       state_dims=s_shape,

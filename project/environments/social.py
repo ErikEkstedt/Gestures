@@ -538,7 +538,6 @@ class SocialHumanoid(Base):
                             "robot_left_shoulder1",
                             "robot_left_shoulder2",
                             "robot_left_elbow"]
-
         self.motor_power = [2000] * len(self.motor_names)
         self.motors = [self.jdict[n] for n in self.motor_names]
 
@@ -591,22 +590,21 @@ class SocialHumanoid(Base):
 
     def camera_adjust(self):
         ''' camera used as observation for agent default: (40,40,3)'''
-        self.camera.move_and_look_at(1, 0, 1, 0, 0, 0)
+        self.camera.move_and_look_at(1, 0, 0, 0, 0, 0)
 
     def human_camera_adjust(self):
         ''' Camera used for regular rendering. Default: (400, 600, 3)'''
-        self.human_camera.move_and_look_at(1, 0, 1, 0, 0, 0)
+        self.human_camera.move_and_look_at(1, 0, 0, 0, 0, 0)
 
-
-def Social_multiple(args):
+def Social_multiple(Env, args):
     from project.environments.SubProcEnv import SubprocVecEnv_Social as SubprocVecEnv
-    def multiple_envs(args, rank):
+    def multiple_envs(Env, args, rank):
         def _thunk():
-            env = Social(args)
+            env = Env(args)
             env.seed(args.seed+rank*100)
             return env
         return _thunk
-    return SubprocVecEnv([multiple_envs(args, i) for i in range(args.num_processes)])
+    return SubprocVecEnv([multiple_envs(Env, args, i) for i in range(args.num_processes)])
 
 class dummy_dset(object):
     def __init__(self, s, o):
@@ -617,47 +615,55 @@ class dummy_dset(object):
     def __call__(self, nop):
         return self.s, self.t
 
+def remove_speeds(dset, n=6):
+    for i, (s,_) in enumerate(dset):
+        dset.state[i] = s[:-n]
+    return dset
+
 # test functions
-def test_social(args):
+def test_social(Env, args):
     from project.environments.utils import random_run
     from project.environments.utils import random_run_with_changing_targets
     from torch import load
 
     # === Targets ===
     print('\nLoading targets from:')
-    # print('path:\t', args.target_path)
+    print('path:\t', args.target_path)
     # dset = load(args.target_path)
-    dset = dummy_dset(18, (3,40,40))
-    # env = Social(args)
-    env = Social3D(args)
-    # env = SocialHumanoidReacher(args)
-    # env = SocialHumanoid(args)
+    # dset = remove_speeds(dset, n=6)
+
+    dset = dummy_dset(12, (3,40,40))
+
+    env = Env(args)
     env.seed(args.seed)
 
-    random_run(env, render=args.render, verbose=args.verbose)
-    # random_run_with_changing_targets(env, dset, args)
+    # random_run(env, render=args.render, verbose=args.verbose)
+    random_run_with_changing_targets(env, dset, args)
 
-def test_social_parallel(args):
+def test_social_parallel(Env, args):
     from project.environments.utils import random_run_with_changing_targets_parallel
     from project.environments.utils import random_run_parallel
     from torch import load
 
     dset = load(args.target_path)
+    env = Social_multiple(Env, args)
 
-    env = Social_multiple(args)
     print(env)
     print('action space:', env.action_space)
     print('state space:', env.state_space)
     print('obs space:', env.observation_space)
-    # random_run_parallel(env, args)
-    random_run_with_changing_targets_parallel(env, dset, args)
-
+    random_run_parallel(env, args)
+    # random_run_with_changing_targets_parallel(env, dset, args)
 
 if __name__ == '__main__':
     from project.utils.arguments import get_args
     args = get_args()
 
+    # Env = Social
+    # Env = Social3D
+    # Env = SocialHumanoidReacher
+    Env = SocialHumanoid
     if args.num_processes > 1:
-        test_social_parallel(args)
+        test_social_parallel(Env, args)
     else:
-        test_social(args)
+        test_social(Env, args)
