@@ -246,6 +246,7 @@ def random_run(env, render=False, verbose=False):
         if verbose:
             print('\nframe: {}\ts: {}\to: {}'.format(i, s.shape, o.shape ))
             print('action:', action)
+            input('Press Enter to continue')
             # print('absolute mean:', np.abs(np.array(action)).mean())
 
         if render:

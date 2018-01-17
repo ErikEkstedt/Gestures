@@ -16,7 +16,7 @@
 ## Training
 
 ```bash
-python main2.py \
+python main.py \
 --test-thresh=1000000 \       # threshold to not test (save computation)
 --num-frames=5000000 \        # total number of frames in training
 --num-test=5 \                # how many episodes during each test
@@ -29,7 +29,7 @@ python main2.py \
 
 Run without test or visdom logger and using standard settings
 ```bash
-python main2.py --no-vis --no-test
+python main.py --no-vis --no-test
 ```
 
 ## Enjoy

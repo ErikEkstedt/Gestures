@@ -1,12 +1,5 @@
-''' social movement environment (basically just a robot physics simulator)
-
-Write documentation.
-
-This will be the final environment script used.
-
-Write how everything her works in connection to other important parts.
-
-Reference original/inspirations
+'''
+social movement environment (Roboschool for poses)
 '''
 from roboschool.scene_abstract import Scene, SingleRobotEmptyScene
 import os
@@ -637,8 +630,8 @@ def test_social(Env, args):
     env = Env(args)
     env.seed(args.seed)
 
-    # random_run(env, render=args.render, verbose=args.verbose)
-    random_run_with_changing_targets(env, dset, args)
+    random_run(env, render=args.render, verbose=args.verbose)
+    # random_run_with_changing_targets(env, dset, args)
 
 def test_social_parallel(Env, args):
     from project.environments.utils import random_run_with_changing_targets_parallel
@@ -659,10 +652,10 @@ if __name__ == '__main__':
     from project.utils.arguments import get_args
     args = get_args()
 
-    # Env = Social
+    Env = Social
     # Env = Social3D
     # Env = SocialHumanoidReacher
-    Env = SocialHumanoid
+    # Env = SocialHumanoid
     if args.num_processes > 1:
         test_social_parallel(Env, args)
     else:
