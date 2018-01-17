@@ -130,79 +130,79 @@ class PixelEmbedding(nn.Module):
 
 
 class CombinePolicy(nn.Module, Policy):
-        ''' Policy that uses both state and obs
-        self(o, o_, s, s_)  : o,s = current state/obs, o_,s_ = target state/obs
-        '''
-        def __init__(self,
-                    s_shape,
-                    st_shape,
-                    o_shape,
-                    ot_shape,
-                    a_shape,
-                    feature_maps=[64, 32, 16],
-                    kernel_sizes=[5, 5, 5],
-                    strides=[2, 2, 2],
-                    args=None):
+    ''' Policy that uses both state and obs
+    self(o, o_, s, s_)  : o,s = current state/obs, o_,s_ = target state/obs
+    '''
+    def __init__(self,
+                s_shape,
+                st_shape,
+                o_shape,
+                ot_shape,
+                a_shape,
+                feature_maps=[64, 32, 16],
+                kernel_sizes=[5, 5, 5],
+                strides=[2, 2, 2],
+                args=None):
 
-            super(CombinePolicy, self).__init__()
-            self.o_shape = o_shape
-            self.s_shape = s_shape
-            self.a_shape = a_shape
+        super(CombinePolicy, self).__init__()
+        self.o_shape = o_shape
+        self.s_shape = s_shape
+        self.a_shape = a_shape
 
-            self.ot_shape = ot_shape
-            self.st_shape = st_shape
+        self.ot_shape = ot_shape
+        self.st_shape = st_shape
 
-            self.in_channels_cat = o_shape[0]+ot_shape[0]
-            self.obs_shape = (self.in_channels_cat, *o_shape[1:])
+        self.in_channels_cat = o_shape[0]+ot_shape[0]
+        self.obs_shape = (self.in_channels_cat, *o_shape[1:])
 
-            self.cnn = PixelEmbedding(self.obs_shape,
-                                      feature_maps=feature_maps,
-                                      kernel_sizes=kernel_sizes,
-                                      strides=strides,
-                                      args=None)
+        self.cnn = PixelEmbedding(self.obs_shape,
+                                    feature_maps=feature_maps,
+                                    kernel_sizes=kernel_sizes,
+                                    strides=strides,
+                                    args=None)
 
-            self.nparams_emb = self.cnn.n_out + s_shape + st_shape
-            self.mlp = MLP(self.nparams_emb, a_shape, args)
-            self.train()
+        self.nparams_emb = self.cnn.n_out + s_shape + st_shape
+        self.mlp = MLP(self.nparams_emb, a_shape, args)
+        self.train()
 
-            # self.n         = self.mlp.n
-            self.n         = 0
-            self.total_n   = args.num_frames
-            self.std_start = args.std_start
-            self.std_stop  = args.std_stop
+        # self.n         = self.mlp.n
+        self.n         = 0
+        self.total_n   = args.num_frames
+        self.std_start = args.std_start
+        self.std_stop  = args.std_stop
 
-        def forward(self, s, st, o, ot):
-            o_cat = torch.cat((o, ot), dim=1)
-            s_cat = torch.cat((s, st), dim=1)
-            x = self.cnn(o_cat)
+    def forward(self, s, st, o, ot):
+        o_cat = torch.cat((o, ot), dim=1)
+        s_cat = torch.cat((s, st), dim=1)
+        x = self.cnn(o_cat)
 
-            x = torch.cat((x, s_cat), dim=1)
-            v, ac_mean = self.mlp(x)
-            ac_std = self.std(ac_mean)
-            return v, ac_mean, ac_std
+        x = torch.cat((x, s_cat), dim=1)
+        v, ac_mean = self.mlp(x)
+        ac_std = self.std(ac_mean)
+        return v, ac_mean, ac_std
 
-        def std(self, x):
-            ''' linearly decreasing standard deviation '''
-            ratio = self.n/self.total_n
-            self.log_std_value = self.std_start - (self.std_start - self.std_stop)*ratio
-            std = torch.FloatTensor([self.log_std_value])
-            ones = torch.ones(x.data.size())
-            if x.is_cuda:
-                std = std.cuda()
-                ones=ones.cuda()
-            std = std*ones
-            std = Variable(std)
-            return std
+    def std(self, x):
+        ''' linearly decreasing standard deviation '''
+        ratio = self.n/self.total_n
+        self.log_std_value = self.std_start - (self.std_start - self.std_stop)*ratio
+        std = torch.FloatTensor([self.log_std_value])
+        ones = torch.ones(x.data.size())
+        if x.is_cuda:
+            std = std.cuda()
+            ones=ones.cuda()
+        std = std*ones
+        std = Variable(std)
+        return std
 
-        def get_std(self):
-            return math.exp(self.log_std_value)
+    def get_std(self):
+        return math.exp(self.log_std_value)
 
-        def total_parameters(self):
-            p = 0
-            for param in self.parameters():
-                tmp_params = reduce(operator.mul, param.size())
-                p += tmp_params
-            return p
+    def total_parameters(self):
+        p = 0
+        for param in self.parameters():
+            tmp_params = reduce(operator.mul, param.size())
+            p += tmp_params
+        return p
 
 class Combine_NoTargetState(nn.Module, Policy):
     def __init__(self,

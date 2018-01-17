@@ -60,11 +60,11 @@ def get_args():
     parser.add_argument('--pi-end-lr', type=float, default=3e-5, help='policy learning rate (default: 3e-5)')
 
     # === MODEL ===
-    parser.add_argument('--feature-maps', nargs='+', type=int, default=[64,64,8])
+    parser.add_argument('--feature-maps', nargs='+', type=int, default=[32,64,32])
     parser.add_argument('--kernel-sizes', nargs='+', type=int, default=[5,5,5])
     parser.add_argument('--strides', nargs='+', type=int, default=[2,2,2])
 
-    parser.add_argument('--hidden', type=int, default=128, help='Number of hidden neurons in policy (default: 128)')
+    parser.add_argument('--hidden', type=int, default=256, help='Number of hidden neurons in policy (default: 256)')
     parser.add_argument('--use_target_state', action='store_true', default=False)
 
     parser.add_argument('--epochs', type=int, default=200, help='Epochs used for understanding training(default: 128)')
