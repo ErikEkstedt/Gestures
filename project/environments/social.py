@@ -621,41 +621,42 @@ def test_social(Env, args):
 
     # === Targets ===
     print('\nLoading targets from:')
-    print('path:\t', args.target_path)
-    # dset = load(args.target_path)
-    # dset = remove_speeds(dset, n=6)
+    print('path:\t', args.torso_target_path)
+    dset = load(args.tosro_target_path)
+    dset = remove_speeds(dset, n=6)
 
-    dset = dummy_dset(12, (3,40,40))
+    # dset = dummy_dset(12, (3,40,40))
 
     env = Env(args)
     env.seed(args.seed)
 
-    random_run(env, render=args.render, verbose=args.verbose)
-    # random_run_with_changing_targets(env, dset, args)
+    # random_run(env, render=args.render, verbose=args.verbose)
+    random_run_with_changing_targets(env, dset, args)
 
 def test_social_parallel(Env, args):
     from project.environments.utils import random_run_with_changing_targets_parallel
     from project.environments.utils import random_run_parallel
     from torch import load
 
-    dset = load(args.target_path)
+    dset = load(args.torso_target_path)
+    dset = remove_speeds(dset, n=6)
     env = Social_multiple(Env, args)
 
     print(env)
     print('action space:', env.action_space)
     print('state space:', env.state_space)
     print('obs space:', env.observation_space)
-    random_run_parallel(env, args)
-    # random_run_with_changing_targets_parallel(env, dset, args)
+    # random_run_parallel(env, args)
+    random_run_with_changing_targets_parallel(env, dset, args)
 
 if __name__ == '__main__':
     from project.utils.arguments import get_args
     args = get_args()
 
-    Env = Social
+    # Env = Social
     # Env = Social3D
     # Env = SocialHumanoidReacher
-    # Env = SocialHumanoid
+    Env = SocialHumanoid
     if args.num_processes > 1:
         test_social_parallel(Env, args)
     else:

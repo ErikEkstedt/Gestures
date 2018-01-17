@@ -82,10 +82,10 @@ def get_args():
     parser.add_argument('--state-dict-path', default=sdpath, help='Path to state_dict to load')
     parser.add_argument('--scale', type=int, default=1, help='scale image for enjoy.py')
 
-    targetpath = os.path.join(os.path.dirname(__file__), "../results/socialtargets_s4_o40-40-3_n5000_1.pt")
-    parser.add_argument('--target-path', default=targetpath, help='Path to target to load')
-    parser.add_argument('--target-path2', default=targetpath, help='Path to target to load')
-    parser.add_argument('--target-path3', default=targetpath, help='Path to target to load')
+    torsopath = os.path.join(os.path.dirname(__file__), "../results/upper_torso/Social_s(18,)_o40-40-3_n1000_0.pt")
+    reacherpath = os.path.join(os.path.dirname(__file__), "../results/socialreacher/socialtargets_s6_o40-40-3_n5000_0_speed.pt")
+    parser.add_argument('--torso-target-path', default=torsopath, help='Path to target to load')
+    parser.add_argument('--reacher-target-path', default=reacherpath, help='Path to target to load')
     parser.add_argument('--random-targets', action='store_true', default=False)
 
     # === LOG ===

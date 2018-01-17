@@ -26,10 +26,10 @@ def remove_speed(dset, n):
 args = get_args()
 
 print('\n=== Loading Targets ===')
-train_dset = torch.load(args.target_path)
-print('\nTraining:', args.target_path)
-test_dset = torch.load(args.target_path2)
-print('\nTesting:', args.target_path2)
+train_dset = torch.load(args.torso_target_path)
+print('\nTraining:', args.torso_target_path)
+test_dset = torch.load(args.torso_target_path)
+print('\nTesting:', args.torso_target_path)
 
 train_dset = remove_speed(train_dset, 6)
 test_dset = remove_speed(test_dset, 6)
@@ -185,3 +185,4 @@ for j in range(args.num_updates):
 
         if args.cuda:
             pi.cuda()
+

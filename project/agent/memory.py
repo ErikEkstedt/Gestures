@@ -102,8 +102,8 @@ class Results(object):
         if self.n > self.max_n:
             self.final_reward_list.pop()
 
-    def update_test(self, test_list):
-        self.test_episode_list.insert(0, self.tmp_final_rewards.mean())
+    def update_test(self, test_reward):
+        self.test_episode_list.insert(0, test_reward)
         self.n += 1
         if self.n > self.max_n:
             self.final_reward_list.pop()
@@ -119,7 +119,10 @@ class Results(object):
             self.ent.pop()
 
     def get_reward_mean(self):
-        return torch.Tensor(self.final_reward_list).mean()
+        if len(self.final_reward_list) > 0:
+            return torch.Tensor(self.final_reward_list).mean()
+        else:
+            return 0
 
     def get_reward_std(self):
         return torch.Tensor(self.final_reward_list).std()
