@@ -559,7 +559,8 @@ class SocialHumanoid(Base):
         potential_old = self.potential
         self.potential = self.calc_potential()
         r = self.reward_constant1 * float(self.potential - potential_old)
-        return r
+        joints_at_limit_cost = float(self.joints_at_limit_cost * self.joints_at_limit)
+        return r + joints_at_limit_cost
 
     def calc_potential(self):
         self.diff_key_points = self.state_target - self.robot_key_points
