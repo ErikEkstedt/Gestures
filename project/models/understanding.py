@@ -158,8 +158,8 @@ def test_VanillaCNN(args):
     env = Social(args)
     env.seed(args.seed)
 
-    CurrentObs = StackedObs(args.num_processes, args.num_stack, ob_shape)
-    obs = np.random.rand(*(args.num_processes,*ob_shape))*255  # env returns numpy
+    CurrentObs = StackedObs(args.num_proc, args.num_stack, ob_shape)
+    obs = np.random.rand(*(args.num_proc,*ob_shape))*255  # env returns numpy
     CurrentObs.update(obs)
 
     model = VanillaCNN(input_shape=CurrentObs.obs_shape,

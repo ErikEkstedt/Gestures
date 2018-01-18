@@ -219,7 +219,7 @@ def test_CNNPolicy(args):
 
     ob_shape = (64,64,3)
     ac_shape = 2
-    CurrentObs = StackedObs(args.num_processes, args.num_stack, ob_shape)
+    CurrentObs = StackedObs(args.num_proc, args.num_stack, ob_shape)
 
     pi = CNNPolicy(input_shape=CurrentObs.obs_shape,
                    action_shape=ac_shape,
@@ -230,7 +230,7 @@ def test_CNNPolicy(args):
                    args=args)
 
 
-    obs = np.random.rand(*(args.num_processes,*ob_shape))*255  # env returns numpy
+    obs = np.random.rand(*(args.num_proc,*ob_shape))*255  # env returns numpy
     CurrentObs.update(obs)
 
     print('-'*55)
@@ -259,7 +259,7 @@ def test_MLPPolicy(args):
     from project.agent.memory import StackedState
     from project.environments.social import Social
     import numpy as np
-    args.num_processes = 1
+    args.num_proc = 1
 
     env = Social(args)
     env.seed(args.seed)
@@ -284,7 +284,7 @@ def test_MLPPolicy(args):
         CurrentState.update(s)
         # v, action_mean, action_logstd, action_std = pi.sample(CurrentState())
         value, action, action_log_prob, a_std = pi.sample(CurrentState())
-        if args.num_processes == 1:
+        if args.num_proc == 1:
             cpu_actions = action.data.cpu().numpy()[0]
         else:
             cpu_actions = action.data.squeeze(1).cpu().numpy()

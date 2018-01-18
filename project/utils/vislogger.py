@@ -71,7 +71,6 @@ class VisLogger(object):
             self.description = self.viz.text('')
             for line in self.args_string:
                 self.viz.text(line, win=self.description, append=True)
-
         self.windows = {}
 
     def print_console(self):

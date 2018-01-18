@@ -159,7 +159,7 @@ class SemiCombinePolicy(nn.Module, Policy):
                 strides=[2, 2, 2],
                 args=None):
 
-        super(CombinePolicy, self).__init__()
+        super(SemiCombinePolicy, self).__init__()
         self.o_shape = o_shape
         self.s_shape = s_shape
         self.a_shape = a_shape
@@ -176,6 +176,8 @@ class SemiCombinePolicy(nn.Module, Policy):
                                   strides=strides,
                                   args=None)
 
+        print('s_shape', s_shape)
+        print('st_shape', st_shape)
         self.nparams_emb = self.cnn.n_out + s_shape + st_shape
         self.mlp = MLP(self.nparams_emb, a_shape, args)
         self.train()
@@ -237,7 +239,7 @@ class CombinePolicy(nn.Module, Policy):
                  strides=[2, 2, 2],
                  args=None):
 
-        super(Combine_NoTargetState, self).__init__()
+        super(CombinePolicy, self).__init__()
         self.o_shape = o_shape
         self.s_shape = s_shape
         self.a_shape = a_shape

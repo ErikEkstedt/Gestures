@@ -6,59 +6,39 @@ import numpy as np
 import torch
 import torch.optim as optim
 
-from utils.utils import make_log_dirs, adjust_learning_rate
 from utils.arguments import get_args
-from utils.vislogger import VisLogger
-from models.combine import SemiCombinePolicy, Combine
+from utils.utils import make_log_dirs, adjust_learning_rate
+from utils.utils import get_model, get_targets
+from environments.utils import env_from_args
+from environments.social import Social_multiple
+from agent.test import Test_and_Save_Video
+from agent.train import exploration, train
+from agent.memory import RolloutStorage, Results, Current, Targets
 
-from agent.test import Test_and_Save_Video_Social as Test_and_Save_Video
-from agent.train import explorationSocial as exploration
-from agent.train import trainSocial as train
-from agent.memory import RolloutStorageCombi as RolloutStorage
-from agent.memory import Results, Current, Targets
-from environments.social import Social, Social_multiple, SocialHumanoid
-
-def remove_speed(dset, n):
-    for i, (s, _) in enumerate(dset):
-        dset.state[i] = s[:-n]
-    return dset
 
 args = get_args()
-
-print('\n=== Loading Targets ===')
-train_dset = torch.load(args.torso_target_path)
-print('\nTraining:', args.torso_target_path)
-test_dset = torch.load(args.torso_target_path2)
-print('\nTesting:', args.torso_target_path2)
-
-train_dset = remove_speed(train_dset, 6)
-test_dset = remove_speed(test_dset, 6)
-
-s_target, o_target = train_dset[4]  # choose random data point
-s_te, o_te = test_dset[5]  # check to have same dims as training set
-assert s_target.shape == s_te.shape, 'training and test shapes do not match'
-assert o_target.shape == o_te.shape, 'training and test shapes do not match'
-
-targets = Targets(n=args.num_processes, dset=train_dset)
-
-args.video_w = o_target.shape[0]  # Environment will use these values
-args.video_h = o_target.shape[1]
+Env = env_from_args(args)
 
 # frames -> updates
-args.num_updates = int(args.num_frames) // args.num_steps // args.num_processes
-args.test_thresh = int(args.test_thresh) // args.num_steps // args.num_processes
+args.num_updates = int(args.num_frames) // args.num_steps // args.num_proc
+args.test_thresh = int(args.test_thresh) // args.num_steps // args.num_proc
+
+print('\n=== Loading Targets ===')
+targets, test_targets = get_targets(args)
+
+st, ot = targets.random_target()
+args.video_w = ot.shape[0]  # Match env dims with targets
+args.video_h = ot.shape[1]
 
 make_log_dirs(args)  # create dirs for training logging
 if not args.no_vis:
+    from utils.vislogger import VisLogger
     vis = VisLogger(args)
+    if args.verbose:
+        vis.print_console()
 
 print('\n=== Create Environment ===\n')
-# Env = Social  # Env as variabe then change this line between experiments
-Env = SocialHumanoid
 env = Social_multiple(Env, args)
-
-st_shape = s_target.shape[0]  # targets
-ot_shape = o_target.shape
 
 s_shape = env.state_space.shape[0]    # Joints state
 o_shape = env.observation_space.shape  # RGB (W,H,C)
@@ -69,40 +49,16 @@ test_env.seed(np.random.randint(0, 20000))
 
 # === Memory ===
 result = Results(200, 10)
-current = Current(args.num_processes, args.num_stack, s_shape, st_shape, o_shape, o_shape)
+current = Current(args.num_proc, args.num_stack, s_shape, st.shape[0], o_shape, ot.shape, ac_shape)
 rollouts = RolloutStorage(args.num_steps,
-                          args.num_processes,
+                          args.num_proc,
                           current.state.size()[1],
                           current.target_state.size()[1],
                           current.obs.size()[1:],
                           ac_shape)
 
 # === Model ===
-# model assumes o_shape: (C, W, H)
-if args.use_target_state:
-    print('All inputs to policy')
-    Model = SemiCombinePolicy
-    pi = SemiCombinePolicy(s_shape=current.s_shape,
-                           st_shape=current.st_shape,
-                           o_shape=current.o_shape,
-                           ot_shape=current.ot_shape,
-                           a_shape=ac_shape,
-                           feature_maps=args.feature_maps,
-                           kernel_sizes=args.kernel_sizes,
-                           strides=args.strides,
-                           args=args)
-else:
-    print('No state_target as input to policy')
-    Model = Combine
-    pi = Combine(s_shape=current.s_shape,
-                 st_shape=current.st_shape,
-                 o_shape=current.o_shape,
-                 ot_shape=current.ot_shape,
-                 a_shape=ac_shape,
-                 feature_maps=args.feature_maps,
-                 kernel_sizes=args.kernel_sizes,
-                 strides=args.strides,
-                 args=args)
+pi, Model = get_model(current, args)
 
 if args.continue_training:
     print('\n=== Continue Training ===\n')
@@ -111,23 +67,24 @@ if args.continue_training:
     pi.load_state_dict(sd)
 
 optimizer_pi = optim.Adam(pi.parameters(), lr=args.pi_lr)
+
 print('\n=== Training ===')
 print('\nEnvironment', args.env_id)
 print('Actions:', ac_shape)
 print('State:', s_shape)
-print('State target:', st_shape)
+print('State target:', st.shape[0])
 print('Obs:', o_shape)
-print('Obs target:', ot_shape)
+print('Obs target:', ot.shape)
 print('\nPOLICY:\n', pi)
 print('Total network parameters to train: ', pi.total_parameters())
 print('\nTraining for %d Updates' % args.num_updates)
 
+# Initialize targets and reset env
 env.set_target(targets())  # set initial targets
 s, s_target, obs, obs_target = env.reset()
 current.update(s, s_target, obs, obs_target)
 s, st, o ,ot = current()
 rollouts.first_insert(s, st, o, ot)
-
 if args.cuda:
     current.cuda()
     rollouts.cuda()
@@ -138,10 +95,10 @@ MAX_REWARD = -99999
 for j in range(args.num_updates):
     exploration(pi, current, targets, rollouts, args, result, env)
     vloss, ploss, ent = train(pi, args, rollouts, optimizer_pi)
+    rollouts.last_to_first()  # reset data, start from last data point
 
-    rollouts.last_to_first()
     result.update_loss(vloss.data, ploss.data, ent.data)
-    frame = pi.n * args.num_processes
+    frame = pi.n * args.num_proc
 
     #  ==== Adjust LR ======
     if args.adjust_lr and j % args.adjust_lr_interval == 0:
@@ -162,7 +119,7 @@ for j in range(args.num_updates):
         print('Testing...')
         pi.cpu()
         sd = pi.cpu().state_dict()
-        test_reward = Test_and_Save_Video(test_env, test_dset, Model, sd, args, frame)
+        test_reward = Test_and_Save_Video(test_env, test_targets, sd, args, frame)
         result.update_test(test_reward)
 
         print('Average Test Reward: {}\n '.format(round(test_reward)))
@@ -185,4 +142,3 @@ for j in range(args.num_updates):
 
         if args.cuda:
             pi.cuda()
-

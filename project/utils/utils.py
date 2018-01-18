@@ -1,44 +1,68 @@
 import pathlib
 import datetime
 import os
+import h5py
 
-def get_env(args):
-    if 'eacher' in args.env_id:
-        if args.dof == 2:
-            from environments.reacher_envs import Reacher2DoF
-            args.env_id='Reacher2DoF'
-            return Reacher2DoF
-        elif args.dof == 3:
-            # from environments.reacher_envs import Reacher3DoF
-            # args.env_id='Reacher3DoF'
-            # return Reacher3DoF
-            from environments.Reacher import Reacher
-            args.env_id='Reacher3DoF'
-            return Reacher
-        elif args.dof == 32:
-            from environments.reacher_envs import Reacher3DoF_2Target
-            args.env_id='Reacher3DoF_2Target'
-            return Reacher3DoF_2Target
-        elif args.dof == 6:
-            from environments.reacher_envs import Reacher6DoF
-            args.env_id='Reacher6DoF'
-            return Reacher6DoF
-        else:
-            from environments.reacher_envs import Reacher_plane
-            args.env_id='Reacher_plane'
-            return Reacher_plane
-    elif 'umanoid' in args.env_id:
-        if args.dof == 3:
-            from environments.humanoid_envs import Humanoid3DoF
-            args.env_id='Humanoid3DoF'
-            return Humanoid3DoF
-        elif args.dof == 6:
-            from environments.reacher_envs import Humanoid6DoF
-            args.env_id='Humanoid6DoF'
-            return Humanoid6DoF
+import cv2
+from torchvision.utils import make_grid
+import torch
+
+def get_model(current, args):
+    if args.model is 'Combine':
+        from project.models.combine import Combine
+        print('Combine model. No internal targets states as input!')
+        Model = Combine
+        pi = Model(s_shape=current.s_shape,
+                   st_shape=current.st_shape,
+                   o_shape=current.o_shape,
+                   ot_shape=current.ot_shape,
+                   a_shape=current.ac_shape,
+                   feature_maps=args.feature_maps,
+                   kernel_sizes=args.kernel_sizes,
+                   strides=args.strides,
+                   args=args)
+    elif args.model is 'Modular':
+        from project.models.modular import MLPPolicy
+        print('No state_target as input to policy')
+        Model = MLPPolicy
+        in_size = current.st_shape + current.s_shape
+        pi = Model(input_size=in_size, a_shape=current.ac_shape, args=args)
     else:
-        print('Unknown environmnet')
-        return
+        from project.models.combine import SemiCombinePolicy
+        print('All inputs to policy')
+        Model = SemiCombinePolicy
+        pi = Model(s_shape=current.s_shape,
+                   st_shape=current.st_shape,
+                   o_shape=current.o_shape,
+                   ot_shape=current.ot_shape,
+                   a_shape=current.ac_shape,
+                   feature_maps=args.feature_maps,
+                   kernel_sizes=args.kernel_sizes,
+                   strides=args.strides,
+                   args=args)
+    return pi, Model
+
+def get_targets(args):
+    from agent.memory import Targets
+    from utils.utils import load_dict
+    print('\nTraining:', args.train_target_path)
+    train_dict = load_dict(args.train_target_path)
+
+    print('\nTesting:', args.test_target_path)
+    test_dict = load_dict(args.test_target_path)
+
+    targets = Targets(args.num_proc, datadict=train_dict)
+    test_targets = Targets(1, datadict=test_dict)
+
+    if not args.speed:
+        targets.remove_speed(args.njoints)  # args.njoints is initialized in "env_to_args"
+        test_targets.remove_speed(args.njoints)
+
+    s_target, o_target = targets.random_target()
+    s_te, o_te = test_targets.random_target() # check to have same dims as training set
+    assert s_target.shape == s_te.shape, 'training and test shapes do not match'
+    assert o_target.shape == o_te.shape, 'training and test shapes do not match'
+    return targets, test_targets
 
 def make_log_dirs(args):
     ''' Creates dirs:
@@ -53,10 +77,7 @@ def make_log_dirs(args):
 
     rootpath = args.log_dir
     day = get_today()
-    if args.RGB:
-        rootpath = os.path.join(rootpath, day, args.env_id, 'RGB')
-    else:
-        rootpath = os.path.join(rootpath, day, args.env_id)
+    rootpath = os.path.join(rootpath, day, args.env_id, args.model)
 
     run = 0
     while os.path.exists("{}/run-{}".format(rootpath, run)):
@@ -76,32 +97,40 @@ def make_log_dirs(args):
     args.result_dir = result_dir
     args.checkpoint_dir = checkpoint_dir
 
+
 def log_print(agent, dist_entropy, value_loss, floss, action_loss, j):
     print("\nUpdate: {}, frames:    {} \
           \nAverage final reward:   {}, \
           \nentropy:                {:.4f}, \
           \ncurrent value loss:     {:.4f}, \
           \ncurrent policy loss:    {:.4f}".format(j,
-                (j + 1) * agent.args.num_steps * agent.args.num_processes,
+                (j + 1) * agent.args.num_steps * agent.args.num_proc,
                 agent.final_rewards.mean(),
                 -dist_entropy.data[0],
                 value_loss.data[0],
                 action_loss.data[0],))
 
-def make_gym_env(env_id, seed, rank, log_dir):
-    ''' Make parallel gym environments '''
-    import gym
-    from baselines.common import bench
-    def _thunk():
-        env = gym.make(env_id)
-        env.seed(seed + rank)
-        env = bench.Monitor(env, os.path.join(log_dir, "{}.monitor.json".format(rank)))
-        return env
-    return _thunk
+
+def record(env, writer, scale=(15,10)):
+    human, _, target = env.render('all_rgb_array')  # (W, H, C)
+    height, width = target.shape[:2]
+
+    # target: (40,40,3) -> (3, 600,400)
+    target = cv2.resize(target,(scale[0]*width, scale[1]*height), interpolation = cv2.INTER_CUBIC)
+    target = target.transpose((2,0,1))
+
+    # human: (600,400, 3) -> (3, 600,400)
+    human = human.transpose((2,0,1))
+    imglist = [torch.from_numpy(human), torch.from_numpy(target)]
+    img = make_grid(imglist, padding=5).numpy()
+    img = img.transpose((1,2,0))
+    writer.writeFrame(img)
+
 
 def adjust_learning_rate(optimizer, decay=0.9):
     for param_group in optimizer.param_groups:
         param_group['lr'] = decay * param_group['lr']
+
 
 def adjust_learning_rate2(optimizer, args, frame):
     ratio = frame/args.num_frames
@@ -109,5 +138,25 @@ def adjust_learning_rate2(optimizer, args, frame):
     for param_group in optimizer.param_groups:
         param_group['lr'] = LR
 
-def save_checkpoint(state, filename):
-    torch.save(state, filename)
+
+def save_dict(datadict, filename):
+    """Save a dict with h5py
+    Args:
+        datadict   dict: {
+        filename   string: full filepath
+    """
+    with h5py.File(filename, 'w') as hdf:
+        for k, v in datadict.items():
+            hdf.create_dataset(k, data=v)
+
+
+def load_dict(filename):
+    """Load a dict with h5py
+    Args:
+        filename   string: full filepath
+    """
+    datadict = {}
+    with h5py.File(filename, 'r') as hdf:
+        for k in hdf.keys():
+            datadict[k] = list(hdf.get(k))
+    return datadict

@@ -25,3 +25,18 @@ Values
 	* [ ] SocialHumanoid
 	* [ ] SocialHumanoidHalf?
 
+# Todo
+
+* Model
+	* [ ] Results from trained model + cnn_translation
+	* [ ] Using stateless targets. See results. training now
+	* [x] Translation in combine training
+
+* [ ] Clean social.py
+	* [x] render functions
+	* [x] target datatype - consistency. NUMPY IN ENV
+
+* [x] Training loop for social.Social
+	* [x] record directly from test
+
+

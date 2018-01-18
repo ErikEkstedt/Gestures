@@ -24,7 +24,7 @@ def train_understand(model, Loss, opt, tloader, vloader, args, vis=None):
             opt.zero_grad()
 
             obs = obs.permute(0,3,1,2).float()
-            obs = obs / 255
+            obs /= 255
             obs, states = Variable(obs.float()), Variable(states.float(), requires_grad=False)
             if args.cuda:
                 obs, states = obs.cuda(), states.cuda()
