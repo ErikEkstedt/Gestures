@@ -1,3 +1,6 @@
+'''
+A CLSTMCell used in a CLSTM structure
+'''
 import torch
 import torch.nn as nn
 import torch.optim as optim

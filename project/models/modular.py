@@ -1,3 +1,12 @@
+'''
+Here are the models for the "Coordination" module.
+
+The Policy class contains relevant functions for all policies in this
+PPO implementation (act, sample, evaluate_actions).
+
+The MLPPolicy is an MLP/fully connected network (S,St) -> V, A, A_std
+The CNNPolicy is an ConvNet. (O,Ot) -> V, A, A_std
+'''
 import copy
 import math
 import torch
@@ -117,14 +126,13 @@ class MLPPolicy(nn.Module, Policy):
 
 
 class CNNPolicy(nn.Module, Policy):
-    def __init__(self, input_shape=(3, 40, 40),
+    def __init__(self, input_shape=(6, 40, 40),
                  action_shape=2,
                  in_channels=3,
                  feature_maps=[128, 64, 8],
                  kernel_sizes=[5, 5, 5],
                  strides=[2, 2, 2],
                  args=None):
-
         super(CNNPolicy, self).__init__()
         self.input_shape  = input_shape
         self.action_shape = action_shape
@@ -160,6 +168,46 @@ class CNNPolicy(nn.Module, Policy):
         ac_mean = self.action(x)
         ac_std = self.std(ac_mean)  #std annealing
         return v, ac_mean, ac_std
+
+
+# Understanding
+class VanillaCNN(nn.Module):
+    ''' Simple CNN model RGB -> state
+    - 3 Conv w/ stride 2
+    - MLP Hidden layer
+    - MLP output
+    '''
+    def __init__(self,
+                 input_shape=(3,100,100),
+                 s_shape=4,
+                 feature_maps=[16, 32, 64],
+                 kernel_sizes=[5, 5, 5],
+                 strides=[2, 2, 2],
+                 args=None):
+        super(VanillaCNN, self).__init__()
+        self.input_shape    = input_shape
+        self.s_shape        = s_shape
+        self.feature_maps   = feature_maps
+        self.kernel_sizes   = kernel_sizes
+        self.strides        = strides
+
+        self.conv1        = nn.Conv2d(input_shape[0], feature_maps[0], kernel_size  = kernel_sizes[0], stride = strides[0])
+        self.out_shape1   = Conv2d_out_shape(self.conv1, input_shape)
+        self.conv2        = nn.Conv2d(feature_maps[0], feature_maps[1], kernel_size = kernel_sizes[1], stride = strides[1])
+        self.out_shape2   = Conv2d_out_shape(self.conv2, self.out_shape1)
+        self.conv3        = nn.Conv2d(feature_maps[1], feature_maps[2], kernel_size = kernel_sizes[2], stride = strides[2])
+        self.out_shape3   = Conv2d_out_shape(self.conv3, self.out_shape2)
+        self.n_out        = total_params(self.out_shape3)
+        self.head           = nn.Linear(self.n_out, args.hidden)
+        self.out            = nn.Linear(args.hidden, s_shape)
+
+    def forward(self, x):
+        x = F.relu(self.conv1(x))
+        x = F.relu(self.conv2(x))
+        x = F.relu(self.conv3(x))
+        x = x.view(x.size(0), -1)
+        x = F.relu(self.head(x))
+        return self.out(x)
 
 
 # ========= Tests ================

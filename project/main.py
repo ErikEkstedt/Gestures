@@ -9,7 +9,7 @@ import torch.optim as optim
 from utils.utils import make_log_dirs, adjust_learning_rate
 from utils.arguments import get_args
 from utils.vislogger import VisLogger
-from models.combine import CombinePolicy, Combine_NoTargetState
+from models.combine import SemiCombinePolicy, Combine
 
 from agent.test import Test_and_Save_Video_Social as Test_and_Save_Video
 from agent.train import explorationSocial as exploration
@@ -81,28 +81,28 @@ rollouts = RolloutStorage(args.num_steps,
 # model assumes o_shape: (C, W, H)
 if args.use_target_state:
     print('All inputs to policy')
-    Model = CombinePolicy
-    pi = CombinePolicy(s_shape=current.s_shape,
-                       st_shape=current.st_shape,
-                       o_shape=current.o_shape,
-                       ot_shape=current.ot_shape,
-                       a_shape=ac_shape,
-                       feature_maps=args.feature_maps,
-                       kernel_sizes=args.kernel_sizes,
-                       strides=args.strides,
-                       args=args)
+    Model = SemiCombinePolicy
+    pi = SemiCombinePolicy(s_shape=current.s_shape,
+                           st_shape=current.st_shape,
+                           o_shape=current.o_shape,
+                           ot_shape=current.ot_shape,
+                           a_shape=ac_shape,
+                           feature_maps=args.feature_maps,
+                           kernel_sizes=args.kernel_sizes,
+                           strides=args.strides,
+                           args=args)
 else:
     print('No state_target as input to policy')
-    Model = Combine_NoTargetState
-    pi = Combine_NoTargetState(s_shape=current.s_shape,
-                               st_shape=current.st_shape,
-                               o_shape=current.o_shape,
-                               ot_shape=current.ot_shape,
-                               a_shape=ac_shape,
-                               feature_maps=args.feature_maps,
-                               kernel_sizes=args.kernel_sizes,
-                               strides=args.strides,
-                               args=args)
+    Model = Combine
+    pi = Combine(s_shape=current.s_shape,
+                 st_shape=current.st_shape,
+                 o_shape=current.o_shape,
+                 ot_shape=current.ot_shape,
+                 a_shape=ac_shape,
+                 feature_maps=args.feature_maps,
+                 kernel_sizes=args.kernel_sizes,
+                 strides=args.strides,
+                 args=args)
 
 if args.continue_training:
     print('\n=== Continue Training ===\n')

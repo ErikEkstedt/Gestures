@@ -19,6 +19,7 @@ def total_params(p):
         n *= int(i)
     return n
 
+
 class VanillaCNN(nn.Module):
     ''' Simple CNN model RGB -> state
     - 3 Conv w/ stride 2

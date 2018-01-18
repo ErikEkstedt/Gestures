@@ -1,3 +1,17 @@
+'''
+Combine Policy classes
+
+This script contains two policies
+
+* Semi-Combine
+* Combine
+
+The Semi combine policy gets all input to the "coordination" module but on test
+time still relies on the state target approximation from the understanding module.
+
+The Combine does not utilize the state target at all, neither in test or in
+the training phase.
+'''
 import copy
 import math
 from functools import reduce
@@ -101,7 +115,6 @@ class PixelEmbedding(nn.Module):
     '''
     def __init__(self,
                  input_shape=(3,100,100),
-                 state_shape=22,
                  feature_maps=[16, 32, 64],
                  kernel_sizes=[5, 5, 5],
                  strides=[2, 2, 2],
@@ -109,7 +122,6 @@ class PixelEmbedding(nn.Module):
 
         super(PixelEmbedding, self).__init__()
         self.input_shape  = input_shape
-        self.state_shape  = state_shape
         self.feature_maps = feature_maps
         self.kernel_sizes = kernel_sizes
         self.strides      = strides
@@ -129,9 +141,12 @@ class PixelEmbedding(nn.Module):
         return x.view(x.size(0), -1)
 
 
-class CombinePolicy(nn.Module, Policy):
-    ''' Policy that uses both state and obs
-    self(o, o_, s, s_)  : o,s = current state/obs, o_,s_ = target state/obs
+class SemiCombinePolicy(nn.Module, Policy):
+    ''' SemiCombine
+
+    Policy that uses both state and obs
+    self(o, ot, s, st)
+
     '''
     def __init__(self,
                 s_shape,
@@ -156,10 +171,10 @@ class CombinePolicy(nn.Module, Policy):
         self.obs_shape = (self.in_channels_cat, *o_shape[1:])
 
         self.cnn = PixelEmbedding(self.obs_shape,
-                                    feature_maps=feature_maps,
-                                    kernel_sizes=kernel_sizes,
-                                    strides=strides,
-                                    args=None)
+                                  feature_maps=feature_maps,
+                                  kernel_sizes=kernel_sizes,
+                                  strides=strides,
+                                  args=None)
 
         self.nparams_emb = self.cnn.n_out + s_shape + st_shape
         self.mlp = MLP(self.nparams_emb, a_shape, args)
@@ -204,7 +219,13 @@ class CombinePolicy(nn.Module, Policy):
             p += tmp_params
         return p
 
-class Combine_NoTargetState(nn.Module, Policy):
+
+class CombinePolicy(nn.Module, Policy):
+    ''' Combine
+
+    This model stores a dummy state target but never utlizes it.
+    Training phase and test phase are the same, (o, ot, s) -> V, A_mean, A_std
+    '''
     def __init__(self,
                  s_shape,
                  st_shape,
@@ -285,9 +306,9 @@ def test_combinepolicy(args):
 
     # Tensors
     s  = torch.rand(s_shape).unsqueeze(0)
-    s_ = torch.rand(st_shape).unsqueeze(0)
+    st = torch.rand(st_shape).unsqueeze(0)
     o  = torch.rand(o_shape).unsqueeze(0)
-    o_ = torch.rand(ot_shape).unsqueeze(0)
+    ot = torch.rand(ot_shape).unsqueeze(0)
 
     pi = CombinePolicy(s_shape=s_shape,
                        st_shape=st_shape,
@@ -304,14 +325,14 @@ def test_combinepolicy(args):
     input('Press Enter to continue')
 
     print('pi.sample()')
-    v, a, a_logprobs, a_std = pi.sample(s, s_target, o, o_target)
+    v, a, a_logprobs, a_std = pi.sample(s, st, o, ot)
     print('Value:', v.shape)
     print('a_mean:', a.shape)
     print('a_logprobs:', a_logprobs.shape)
     print('a_std:', a_std.shape)
 
     print('pi.act()')
-    v, a = pi.act(s, s_, o, o_)
+    v, a = pi.act(s, st, o, ot)
     print('Value:', v.shape)
     print('a:', a.shape)
 
