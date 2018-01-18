@@ -23,8 +23,7 @@ import torch.nn.functional as F
 import torch.optim as optim
 from torch.autograd import Variable
 
-from gesture.dynamics_model.utils import Conv2d_out_shape, ConvTranspose2d_out_shape
-from gesture.dynamics_model.CLSTMCell import CLSTMCell
+from gesture.utils.utils import Conv2d_out_shape, ConvTranspose2d_out_shape
 
 
 def total_params(p):

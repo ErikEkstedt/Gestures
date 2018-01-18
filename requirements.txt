@@ -1,0 +1,6 @@
+h5py
+gym
+pyopengl
+tqdm
+visdom
+sk-video

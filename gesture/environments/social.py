@@ -447,6 +447,7 @@ def test_social(Env, args):
     print('path:\t', args.test_target_path)
     datadict = load_dict(args.test_target_path)
     targets = Targets(args.num_proc, datadict)
+    targets.remove_speed(args.njoints)
 
     env = Env(args)
     env.seed(args.seed)
@@ -457,11 +458,14 @@ def test_social(Env, args):
 def test_social_parallel(Env, args):
     from gesture.environments.utils import random_run_with_changing_targets_parallel
     from gesture.environments.utils import random_run_parallel
+    from gesture.utils.utils import load_dict
+    from gesture.agent.memory import Targets
     from torch import load
 
     print('path:\t', args.test_target_path)
     datadict = load_dict(args.test_target_path)
     targets = Targets(args.num_proc, datadict)
+    targets.remove_speed(args.njoints)
 
     env = Social_multiple(Env, args)
     print(env)

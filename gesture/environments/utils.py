@@ -81,7 +81,7 @@ def random_run(env, render=False, verbose=False):
         if d:
             s, s_, o, o_ = env.reset()
 
-def random_run_with_changing_targets(env, dset, args):
+def random_run_with_changing_targets(env, targets, args):
     ''' Executes random actions and also changes the target.
     targets are set in order from a gesture.data.dataset.
     renders options:
@@ -89,7 +89,7 @@ def random_run_with_changing_targets(env, dset, args):
     '''
     t = 0
     while True:
-        env.set_target(dset[t]); t += 1
+        env.set_target(targets())
         state, s_target, obs, o_target = env.reset()
         episode_reward = 0
         for j in count(1):
@@ -99,7 +99,7 @@ def random_run_with_changing_targets(env, dset, args):
             if args.verbose: print('frame:', j)
             # update the target
             if j % args.update_target == 0:
-                env.set_target(dset[t]); t += 1
+                env.set_target(targets())
 
             # Observe reward and next state
             actions = env.action_space.sample()
@@ -134,7 +134,7 @@ def random_run_parallel(env, args):
         if sum(d) > 0:
             print('one env is finished')
 
-def random_run_with_changing_targets_parallel(env, dset, args):
+def random_run_with_changing_targets_parallel(env, targets, args):
     ''' Executes random actions and also changes the target.
     targets are set in order from a gesture.data.dataset.
     renders options:
@@ -146,9 +146,8 @@ def random_run_with_changing_targets_parallel(env, dset, args):
             modes = ['all'] * args.num_proc
     '''
     t = 0
-    targets = [dset[t]] * args.num_proc
 
-    env.set_target(targets)
+    env.set_target(targets())
     t += 1
     state, s_target, obs, o_target = env.reset()
     episode_reward = 0
@@ -159,8 +158,7 @@ def random_run_with_changing_targets_parallel(env, dset, args):
 
         # update the target
         if j % args.update_target == 0:
-            targets = [dset[t]] * args.num_proc
-            env.set_target(targets)
+            env.set_target(targets())
             t += 1
 
         # Observe reward and next state

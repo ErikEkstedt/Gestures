@@ -21,24 +21,29 @@ conda create -n gesture
 ```bash
 source activate gesture
 ```
-3. Install opencv
-```bash
-conda install -c menpo opencv3
-```
 4. Install PyTorch
 ```bash
-conda install pytorch torchvision -c soumith
+conda install pytorch torchvision -c pytorch
+```
+3. Install opencv
+```bash
+conda install -c conda-forge opencv
 ``` 
 5. cd into your roboschool folder and pip install
 ```bash
 cd $ROBOSCHOOL_PATH
 pip install -e .
 ``` 
-6. Clone this repo 
+6. Clone this repo and install
 ```bash
 git clone https://github.com/ErikEkstedt/Gestures
 cd Gestures
 pip install -e .
 ```
+7. Install requirements
+```bash
+pip install -r requirements.txt
+```
+
 
 

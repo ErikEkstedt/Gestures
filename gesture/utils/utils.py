@@ -2,6 +2,7 @@ import pathlib
 import datetime
 import os
 import h5py
+import numpy as np
 
 import cv2
 from torchvision.utils import make_grid
@@ -9,7 +10,7 @@ import torch
 
 def get_model(current, args):
     if args.model is 'Combine':
-        from project.models.combine import Combine
+        from gesture.models.combine import Combine
         print('Combine model. No internal targets states as input!')
         Model = Combine
         pi = Model(s_shape=current.s_shape,
@@ -22,13 +23,13 @@ def get_model(current, args):
                    strides=args.strides,
                    args=args)
     elif args.model is 'Modular':
-        from project.models.modular import MLPPolicy
+        from gesture.models.modular import MLPPolicy
         print('No state_target as input to policy')
         Model = MLPPolicy
         in_size = current.st_shape + current.s_shape
         pi = Model(input_size=in_size, a_shape=current.ac_shape, args=args)
     else:
-        from project.models.combine import SemiCombinePolicy
+        from gesture.models.combine import SemiCombinePolicy
         print('All inputs to policy')
         Model = SemiCombinePolicy
         pi = Model(s_shape=current.s_shape,
@@ -160,3 +161,75 @@ def load_dict(filename):
         for k in hdf.keys():
             datadict[k] = list(hdf.get(k))
     return datadict
+
+
+def Conv2d_out_shape(Conv, input_shape, verbose=False, batch=False):
+    '''Output of nn.Conv2d.
+    #Arguments:
+        input_shape - shape of input. (N,C,H,W) or (C,H,W)
+        Conv - nn.Conv2d()
+
+    From PyTorch Documentation:
+            http://pytorch.org/docs/master/nn.html#conv2d
+    Assumes channel first (N,C,H,W) or (C,H,W)
+    '''
+    if len(input_shape) > 3:
+        # contains batch dimension
+        batch = True
+        h_in = input_shape[2]
+        w_in = input_shape[3]
+    else:
+        # no batch dimension
+        h_in = input_shape[1]
+        w_in = input_shape[2]
+    s = Conv.stride
+    k = Conv.kernel_size
+    p = Conv.padding
+    d = Conv.dilation
+    if verbose:
+        print('stride: ', s)
+        print('kernel: ', k)
+        print('padding: ', p)
+        print('h_in: ', h_in)
+        print('w_in: ', w_in)
+    # from numpy import floor
+    h = np.floor((h_in + 2 * p[0] - d[0] * (k[0] - 1) - 1) / s[0] + 1)
+    w = np.floor((w_in + 2 * p[1] - d[1] * (k[1] - 1) - 1) / s[1] + 1)
+
+    return (input_shape[0], Conv.out_channels, h, w) if batch else (Conv.out_channels, h, w)
+
+def ConvTranspose2d_out_shape(Conv, input_shape, verbose=False, batch=False):
+    '''Output shape of nn.ConvTranspose2d.
+    #Arguments:
+        input_shape - shape of input. (N,C,H,W) or (C,H,W)
+        Conv - nn.ConvTranspose2d()
+
+    From PyTorch Documentation:
+            http://pytorch.org/docs/master/nn.html#conv2d
+    Assumes channel first (N,C,H,W) or (C,H,W)
+    '''
+    if len(input_shape) > 3:
+        # contains batch dimension
+        batch = True
+        h_in = input_shape[2]
+        w_in = input_shape[3]
+    else:
+        # no batch dimension
+        h_in = input_shape[1]
+        w_in = input_shape[2]
+
+    s = Conv.stride
+    k = Conv.kernel_size
+    p = Conv.padding
+    op = Conv.output_padding
+    # d = Conv.dilation
+    if verbose:
+        print('stride: ', s)
+        print('kernel: ', k)
+        print('padding: ', p)
+        print('h_in: ', h_in)
+        print('w_in: ', w_in)
+    h = (h_in - 1) * s[0] - 2 * p[0] + k[0] + op[0]
+    w = (w_in - 1) * s[1] - 2 * p[1] + k[1] + op[1]
+    return (input_shape[0], Conv.out_channels, h, w) if batch else (Conv.out_channels, h, w)
+

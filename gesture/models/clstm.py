@@ -3,7 +3,7 @@ Not yet implemented in this gesture
 '''
 import torch.nn as nn
 from utils import Conv2d_out_shape, ConvTranspose2d_out_shape
-from gesture.dynamics_model.CLSTMCell import CLSTMCell
+from gesture.models.clstmcell import CLSTMCell
 
 
 class CLSTM(nn.Module):
