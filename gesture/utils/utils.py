@@ -109,15 +109,13 @@ def log_print(agent, dist_entropy, value_loss, floss, action_loss, j):
                 action_loss.data[0],))
 
 
-def record(env, writer, scale=(15,10)):
+def record(env, writer):
     human, _, target = env.render('all_rgb_array')  # (W, H, C)
-    height, width = target.shape[:2]
-
-    # target: (40,40,3) -> (3, 600,400)
-    target = cv2.resize(target,(scale[0]*width, scale[1]*height), interpolation = cv2.INTER_CUBIC)
+    H, W = human.shape[:2]
+    # target: (w,h,3) -> (3, W,H)
+    target = cv2.resize(target,(W, H), interpolation = cv2.INTER_CUBIC)
     target = target.transpose((2,0,1))
-
-    # human: (600,400, 3) -> (3, 600,400)
+    # human: (W,H, 3) -> (3, W,H)
     human = human.transpose((2,0,1))
     imglist = [torch.from_numpy(human), torch.from_numpy(target)]
     img = make_grid(imglist, padding=5).numpy()

@@ -29,7 +29,7 @@ def get_filename(path='/tmp', s_shape=6, o_shape=(40,40,3), n=10000, args=None):
     '''
     print('Directory:', args.filepath)
     pathlib.Path(path).mkdir(parents=True, exist_ok=True)
-    name = '{}_S{}_O{}-{}-{}_n{}'.format(args.env_id, s_shape, o_shape[0],o_shape[1],o_shape[2], n)
+    name = '{}_S{}_O{}-{}-{}_n{}'.format(args.env_id, s_shape[0], o_shape[0],o_shape[1],o_shape[2], n)
     filename = os.path.join(path, name)
     run = 0
     while os.path.exists("{}_{}.h5".format(filename, run)):
