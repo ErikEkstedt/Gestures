@@ -12,10 +12,11 @@
 * [Roboschool](https://github.com/openai/roboschool)
 
 ## Setup
+This has been tested on Ubuntu 16.04
 
 1. Create a Conda environment (python=3.5)
 ```bash
-conda create -n gesture
+conda create -n gesture python=3.5
 ```
 2. Source environment
 ```bash
@@ -26,6 +27,7 @@ source activate gesture
 conda install pytorch torchvision -c pytorch
 ```
 3. Install opencv
+Opencv is used to render images with cv2.imshow. This package is large, might be a better way but this works.
 ```bash
 conda install -c conda-forge opencv
 ``` 

@@ -244,6 +244,7 @@ class Base(MyGymEnv):
     def get_joint_dicts(self, verbose=False):
         ''' This function separates all parts/joints by containing `robot` or `target`.'''
         self.robot_joints, self.robot_parts = self.get_joints_parts_by_name('robot')
+        self.target_joints, self.target_parts = self.get_joints_parts_by_name('target') # used only in SocialReacher_targets
         if verbose:
             print('{}\n'.format(self.robot_joints))
             print('{}\n'.format(self.robot_parts))
@@ -445,6 +446,10 @@ class SocialReacherTargets(Base):
         self.obs_target = targets[1]
         assert type(targets[0]) is np.ndarray, 'state target must be numpy'
         assert type(targets[1]) is np.ndarray, 'obs target must be numpy'
+
+        for j in self.target_joints.values():
+            j.reset_current_position(self.np_random.uniform(low=-0.01, high=0.01 ), 0)
+            j.set_motor_torque(0)
 
     def robot_specific_reset(self):
         self.motor_names = ["robot_shoulder_joint_z", "robot_elbow_joint"]

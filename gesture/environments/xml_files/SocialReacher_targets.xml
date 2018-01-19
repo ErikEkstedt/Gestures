@@ -9,10 +9,7 @@
 	</option>
 	<worldbody>
 		<!-- Base -->
-		<geom conaffinity="0" contype="0" fromto="0 0 0 0 0 0.4" name="base" rgba="0.9 0.4 0.6 1" size=".02" type="cylinder"/>
-
-		<!-- Arm -->
-		<body name="robot_arm" pos="0 0 0.41">
+		<geom conaffinity="0" contype="0" fromto="0 0 0 0 0 0.4" name="base" rgba="0.9 0.4 0.6 1" size=".02" type="cylinder"/> <!-- Arm --> <body name="robot_arm" pos="0 0 0.41">
 			<geom name="robot_shoulder" pos="0 0 0" rgba="0.9 0.2 0.1 0.9" size=".025" type="sphere"/>
 			<joint axis="0 0 1" limited="false" name="robot_shoulder_joint_z" pos="0 0 0" type="hinge"/>
 			<geom fromto="0 0 0 0.2 0 0" name="robot_arm0" rgba="0.0 0.4 0.8 0.9" size=".01" type="capsule"/>

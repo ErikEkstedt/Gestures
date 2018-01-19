@@ -22,6 +22,7 @@ Env = env_from_args(args)
 # frames -> updates
 args.num_updates = int(args.num_frames) // args.num_steps // args.num_proc
 args.test_thresh = int(args.test_thresh) // args.num_steps // args.num_proc
+args.test_interval = int(args.test_interval) // args.num_steps // args.num_proc
 
 print('\n=== Loading Targets ===')
 targets, test_targets = get_targets(args)
@@ -115,7 +116,7 @@ for j in range(args.num_updates):
         result.vis_plot(vis, frame, pi.get_std())
 
     #  ==== TEST ======
-    nt = 5
+    nt = 3
     if not args.no_test and j % args.test_interval < nt and j > args.test_thresh:
         print('Testing...')
         pi.cpu()
