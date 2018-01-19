@@ -1,4 +1,5 @@
 # Defining Mujoco xml
+
 [Mujoco modeling](http://www.mujoco.org/book/modeling.html)
 ## Notes
 
@@ -25,8 +26,11 @@
 * integrator - This attribute selects the numerical integrator to be used. Currently the available integrators are the semi-implicit Euler method and the fixed-step 4-th order Runge Kutta method.
 * iterations - int, maximum number of iterations of the integrator.
 * sover - solver algorithm, PGS or Newton
-* timestep - Simulation time step in seconds. This is the single most important parameter affecting the speed-accuracy trade-off which is inherent in every physics simulation. Smaller values result in better accuracy and stability. To achieve real-time performance, the time step must be larger than the CPU time per step (or 4 times larger when using the RK4 integrator).
-
+* timestep - Simulation time step in seconds. This is the single most important
+	parameter affecting the speed-accuracy trade-off which is inherent in every
+	physics simulation. Smaller values result in better accuracy and stability.
+	To achieve real-time performance, the time step must be larger than the CPU
+	time per step (or 4 times larger when using the RK4 integrator).
 
 ## joint
 * armature - rotor inertia,

@@ -69,7 +69,8 @@ if args.continue_training:
 optimizer_pi = optim.Adam(pi.parameters(), lr=args.pi_lr)
 
 print('\n=== Training ===')
-print('\nEnvironment', args.env_id)
+print('\nEnvironment:', args.env_id)
+print('Model:', args.model)
 print('Actions:', ac_shape)
 print('State:', s_shape)
 print('State target:', st.shape[0])

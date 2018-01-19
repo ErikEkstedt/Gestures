@@ -9,28 +9,8 @@ from torchvision.utils import make_grid
 import torch
 
 def get_model(current, args):
-    if args.model is 'Combine':
-        from gesture.models.combine import Combine
-        print('Combine model. No internal targets states as input!')
-        Model = Combine
-        pi = Model(s_shape=current.s_shape,
-                   st_shape=current.st_shape,
-                   o_shape=current.o_shape,
-                   ot_shape=current.ot_shape,
-                   a_shape=current.ac_shape,
-                   feature_maps=args.feature_maps,
-                   kernel_sizes=args.kernel_sizes,
-                   strides=args.strides,
-                   args=args)
-    elif args.model is 'Modular':
-        from gesture.models.modular import MLPPolicy
-        print('No state_target as input to policy')
-        Model = MLPPolicy
-        in_size = current.st_shape + current.s_shape
-        pi = Model(input_size=in_size, a_shape=current.ac_shape, args=args)
-    else:
+    if 'SemiCombine' in args.model:
         from gesture.models.combine import SemiCombinePolicy
-        print('All inputs to policy')
         Model = SemiCombinePolicy
         pi = Model(s_shape=current.s_shape,
                    st_shape=current.st_shape,
@@ -41,6 +21,23 @@ def get_model(current, args):
                    kernel_sizes=args.kernel_sizes,
                    strides=args.strides,
                    args=args)
+    elif 'Combine' in args.model:
+        from gesture.models.combine import Combine
+        Model = Combine
+        pi = Model(s_shape=current.s_shape,
+                   st_shape=current.st_shape,
+                   o_shape=current.o_shape,
+                   ot_shape=current.ot_shape,
+                   a_shape=current.ac_shape,
+                   feature_maps=args.feature_maps,
+                   kernel_sizes=args.kernel_sizes,
+                   strides=args.strides,
+                   args=args)
+    else:
+        from gesture.models.modular import MLPPolicy
+        Model = MLPPolicy
+        in_size = current.st_shape + current.s_shape
+        pi = Model(input_size=in_size, a_shape=current.ac_shape, args=args)
     return pi, Model
 
 def get_targets(args):

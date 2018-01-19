@@ -2,7 +2,7 @@
 
 Environment with: 
 * [ ] Clean Reacher with visible target dots. Small state space.
-* [ ] Clean SocialReacher state space only implementation.
+* [x] Clean SocialReacher state space only implementation.
 * [ ] SocialHumanoidHlaf??
 
 Reward
@@ -10,8 +10,8 @@ Reward
 * [ ] Show/record best test score and relate to training data.
 
 Train
-* [ ] Clean training loop.
-* [ ] Change environmnet easy (now my environments should not change anymore)
+* [x] Clean training loop.
+* [x] Change environmnet easy (now my environments should not change anymore)
 
 Test
 * [ ] Set up a test script that utilizes state_target approximation

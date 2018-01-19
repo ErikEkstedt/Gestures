@@ -1,12 +1,11 @@
 '''
 Collect random targets used in training.
 
-
 ex:
 
-```bash
-python collect_targets --dpoints=100000 --num_proc=4 --filepath=/FILE/PATH/
-```
+Bash:
+
+    python collect_targets --dpoints=100000 --num_proc=4 --filepath=/FILE/PATH/
 
 Saves 100000 state and observations using 4 processors to:
 
@@ -47,6 +46,7 @@ def collect_random_targets(Env, args):
         print('Collecting {} datapoints using {} processes'.format(args.dpoints, args.num_proc))
         env = Social_multiple(Env, args)
         s_shape = env.state_space.shape
+        o_shape = env.observation_space.shape
         dummy_target = [[np.array(s_shape), np.array(s_shape)]] *args.num_proc # Dummy target
         env.set_target(dummy_target)
 
