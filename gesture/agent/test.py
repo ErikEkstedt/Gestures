@@ -40,6 +40,7 @@ def Test_and_Save_Video(env, targets, state_dict, args, frames):
 
     pi, _ = get_model(current, args)
     pi.load_state_dict(state_dict)
+    pi.eval()
 
     total_reward = 0
     for i in trange(args.num_test):
