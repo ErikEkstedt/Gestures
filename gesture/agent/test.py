@@ -6,7 +6,7 @@ from gesture.agent.memory import Current
 from gesture.utils.utils import record, get_model
 
 
-def Test_and_Save_Video(env, targets, state_dict, args, frames):
+def Test_and_Save_Video(env, targets, state_dict, args, frames, Model=None):
     '''
     Test with video
     :param env   - Reacher/HUmanoid environment
@@ -38,7 +38,19 @@ def Test_and_Save_Video(env, targets, state_dict, args, frames):
                       otarget_dims=ot_shape,
                       ac_shape=ac_shape)
 
-    pi, _ = get_model(current, args)
+    if Model is None:
+        pi, _ = get_model(current, args)
+    else:
+        pi = Model(s_shape=current.s_shape,
+                   st_shape=current.st_shape,
+                   o_shape=current.o_shape,
+                   ot_shape=current.ot_shape,
+                   a_shape=current.ac_shape,
+                   feature_maps=args.feature_maps,
+                   kernel_sizes=args.kernel_sizes,
+                   strides=args.strides,
+                   args=args)
+
     pi.load_state_dict(state_dict)
     pi.eval()
 

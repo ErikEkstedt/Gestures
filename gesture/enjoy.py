@@ -68,7 +68,7 @@ def enjoy(env, targets, pi, args):
             if args.continuous_targets:
                 target = targets[t]
                 t += 1
-                if t > len(dset)-1:
+                if t > len(targets)-1:
                     break
             else:
                 target = targets()
@@ -80,6 +80,7 @@ def enjoy(env, targets, pi, args):
         total_reward += reward
 
     print('Time for enjoyment: ', time.time()-tt)
+    print('Total Reward: ', total_reward)
     if args.record:
         writer.close()
 

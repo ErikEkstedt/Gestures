@@ -22,6 +22,7 @@ class Results(object):
         self.max_n = max_n
 
         self.vloss = []
+        self.uloss = []
         self.ploss = []
         self.ent = []
         self.updates = 0
@@ -48,15 +49,18 @@ class Results(object):
         if self.n > self.max_n:
             self.final_reward_list.pop()
 
-    def update_loss(self, v, p, e):
+    def update_loss(self, v, p, e, u=None):
         self.vloss.insert(0, v)
         self.ploss.insert(0, p)
         self.ent.insert(0, e)
+        self.uloss.insert(0, u)
+
         self.updates += 1
         if self.updates > self.max_u:
             self.vloss.pop()
             self.ploss.pop()
             self.ent.pop()
+            self.uloss.pop()
 
     def get_reward_mean(self):
         if len(self.final_reward_list) > 0:
@@ -74,24 +78,26 @@ class Results(object):
         v = torch.stack(self.vloss).mean()
         p = torch.stack(self.ploss).mean()
         e = torch.stack(self.ent).mean()
-        return v, p, e
+        u = torch.stack(self.uloss).mean()
+        return v, p, e, u
 
     def plot_console(self, frame):
-        v, p, e = self.get_loss_mean()
-        v, p, e = round(v, 2), round(p,2), round(e,2),
+        v, p, e, u = self.get_loss_mean()
+        v, p, e, u = round(v, 2), round(p,2), round(e,2), round(u, 2)
         r       = round(self.get_reward_mean(), 2)
-        print('Time: {}, Steps: {}, Avg.Rew: {}, VLoss: {}, PLoss: {},  Ent: {}'.format(
-            int(self.time()), frame, r, v, p, e))
+        print('Time: {}, Steps: {}, Avg.Rew: {}, VLoss: {}, PLoss: {},  Ent: {}, Uloss: {}'.format(
+            int(self.time()), frame, r, v, p, e, u))
 
     def vis_plot(self, vis, frame, std):
         tr_rew_mean = self.get_reward_mean()
         tr_rew_std = self.get_reward_std()
-        v, p, e = self.get_loss_mean()
+        v, p, e, u = self.get_loss_mean()
 
         # Draw plots
         vis.line_update(Xdata=frame, Ydata=tr_rew_mean, name='Training Score Mean')
         vis.line_update(Xdata=frame, Ydata=tr_rew_std, name='Training Score Std')
         vis.line_update(Xdata=frame, Ydata=v, name='Value Loss')
+        vis.line_update(Xdata=frame, Ydata=u, name='Understand Loss')
         vis.line_update(Xdata=frame, Ydata=p, name='Policy Loss')
         vis.line_update(Xdata=frame, Ydata=std, name='Action std')
         vis.line_update(Xdata=frame, Ydata=-e, name='Entropy')
@@ -525,6 +531,9 @@ class Targets(object):
         idx = np.random.randint(0,len(self.states))
         return [self.states[idx], self.obs[idx]]
 
+    def __len__(self):
+        return len(self.states)
+
     def __call__(self):
         if self.n > 1:
             idx = np.random.randint(0,len(self.states), self.n)
@@ -537,10 +546,7 @@ class Targets(object):
             return [self.states[idx], self.obs[idx]]
 
     def __getitem__(self, idx):
-        ret = []
-        for ix in idx:
-            ret.append([self.states[ix], self.obs[ix]])
-        return ret
+        return [self.states[idx], self.obs[idx]]
 
 # Test functions
 def obs_process(obs):

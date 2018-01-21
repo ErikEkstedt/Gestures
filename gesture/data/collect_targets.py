@@ -29,7 +29,7 @@ def get_filename(path='/tmp', s_shape=6, o_shape=(40,40,3), n=10000, args=None):
     '''
     print('Directory:', args.filepath)
     pathlib.Path(path).mkdir(parents=True, exist_ok=True)
-    name = '{}_S{}_O{}-{}-{}_n{}'.format(args.env_id, s_shape[0], o_shape[0],o_shape[1],o_shape[2], n)
+    name = '{}_S{}_O{}-{}-{}_n{}'.format(args.env_id, s_shape, o_shape[0],o_shape[1],o_shape[2], n)
     filename = os.path.join(path, name)
     run = 0
     while os.path.exists("{}_{}.h5".format(filename, run)):
@@ -84,23 +84,27 @@ def collect_continous(Env, args):
     Continuous state trajectory collection
     Collects args.dpoints frames continuously and saves a dataset to disk.
     '''
+    env = Env(args)
+    env.seed(args.seed)
     args.MAX_TIME = args.dpoints  # never reset
+    print(args.MAX_TIME)
+    print(args.dpoints)
     trajectory = {'states': [], 'obs': []}  # dataset wants dict
 
-    env.set_target([np.array(s.shape), np.array(s.shape)])  #set random targets
+    s_shape = env.state_space.shape[0]
+    o_shape = env.observation_space.shape
+    env.set_target([np.array(s_shape), np.array(s_shape)])  #set random targets
+
     s, _, o, _ = env.reset()
     for i in tqdm(range(args.dpoints)):
         trajectory['states'].append(s)
         trajectory['obs'].append(o)
-        action = env.action_space.sample()
+        # action = env.action_space.sample()
+        action = np.random.rand(*env.action_space.shape) * 2 -1 # [0 1] -> [-1 1]
         s, _, o, _, r, d, _ = env.step(action)
-        if d:
-            env.seed(np.random.randint(0,20000))  # random seed
-            print('DONE')
-            trajectory['states'].append(s)
-            trajectory['obs'].append(o)
-            s, _, o, _ = env.reset()
-    return trajectory
+        # if d:
+        #     s, _, o, _ = env.reset()
+    return trajectory, s_shape, o_shape
 
 
 if __name__ == '__main__':

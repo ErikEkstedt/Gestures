@@ -170,7 +170,3 @@ def random_run_with_changing_targets_parallel(env, targets, args):
         if sum(done) > 0:
             if args.verbose:
                 print(episode_reward)
-
-
-
-

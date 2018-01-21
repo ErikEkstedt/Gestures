@@ -27,7 +27,6 @@
 				</body>
 			</body>
 		</body>
-
 		<!-- Target0 -->
 		<body name="target_elbow" pos="0 0 0.41">
 			<joint armature="0" axis="1 0 0" damping="0" name="target_elbow" pos="0 0 0" type="slide"/>

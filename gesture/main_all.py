@@ -8,11 +8,13 @@ import torch.optim as optim
 
 from utils.arguments import get_args
 from utils.utils import make_log_dirs, adjust_learning_rate
-from utils.utils import get_model, get_targets
+from utils.utils import get_targets
 from environments.utils import env_from_args
 from environments.social import Social_multiple
+from models.model import AllPolicy
 from agent.test import Test_and_Save_Video
-from agent.train import exploration, train
+from agent.train import exploration
+from agent.train import trainAll as train
 from agent.memory import RolloutStorage, Results, Current, Targets
 
 
@@ -59,7 +61,16 @@ rollouts = RolloutStorage(args.num_steps,
                           ac_shape)
 
 # === Model ===
-pi, Model = get_model(current, args)
+Model = AllPolicy
+pi = Model(s_shape=current.s_shape,
+            st_shape=current.st_shape,
+            o_shape=current.o_shape,
+            ot_shape=current.ot_shape,
+            a_shape=current.ac_shape,
+            feature_maps=args.feature_maps,
+            kernel_sizes=args.kernel_sizes,
+            strides=args.strides,
+            args=args)
 
 if args.continue_training:
     print('\n=== Continue Training ===\n')
@@ -68,7 +79,7 @@ if args.continue_training:
     pi.load_state_dict(sd)
 
 optimizer_pi = optim.Adam(pi.parameters(), lr=args.pi_lr)
-
+ULoss = torch.nn.MSELoss()
 
 print('\n=== Training ===')
 print('\nEnvironment:', args.env_id)
@@ -97,10 +108,10 @@ pi.train()
 MAX_REWARD = -99999
 for j in range(args.num_updates):
     exploration(pi, current, targets, rollouts, args, result, env)
-    vloss, ploss, ent = train(pi, args, rollouts, optimizer_pi)
+    vloss, ploss, ent, uloss = train(pi, args, rollouts, optimizer_pi, ULoss)
     rollouts.last_to_first()  # reset data, start from last data point
 
-    result.update_loss(vloss.data, ploss.data, ent.data)
+    result.update_loss(vloss.data, ploss.data, ent.data, uloss.data)
     frame = pi.n * args.num_proc
 
     #  ==== Adjust LR ======
@@ -122,7 +133,7 @@ for j in range(args.num_updates):
         print('Testing...')
         pi.cpu()
         sd = pi.cpu().state_dict()
-        test_reward = Test_and_Save_Video(test_env, test_targets, sd, args, frame)
+        test_reward = Test_and_Save_Video(test_env, test_targets, sd, args, frame, Model)
         result.update_test(test_reward)
 
         print('Average Test Reward: {}\n '.format(round(test_reward)))

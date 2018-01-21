@@ -15,9 +15,15 @@ from agent.test import Test_and_Save_Video
 from agent.train import exploration, train
 from agent.memory import RolloutStorage, Results, Current, Targets
 
+from environments.reward import SocialReacherTargets, ReacherAbs, ReacherDiff
+
+def env_from_reward_envs(args):
+    pass
+
 
 args = get_args()
-Env = env_from_args(args)
+Env = env_from_reward_envs(args)
+Env = ReacherDiff
 
 # frames -> updates
 args.num_updates = int(args.num_frames) // args.num_steps // args.num_proc
@@ -92,6 +98,8 @@ if args.cuda:
     current.cuda()
     rollouts.cuda()
     pi.cuda()
+
+(pi, current, targets, rollouts, args, result, env, optimizer_pi)
 
 pi.train()
 MAX_REWARD = -99999
