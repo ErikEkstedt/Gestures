@@ -15,8 +15,8 @@ from models.model import AllPolicy
 from agent.test import Test_and_Save_Video
 from agent.train import exploration
 from agent.train import trainAll as train
-from agent.memory import RolloutStorage, Results, Current, Targets
-
+from agent.memory import RolloutStorage, Current, Targets
+from agent.memory import Results
 
 args = get_args()
 Env = env_from_args(args)
