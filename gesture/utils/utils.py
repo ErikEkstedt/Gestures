@@ -23,7 +23,7 @@ def get_model(current, args):
                    args=args)
     elif 'Combine' in args.model:
         from gesture.models.combine import CombinePolicy
-        Model = Combine
+        Model = CombinePolicy
         pi = Model(s_shape=current.s_shape,
                    st_shape=current.st_shape,
                    o_shape=current.o_shape,
