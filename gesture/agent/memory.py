@@ -57,7 +57,7 @@ class Results(object):
         if self.updates > self.max_u:
             self.vloss.pop()
             self.ploss.pop()
-            self.uloss.pop()
+            self.ent.pop()
 
     def get_reward_mean(self):
         if len(self.final_reward_list) > 0:
