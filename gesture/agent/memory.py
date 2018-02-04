@@ -22,6 +22,99 @@ class Results(object):
         self.max_n = max_n
 
         self.vloss = []
+        self.ploss = []
+        self.ent = []
+        self.updates = 0
+        self.max_u = max_u
+        self.start_time = time.time()
+
+        # Test
+        self.test_episode_list = []
+        self.t = 0
+        self.max_t = max_n  # same as training for comparison
+
+    def time(self):
+        return time.time() - self.start_time
+
+    def update_list(self):
+        self.final_reward_list.insert(0, self.tmp_final_rewards.mean())
+        self.n += 1
+        if self.n > self.max_n:
+            self.final_reward_list.pop()
+
+    def update_test(self, test_reward):
+        self.test_episode_list.insert(0, test_reward)
+        self.n += 1
+        if self.n > self.max_n:
+            self.final_reward_list.pop()
+
+    def update_loss(self, v, p, e, u=None):
+        self.vloss.insert(0, v)
+        self.ploss.insert(0, p)
+        self.ent.insert(0, e)
+
+        self.updates += 1
+        if self.updates > self.max_u:
+            self.vloss.pop()
+            self.ploss.pop()
+            self.ent.pop()
+
+    def get_reward_mean(self):
+        if len(self.final_reward_list) > 0:
+            return torch.Tensor(self.final_reward_list).mean()
+        else:
+            return 0
+
+    def get_reward_std(self):
+        return torch.Tensor(self.final_reward_list).std()
+
+    def get_last_reward(self):
+        return self.final_reward_list[0]
+
+    def get_loss_mean(self):
+        v = torch.stack(self.vloss).mean()
+        p = torch.stack(self.ploss).mean()
+        e = torch.stack(self.ent).mean()
+        return v, p, e
+
+    def plot_console(self, frame):
+        v, p, e = self.get_loss_mean()
+        v, p, e = round(v, 2), round(p,2), round(e,2)
+        r       = round(self.get_reward_mean(), 2)
+        print('Time: {}, Steps: {}, Avg.Rew: {}, VLoss: {}, PLoss: {},  Ent: {}'.format(
+            int(self.time()), frame, r, v, p, e))
+
+    def vis_plot(self, vis, frame, std):
+        tr_rew_mean = self.get_reward_mean()
+        tr_rew_std = self.get_reward_std()
+        v, p, e = self.get_loss_mean()
+
+        # Draw plots
+        vis.line_update(Xdata=frame, Ydata=tr_rew_mean, name='Training Score Mean')
+        vis.line_update(Xdata=frame, Ydata=tr_rew_std, name='Training Score Std')
+        vis.line_update(Xdata=frame, Ydata=v, name='Value Loss')
+        vis.line_update(Xdata=frame, Ydata=p, name='Policy Loss')
+        vis.line_update(Xdata=frame, Ydata=std, name='Action std')
+        vis.line_update(Xdata=frame, Ydata=-e, name='Entropy')
+
+
+class ResultsAll(object):
+    ''' Results
+    Class for storing the results during training.
+    Could/should be combine with vislogger/logger.
+    '''
+    def __init__(self, max_n=200, max_u=200):
+        '''
+        :param max_n     :int, number of final episode rewards for averaging rewards
+        :param max_u     :int, number of updates for averaging training losses
+        '''
+        self.episode_rewards = 0
+        self.tmp_final_rewards = 0
+        self.final_reward_list = []
+        self.n = 0
+        self.max_n = max_n
+
+        self.vloss = []
         self.uloss = []
         self.ploss = []
         self.ent = []
@@ -101,7 +194,6 @@ class Results(object):
         vis.line_update(Xdata=frame, Ydata=p, name='Policy Loss')
         vis.line_update(Xdata=frame, Ydata=std, name='Action std')
         vis.line_update(Xdata=frame, Ydata=-e, name='Entropy')
-
 
 class StackedObs(object):
     ''' stacked obs for Roboschool
