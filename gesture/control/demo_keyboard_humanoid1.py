@@ -9,6 +9,11 @@ import tensorflow as tf
 # This opens a test window (not chase camera), allows to control humanoid using keyboard.
 #
 
+############################################################
+#
+# NOT IMPPLEMENTED AT ALL
+#
+############################################################
 def demo_run():
     env = gym.make("RoboschoolHumanoidFlagrun-v1")
 

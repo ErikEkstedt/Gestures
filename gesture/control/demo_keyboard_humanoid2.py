@@ -10,6 +10,11 @@ import tensorflow as tf
 # using keyboard (in a different way)
 #
 
+############################################################
+#
+# NOT IMPPLEMENTED AT ALL
+#
+############################################################
 class PygletInteractiveWindow(pw.Window):
     def __init__(self, env):
         pw.Window.__init__(self, width=600, height=400, vsync=False, resizable=True)
