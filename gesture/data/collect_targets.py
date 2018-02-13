@@ -5,7 +5,7 @@ ex:
 
 Bash:
 
-    python collect_targets --dpoints=100000 --num_proc=4 --filepath=/FILE/PATH/
+    python collect_targets.py --dpoints=100000 --num-proc=4 --filepath=/FILE/PATH/
 
 Saves 100000 state and observations using 4 processors to:
 

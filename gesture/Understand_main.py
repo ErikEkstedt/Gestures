@@ -1,4 +1,5 @@
 import os
+import time
 import torch
 import torch.nn as nn
 import torch.optim as optim
@@ -6,9 +7,12 @@ from torch.autograd import Variable
 
 from utils.arguments import get_args
 from utils.utils import make_log_dirs
+from utils.utils import load_dict
+from data.dataset import UnderstandDataset
+from data.dataset import UnderstandDatasetCuda
 from models.understanding import VanillaCNN
 from torch.utils.data import DataLoader
-from data.dataset import load_reacherplane_data
+
 
 def obstotensor(obs):
     if len(obs.shape) > 3:
@@ -18,37 +22,40 @@ def obstotensor(obs):
     return torch.from_numpy(obs)
 
 def train_understand(model, Loss, opt, tloader, vloader, args, vis=None):
-    model.train()
     for ep in range(args.epochs):
+        train_loss = 0
+        n = 0
+        model.train()
         for states, obs in tloader:
             opt.zero_grad()
-
-            obs = obs.permute(0,3,1,2).float()
-            obs /= 255
-            obs, states = Variable(obs.float()), Variable(states.float(), requires_grad=False)
-            if args.cuda:
-                obs, states = obs.cuda(), states.cuda()
-
+            obs, states = Variable(obs), Variable(states, requires_grad=False)
+            # if args.cuda:
+            #     obs, states = obs.cuda(), states.cuda()
             predicted_states = model(obs)
             loss = Loss(predicted_states, states)
+            train_loss += loss.data[0]
+            n += 1
             loss.backward()
             opt.step()
 
+        train_loss /= n
+        vis.line_update(Xdata=ep, Ydata=train_loss, name='Training Loss')
+
         # Validation
+        val_loss = 0
+        n = 0
+        model.eval()
         for states, obs in vloader:
-            obs = obs.permute(0,3,1,2).float()
-            obs = obs / 255
-            obs, states = Variable(obs.float()), Variable(states.float(), requires_grad=False)
-            if args.cuda:
-                obs, states = obs.cuda(), states.cuda()
+            obs, states = Variable(obs), Variable(states, requires_grad=False)
+            # if args.cuda:
+            #     obs, states = obs.cuda(), states.cuda()
             predicted_states = model(obs)
             vloss = Loss(predicted_states, states)
+            val_loss += vloss.data[0]
+            n += 1
+        val_loss /= n
 
-        if vis and ep > 10:
-            # Draw plots
-            vis.line_update(Xdata=ep, Ydata=loss.data[0], name='Training Loss')
-            vis.line_update(Xdata=ep, Ydata=vloss.data[0], name='Validation Loss')
-
+        vis.line_update(Xdata=ep, Ydata=val_loss, name='Validation Loss')
         if ep % args.save_interval == 0:
             name = os.path.join(args.checkpoint_dir,
                                 'UnderDict{}_{}.pt'.format(ep, round(vloss.data[0], 3)))
@@ -58,8 +65,8 @@ def train_understand(model, Loss, opt, tloader, vloader, args, vis=None):
                 model.cuda()
         print('Epoch: {}/{}\t loss: {}\t Vloss:{}'.format(ep,
                                                           args.epochs,
-                                                          loss.data[0],
-                                                          vloss.data[0]))
+                                                          train_loss,
+                                                          val_loss ))
 
 def test_understand(model, tloader, args):
     model.eval()
@@ -77,48 +84,55 @@ def test_understand(model, tloader, args):
 def main():
     args = get_args()
     make_log_dirs(args)
-    args.num_updates   = int(args.num_frames) // args.num_steps // args.num_processes
+    args.num_updates   = int(args.num_frames) // args.num_steps // args.num_proc
 
     # # === Load Data ===
-    train_dset = torch.load(args.target_path)
-    val_dset = torch.load(args.target_path2)
+    # print('Loading training data')
+    # train_data = load_dict(args.train_target_path)
+    # train_dset = UnderstandDataset(train_data)
+    # print('Loading validation data')
+    # val_data = load_dict(args.val_target_path)
+    # val_dset = UnderstandDataset(val_data)
+    # print('Done')
 
-    # busted dataset
-    for i, (s, o) in enumerate(train_dset):
-        if s.shape[0] is not 4:
-            train_dset.state.pop(i)
-            train_dset.obs.pop(i)
-            print('removed index {} from train_dset: ', i)
+    print('Loading training data')
+    train_data = load_dict(args.train_target_path)
+    train_dset = UnderstandDatasetCuda(train_data)
+    print('Loading validation data')
+    val_data = load_dict(args.val_target_path)
+    val_dset = UnderstandDatasetCuda(val_data)
+    print('Done')
 
-    for i, (s, o) in enumerate(train_dset):
-        if s.shape[0] is not 4:
-            val_dset.state.pop(i)
-            val_dset.obs.pop(i)
-            print('removed index {} from val_dset: ', i)
-
-    trainloader = DataLoader(train_dset, batch_size=args.batch_size, shuffle=True)
-    valloader = DataLoader(val_dset, batch_size=args.batch_size, shuffle=True)
+    # trainloader = DataLoader(train_dset, batch_size=args.batch_size, shuffle=True, pin_memory=True, num_workers=4)
+    # valloader = DataLoader(val_dset, batch_size=args.batch_size, shuffle=True, pin_memory=True, num_workers=4)
+    trainloader = DataLoader(train_dset, batch_size=args.batch_size, shuffle=True,  num_workers=0)
+    valloader = DataLoader(val_dset, batch_size=args.batch_size, shuffle=True,  num_workers=0)
 
     # Check dims
     st, ob = train_dset[0]
     vst, vob = val_dset[0]
     assert vob.shape == ob.shape
     assert vst.shape == st.shape
+
     if args.verbose:
-        print('ob.shape', ob.shape)
-        print('st.shape', st.shape)
-        print('ob.shape', vob.shape)
-        print('st.shape', vst.shape)
+        print('train: ob.shape', ob.shape)
+        print('train: st.shape', st.shape)
+        print('val: ob.shape', vob.shape)
+        print('val: st.shape', vst.shape)
+        print('test: ob.shape', tob.shape)
+        print('test: st.shape', tst.shape)
+        print('State: \nmean: {}\ntype: {}'.format(st.mean(), type(st)))
+        print('Obs: \nmean: {}\ntype: {}'.format(ob.mean(), type(ob)))
         input('Press Enter to continue')
 
-    ob = obstotensor(ob)
     # === Model ===
-    model = VanillaCNN(input_shape=ob.shape,
+    model = VanillaCNN(input_shape=tuple(ob.shape),
                        s_shape=st.shape[0],
                        feature_maps=args.feature_maps,
                        kernel_sizes=args.kernel_sizes,
                        strides=args.strides,
                        args=args)
+
     Loss = nn.MSELoss()
     opt = optim.Adam(model.parameters(), lr=args.cnn_lr)
     print('=== Model ===')
@@ -131,13 +145,18 @@ def main():
     if not args.no_vis:
         from utils.vislogger import VisLogger
         vis = VisLogger(args)
-        train_understand(model, Loss, opt, trainloader, valloader, args, vis)
+        start = time.time()
+        train_understand(model, Loss, opt, trainloader, valloader,  args, vis)
+        duration = time.time() - start
     else:
-        train_understand(model, Loss, opt, trainloader, valloader, args)
+        start = time.time()
+        train_understand(model, Loss, opt, trainloader, valloader,  args)
+        duration = time.time() - start
 
-    test_dset = torch.load(args.target_path3)
-    teloader = DataLoader(test_dset, batch_size=args.batch_size, shuffle=True)
-    test_understand(model, teloader, args)
+    print('Duration: ', duration)
+    # test_dset = torch.load(args.test_target_path)
+    # teloader = DataLoader(test_dset, batch_size=args.batch_size, shuffle=True)
+    # test_understand(model, teloader, args)
 
 if __name__ == '__main__':
     main()

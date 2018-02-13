@@ -6,6 +6,11 @@ def get_args():
     parser = argparse.ArgumentParser(description='PPOAgent')
     parser.add_argument('--num-proc', type=int, default=4)
 
+    # Choregraphe
+    parser.add_argument('--PORT', type=str, default=None,
+                        help='The port number to the Choregraphe session')
+    parser.add_argument('--IP', type=str, default='localhost',
+                        help='The ip number to the Choregraphe session')
     # === Environment ===
     parser.add_argument('--env-id', default='SocialReacher')
     parser.add_argument('--dof', type=int, default=2)
@@ -65,9 +70,9 @@ def get_args():
     parser.add_argument('--cnn-lr', type=float, default=3e-4, help='cnn learning rate (default: 3e-4)')
     parser.add_argument('--epochs', type=int, default=200, help='Epochs used for understanding training(default: 128)')
     parser.add_argument('--save-interval', type=float, default=10, help='Save interval (default: 10)')
+
     # MLP parts
     parser.add_argument('--hidden', type=int, default=256, help='Number of hidden neurons in policy (default: 256)')
-
 
     # === TEST ===
     parser.add_argument('--no-test', action='store_true', default=False, help='disables test during training')
@@ -78,6 +83,8 @@ def get_args():
     sdpath = os.path.join(os.path.dirname(__file__), "../dummy_data/BestDictCombi4710400_65.577.pt")
     parser.add_argument('--state-dict-path', default=sdpath, help='Path to state_dict to load')
 
+    # === Evaluation ===
+    parser.add_argument('--eval-thresh', type=float,  default=0.1, help='Total distance from target threshold')
 
     # === Targets ===
     parser.add_argument('--scale', type=int, default=1, help='scale image for enjoy.py')
@@ -85,6 +92,7 @@ def get_args():
     humanoidpath = os.path.join(os.path.dirname(__file__), "../dummy_data/Humanoid/Humanoid_S18_O40-40-3_n1000_0.h5")
     reacherpath = os.path.join(os.path.dirname(__file__), "../dummy_data/Reacher/Reacher_S6_O40-40-3_n1000_0.h5")
     parser.add_argument('--train-target-path', default=reacherpath, help='Path to target to load')
+    parser.add_argument('--val-target-path', default=reacherpath, help='Path to target to load')
     parser.add_argument('--test-target-path', default=reacherpath, help='Path to target to load')
     parser.add_argument('--humanoidpath', default=humanoidpath, help='Path to humanoid targets')
     parser.add_argument('--reacherpath', default=reacherpath, help='Path to reacher targets')
@@ -100,7 +108,6 @@ def get_args():
     parser.add_argument('--log-interval', type=int, default=1, help='log interval in console, one log per n updates (default: 1)')
     parser.add_argument('--log-dir', default='/tmp', help='directory to save agent logs')
     parser.add_argument('--filepath', default='/tmp/file_created_by_project_args', help='Filepath')
-
 
     # === Boolean ===
     parser.add_argument('--no-cuda', action='store_true', default=False, help='disables CUDA training')

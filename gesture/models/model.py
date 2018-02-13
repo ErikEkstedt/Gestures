@@ -123,6 +123,7 @@ class PixelEmbedding(nn.Module):
         x = F.relu(self.conv3(x))
         return x.view(x.size(0), -1)
 
+
 class AllPolicy(nn.Module, Policy):
     def __init__(self,
                 s_shape,

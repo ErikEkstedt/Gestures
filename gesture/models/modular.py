@@ -141,6 +141,7 @@ class MLPPolicy(nn.Module, Policy):
             p += tmp_params
         return p
 
+
 class CNNPolicy(nn.Module, Policy):
     def __init__(self, input_shape=(6, 40, 40),
                  action_shape=2,

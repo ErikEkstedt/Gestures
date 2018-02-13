@@ -46,8 +46,9 @@ class VanillaCNN(nn.Module):
         self.conv3        = nn.Conv2d(feature_maps[1], feature_maps[2], kernel_size = kernel_sizes[2], stride = strides[2])
         self.out_shape3   = Conv2d_out_shape(self.conv3, self.out_shape2)
         self.n_out        = total_params(self.out_shape3)
-        self.head           = nn.Linear(self.n_out, args.hidden)
-        self.out            = nn.Linear(args.hidden, s_shape)
+        self.head         = nn.Linear(self.n_out, args.hidden)
+        self.out          = nn.Linear(args.hidden, s_shape)
+
 
     def forward(self, x):
         x = F.relu(self.conv1(x))
