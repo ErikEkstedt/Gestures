@@ -82,6 +82,7 @@ def get_args():
 
     sdpath = os.path.join(os.path.dirname(__file__), "../dummy_data/BestDictCombi4710400_65.577.pt")
     parser.add_argument('--state-dict-path', default=sdpath, help='Path to state_dict to load')
+    parser.add_argument('--state-dict-path2', default=sdpath, help='Path to state_dict to load')
 
     # === Evaluation ===
     parser.add_argument('--eval-thresh', type=float,  default=0.1, help='Total distance from target threshold')
