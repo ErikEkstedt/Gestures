@@ -79,8 +79,8 @@ class Results(object):
 
     def plot_console(self, frame):
         v, p, e = self.get_loss_mean()
-        v, p, e = round(v, 2), round(p,2), round(e,2)
-        r       = round(self.get_reward_mean(), 2)
+        v, p, e = round(v, 4), round(p,4), round(e,2)
+        r = round(self.get_reward_mean(), 2)
         print('Time: {}, Steps: {}, Avg.Rew: {}, VLoss: {}, PLoss: {},  Ent: {}'.format(
             int(self.time()), frame, r, v, p, e))
 
