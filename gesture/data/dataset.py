@@ -41,19 +41,19 @@ class UnderstandDatasetCuda(Dataset):
         self.state = data['states']
         self.obs_shape = self.obs[0].shape
         self.state_shape = self.state[0].shape
-        self.transform_to_cuda()
+        # self.transform_to_cuda()
 
     def __len__(self):
         return len(self.obs)
 
-    def transform_to_cuda(self):
+    def transform_to_cuda(self, vel=2):
         obs_cuda, state_cuda = [], []
         for s, obs in tqdm(zip(self.state, self.obs)):
             obs = obs.transpose((2, 0, 1))  #swap color axis np(seq,H,W,C) -> torch(seq,C,H,W)
             obs = torch.from_numpy(obs).float()
             obs /= 255.  # normalize
             obs = obs.cuda()
-            s = torch.from_numpy(s).float().cuda()
+            s = torch.from_numpy(s[:-vel]).float().cuda()
             obs_cuda.append(obs)
             state_cuda.append(s)
         self.obs = obs_cuda

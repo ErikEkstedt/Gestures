@@ -10,22 +10,9 @@ python main.py --num-frames=3000000 \
 
 
 # Understanding
-
 python Understand_main.py --epochs=100 \
 	--feature-maps 64 64 64 \
-	--hidden=256 --pi-lr=1e-4 \
-	--train-target-path="/home/erik/DATA/Reacher/SocialReacher_S(6,)_O40-40-3_n500000_0.h5" \
-	--val-target-path="/home/erik/DATA/Reacher/SocialReacher_S(6,)_O40-40-3_n100000_1.h5" \
-	--test-target-path="/home/erik/DATA/Reacher/SocialReacher_S(6,)_O40-40-3_n100000_0.h5" \
-	--log-dir="/home/erik/DATA/Reacher/experiments"\
-	--env-id="Understanding" \
-	--batch-size=1024 \
-	--num-proc=4 --vis-interval=1 --test-interval=5  --save-interval=5
-
-
-python Understand_main.py --epochs=100 \
-	--feature-maps 64 64 64 \
-	--hidden=256 --pi-lr=1e-4 \
+	--hidden=256 --pi-lr=1e-5 \
 	--train-target-path="/home/erik/DATA/Reacher/SocialReacher_S(6,)_O40-40-3_n200000_0.h5" \
 	--val-target-path="/home/erik/DATA/Reacher/SocialReacher_S(6,)_O40-40-3_n100000_1.h5" \
 	--log-dir="/home/erik/DATA/Reacher/experiments"\
@@ -35,11 +22,47 @@ python Understand_main.py --epochs=100 \
 
 python Understand_main.py --epochs=100 \
 	--feature-maps 64 64 64 \
-	--hidden=256 --pi-lr=1e-4 \
-	--train-target-path="/home/erik/com_sci/Master_code/Gestures/gesture/dummy_data/Reacher/Reacher_S6_O40-40-3_n1000_0.h5" \
-	--val-target-path="/home/erik/com_sci/Master_code/Gestures/gesture/dummy_data/Reacher/Reacher_S6_O40-40-3_n1000_0.h5" \
-	--test-target-path="/home/erik/com_sci/Master_code/Gestures/gesture/dummy_data/Reacher/Reacher_S6_O40-40-3_n1000_0.h5" \
+	--hidden=256 --pi-lr=1e-5 \
+	--train-target-path="/home/erik/DATA/Reacher/SocialReacher_S(6,)_O40-40-3_n200000_0.h5" \
+	--val-target-path="/home/erik/DATA/Reacher/SocialReacher_S(6,)_O40-40-3_n100000_1.h5" \
 	--log-dir="/home/erik/DATA/Reacher/experiments"\
 	--env-id="Understanding" \
-	--num-proc=4 --test-interval=5  --save-interval=10
+	--batch-size=1024 \
+	--num-proc=4 --save-interval=5 --continue-training \
+	--state-dict-path= HEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEERE
+
+# Coordination
+
+python Coordination_main.py --num-frames=3000000 \
+	--hidden=256 --pi-lr=1e-4 \
+	--test-thresh=500000 \
+	--test-interval=200000 \
+	--train-target-path="/home/erik/DATA/Reacher/SocialReacher_S(6,)_O40-40-3_n100000_0.h5" \
+	--log-dir="/home/erik/DATA/Reacher/experiments"\
+	--env-id="Coordination" \
+	--num-proc=4 --save-interval=5
+
+
+# Semi-Combine
+python main.py --num-frames=3000000 \
+	--hidden=256 --pi-lr=1e-4 \
+	--test-thresh=500000 \
+	--test-interval=200000 \
+	--model="SemiCombine"
+	--train-target-path="/home/erik/DATA/Reacher/SocialReacher_S(6,)_O40-40-3_n100000_0.h5" \
+	--log-dir="/home/erik/DATA/Reacher/experiments"\
+	--env-id="reacher" \
+	--num-proc=4 --save-interval=5
+
+# Combine
+
+python main.py --num-frames=3000000 \
+	--hidden=256 --pi-lr=1e-4 \
+	--test-thresh=500000 \
+	--test-interval=200000 \
+	--model="Combine"
+	--train-target-path="/home/erik/DATA/Reacher/SocialReacher_S(6,)_O40-40-3_n100000_0.h5" \
+	--log-dir="/home/erik/DATA/Reacher/experiments/Combine"\
+	--env-id="reacher" \
+	--num-proc=4 --save-interval=5
 
