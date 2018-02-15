@@ -1,4 +1,4 @@
-''' Coordination: SemiCombine '''
+''' Coordination: Combine '''
 
 import os
 import numpy as np
@@ -13,7 +13,7 @@ from environments.social import Social_multiple
 from agent.test import Test_and_Save_Video_MLP
 from agent.train import exploration, train
 from agent.memory import RolloutStorage, Results, Current, Targets
-from models.combine import SemiCombinePolicy as Model
+from models.combine import CombinePolicy as Model
 
 args = get_args()
 Env = SocialReacher

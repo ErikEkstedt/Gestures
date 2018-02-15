@@ -11,7 +11,7 @@ python main.py --num-frames=5000000 \
 
 # Understanding
 python Understand_main.py --epochs=200 \
-	--model='Understand'
+	--model='Understand' \
 	--feature-maps 64 64 64 \
 	--hidden=256 --pi-lr=1e-5 \
 	--train-target-path="/home/erik/DATA/Reacher/SocialReacher_S(6,)_O40-40-3_n200000_0.h5" \
@@ -21,8 +21,10 @@ python Understand_main.py --epochs=200 \
 	--batch-size=1024 \
 	--num-proc=4 --save-interval=5
 
+# Continue Understand
+
 python Understand_main.py --epochs=200 \
-	--model='Understand'
+	--model='Understand' \
 	--feature-maps 64 64 64 \
 	--hidden=256 --pi-lr=1e-5 \
 	--train-target-path="/home/erik/DATA/Reacher/SocialReacher_S(6,)_O40-40-3_n200000_0.h5" \
@@ -36,7 +38,7 @@ python Understand_main.py --epochs=200 \
 # Coordination
 
 python Coordination_main.py --num-frames=5000000 \
-	--model='Coordination'
+	--model='Coordination' \
 	--hidden=256 --pi-lr=1e-4 \
 	--test-thresh=500000 \
 	--test-interval=200000 \
@@ -47,8 +49,9 @@ python Coordination_main.py --num-frames=5000000 \
 
 
 # Semi-Combine
+
 python main.py --num-frames=5000000 \
-	--model='SemiCombine'
+	--model='SemiCombine' \
 	--hidden=256 --pi-lr=1e-4 \
 	--test-thresh=500000 \
 	--test-interval=200000 \
@@ -61,13 +64,13 @@ python main.py --num-frames=5000000 \
 # Combine
 
 python main.py --num-frames=5000000 \
-	--model='Combine'
+	--model='Combine' \
 	--hidden=256 --pi-lr=1e-4 \
 	--test-thresh=500000 \
 	--test-interval=200000 \
 	--model="Combine"
 	--train-target-path="/home/erik/DATA/Reacher/SocialReacher_S(6,)_O40-40-3_n100000_0.h5" \
 	--log-dir="/home/erik/DATA/Reacher/experiments/Combine"\
-	--env-id="reacher" \
+	--env-id="Reacher" \
 	--num-proc=4 --save-interval=5
 

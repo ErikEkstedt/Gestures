@@ -13,7 +13,7 @@ from environments.social import Social_multiple
 from agent.test import Test_and_Save_Video_MLP
 from agent.train import exploration, train
 from agent.memory import RolloutStorage, Results, Current, Targets
-from models.modular import MLPPolicy
+from models.modular import MLPPolicy as Model
 
 args = get_args()
 Env = SocialReacher
@@ -59,7 +59,6 @@ rollouts = RolloutStorage(args.num_steps,
                           ac_shape)
 
 # === Model ===
-Model = MLPPolicy
 in_size = current.st_shape + current.s_shape
 pi = Model(input_size=in_size, a_shape=current.ac_shape, args=args)
 
