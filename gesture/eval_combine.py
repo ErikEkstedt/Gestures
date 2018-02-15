@@ -21,12 +21,11 @@ from gesture.utils.arguments import get_args
 from gesture.utils.utils import record, load_dict, get_targets
 from gesture.agent.memory import Current, Targets
 from gesture.models.modular import VanillaCNN
-from gesture.models.combine import SemiCombinePolicy
+from gesture.models.combine import CombinePolicy as Model
 from gesture.environments.social import SocialReacher
 
-
 class PoseDefiner(object):
-    def __init__(self, thresh=0.1, done_duration=30, max_time=300, target=None):
+    def __init__(self, thresh=0.1, done_duration=50, max_time=300, target=None):
         self.thresh = thresh
         self.done_duration = done_duration
         self.max_time = max_time
@@ -35,16 +34,19 @@ class PoseDefiner(object):
         self.counter = 0
         self.time = 0
         self.poses_achieved = 0
+        self.total_poses = 1
 
     def reset(self, target):
         self.counter = 0
+        self.time = 0
         self.target = target
+        self.total_poses += 1
 
     def update(self, state):
-        change_target = False
         self.time += 1
-        d = np.linalg.norm(state[:len(target)] - self.target)
-        if d < self.thresh:
+        change_target = False
+        dist = np.linalg.norm(state[:len(self.target)] - self.target)
+        if dist < self.thresh:
             # Pose reached!
             self.counter += 1
             if self.counter >= self.done_duration:
@@ -55,17 +57,18 @@ class PoseDefiner(object):
             self.counter = 0
             if self.time > self.max_time:
                 change_target = True
-        return d, change_target
+        return dist, change_target
 
     def distance(self, state):
-        return np.linalg.norm(state[:len(target)] - self.target)
+        return np.linalg.norm(state[:len(self.target)] - self.target)
 
+    def print_result(self):
+        print('\nPoses reached/possible: {}/{}'.format(self.poses_achieved, self.total_poses))
 
-def evaluate(env, targets, pi, understand, args, plot=False, USE_UNDERSTAND=True):
+def evaluate(env, targets, pi, args, plot=False):
     if args.cuda:
         current.cuda()
         pi.cuda()
-        understand.cuda()
 
     if args.record:
         import skvideo.io
@@ -82,20 +85,12 @@ def evaluate(env, targets, pi, understand, args, plot=False, USE_UNDERSTAND=True
     state, real_state_target, obs, o_target = env.reset()
 
     posedefiner = PoseDefiner(target=real_state_target)
-    d, _ = posedefiner.distance(state)
+    d = posedefiner.distance(state)
     X = [0]; Y = [d]
 
     tt = time.time()
     total_reward = 0
     for j in tqdm(range(args.MAX_TIME)):
-
-        if USE_UNDERSTAND:
-            o_tmp = o_target.transpose(2, 0, 1).astype('float')
-            o_tmp /= 255
-            o_tmp = torch.from_numpy(o_tmp).float().unsqueeze(0)
-            s_target = understand(Variable(o_target)).data.numpy()
-        else:
-            s_target = real_state_target
 
         current.update(state, s_target, obs, o_target)
         s ,st, o, ot = current()
@@ -107,16 +102,6 @@ def evaluate(env, targets, pi, understand, args, plot=False, USE_UNDERSTAND=True
 
         if args.record:
             record(env, writer)
-
-        # if j % args.update_target == 0:
-        #     if args.continuous_targets:
-        #         target = targets[t]
-        #         t += 1
-        #         if t > len(targets)-1:
-        #             break
-        #     else:
-        #         target = targets()
-        #     env.set_target(target)
 
         # Observe reward and next state
         cpu_actions = action.data.cpu().numpy()[0]
@@ -140,11 +125,14 @@ def evaluate(env, targets, pi, understand, args, plot=False, USE_UNDERSTAND=True
                 target = targets()
             env.set_target(target)
             state, real_state_target, obs, o_target = env.reset()
+            posedefiner.reset(real_state_target)
 
     print('Duration of script: ', time.time()-tt)
     print('Total Reward: ', total_reward)
     if args.record:
         writer.close()
+
+    posedefiner.print_result()
     plt.plot(X,Y,'-b', X, [0.1]*len(X), '-r')
     plt.show()
 
@@ -155,7 +143,7 @@ if __name__ == '__main__':
 
     # === Environment and targets ===
     env = SocialReacher(args)
-    env.seed(np.random.randint(0,20000))  # random seed
+    env.seed(200)
 
     print('\nLoading targets from:')
     print('path:\t', args.test_target_path)
@@ -172,34 +160,20 @@ if __name__ == '__main__':
     ac_shape = env.action_space.shape[0]   # Actions
     current = Current(1, args.num_stack, s_shape, st_shape, o_shape, o_shape, ac_shape)
 
-    pi = SemiCombinePolicy(s_shape=current.s_shape,
-                           st_shape=current.st_shape,
-                           o_shape=current.o_shape,
-                           ot_shape=current.ot_shape,
-                           a_shape=current.ac_shape,
-                           feature_maps=args.feature_maps,
-                           kernel_sizes=args.kernel_sizes,
-                           strides=args.strides,
-                           args=args)
+    pi = Model(s_shape=current.s_shape,
+               st_shape=current.st_shape,
+               o_shape=current.o_shape,
+               ot_shape=current.ot_shape,
+               a_shape=current.ac_shape,
+               feature_maps=args.feature_maps,
+               kernel_sizes=args.kernel_sizes,
+               strides=args.strides,
+               args=args)
 
     print('Loading coordination state dict from:')
     print('path:\t', args.state_dict_path)
     coordination_state_dict = torch.load(args.state_dict_path)
     pi.load_state_dict(coordination_state_dict)
 
-    args.hidden=128
-    understand = VanillaCNN(input_shape=current.ot_shape,
-                            s_shape=current.st_shape,
-                            feature_maps=args.feature_maps,
-                            kernel_sizes=args.kernel_sizes,
-                            strides=args.strides,
-                            args=args)
-
-    print('Loading understanding state dict from:')
-    print('path:\t', args.state_dict_path2)
-    understand_state_dict = torch.load(args.state_dict_path2)
-    understand.load_state_dict(understand_state_dict)
-
     pi.eval()
-    understand.eval()
-    evaluate(env, targets, pi, understand, args, plot=True, USE_UNDERSTAND=False)
+    evaluate(env, targets, pi, args, plot=False)

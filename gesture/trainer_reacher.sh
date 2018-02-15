@@ -73,4 +73,3 @@ python main.py --num-frames=5000000 \
 	--log-dir="/home/erik/DATA/Reacher/experiments/Combine"\
 	--env-id="Reacher" \
 	--num-proc=4 --save-interval=5
-

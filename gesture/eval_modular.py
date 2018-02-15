@@ -85,7 +85,6 @@ def evaluate(env, targets, pi, understand, args, plot=False, USE_UNDERSTAND=True
     env.set_target(target)
     state, real_state_target, obs, o_target = env.reset()
 
-    print(state)
     posedefiner = PoseDefiner(target=real_state_target)
     d = posedefiner.distance(state)
     X = [0]; Y = [d]
@@ -98,7 +97,8 @@ def evaluate(env, targets, pi, understand, args, plot=False, USE_UNDERSTAND=True
             o_target = o_target.transpose(2, 0, 1).astype('float')
             o_target /= 255
             o_target = torch.from_numpy(o_target).float().unsqueeze(0)
-            s_target = understand(Variable(o_target)).data.numpy()
+            if args.cuda: o_target = o_target.cuda()
+            s_target = understand(Variable(o_target)).data.cpu().numpy()
         else:
             s_target = real_state_target
 
@@ -153,7 +153,7 @@ if __name__ == '__main__':
 
     # === Environment and targets ===
     env = SocialReacher(args)
-    env.seed(np.random.randint(0,20000))  # random seed
+    env.seed(200)
 
     print('\nLoading targets from:')
     print('path:\t', args.test_target_path)
@@ -193,4 +193,4 @@ if __name__ == '__main__':
 
     pi.eval()
     understand.eval()
-    evaluate(env, targets, pi, understand, args, plot=False, USE_UNDERSTAND=False)
+    evaluate(env, targets, pi, understand, args, plot=False, USE_UNDERSTAND=True)
