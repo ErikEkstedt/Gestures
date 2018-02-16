@@ -17,7 +17,14 @@ def explorationPepper(pi, current, targets, rollouts, args, result,  env):
     '''
     stds = []
     s, st, o, _ = current()
+    done = False
     for step in range(args.num_steps):
+        if done:
+            env.set_random_target()
+            new_s, new_st, new_o = env.reset()
+            current.update(new_s, new_st, new_o, new_o) #transforms accordingly
+            s, st, o, _ = current()
+
         # add step count
         pi.n += 1
 
@@ -37,7 +44,6 @@ def explorationPepper(pi, current, targets, rollouts, args, result,  env):
             result.tmp_final_rewards += (1 - masks) * result.episode_rewards
             result.episode_rewards *= masks
             result.update_list()
-            s, obs = env.reset()
 
         current.update(state, s_target, obs, obs)
         s, st, o, _ = current()

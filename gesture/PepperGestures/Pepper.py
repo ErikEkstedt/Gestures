@@ -12,7 +12,13 @@ from screen import ObsRGB
 
 #============== Help Functions ======================
 
-def getLimits(motion_service, name="Body"):
+def get_random_target(slim_low, slim_high, target='both', idx=None):
+    tmp_high = slim_high.abs() + slim_low.abs()
+    goal = torch.rand(slim_high.size())
+    goal = goal * tmp_high - slim_low.abs()
+    return goal
+
+def printLimits(motion_service, name="Body"):
     limits = motion_service.getLimits(name)
     jointNames = motion_service.getBodyNames(name)
     for i in range(0,len(limits)):
@@ -22,163 +28,10 @@ def getLimits(motion_service, name="Body"):
             "maxVelocity", limits[i][2],\
             "maxTorque", limits[i][3])
 
-class Pepper_v0_with_goal(gym.Env):
-    '''
-    metadata = { 'render.modes': ['human', 'rgb_array'],
-                 'video.frames_per_second' : 50 }
-
-    # Directions:
-    #           Environment - Choregraphe
-    #           Open Choregraphe and connect to a virtual session.
-    #           Copy the PORT the simulation runs on.
-    #           Detach the "Robot view" window and have it
-    #           visable on desktop (we get pixel values from the screen).
-    #           Create a qi session with the PORT number.
-
-    '''
-    def __init__(self, session, rgb_shape=(64,64), head=False, goal=None, precision=1e-2):
-        '''
-        Arguments:
-            session - a qi.session
-            head - boolean, if true actions include head actions.
-            precision - precision used for end run condition
-        '''
-        self.session = session
-        self.motion_service = session.service("ALMotion")
-        self.motion_service.setStiffnesses = 1  # movement possible
-        self.posture_service = session.service("ALRobotPosture")
-        self.posture_service.goToPosture("StandInit", 0.5)
-
-        o_low, o_high, a, b = self.get_limits(head)  # different sizes w/ or w/out head
-        self.state_space = spaces.Box(o_low, o_high)
-        self.action_space = spaces.Box(0.3*o_low, 0.2*o_high)
-
-        self.RGB_observer = ObsRGB()
-        self.rgb_shape = rgb_shape
-        self.observation_shape = (3, rgb_shape[0], rgb_shape[1])
-
-        self.useSensors = False
-        self.step_time = 0.1
-        self.head = head
-        if head:
-            self.names = ["LShoulderRoll", "LShoulderPitch",
-                    "LElbowYaw", "LElbowRoll",
-                    "LWristYaw", "LHand",
-                    "RShoulderRoll", "RShoulderPitch",
-                    "RElbowYaw", "RElbowRoll",
-                    "RWristYaw", "RHand",
-                    "HeadYaw", "HeadPitch"]
-        else:
-            self.names= ["LShoulderRoll", "LShoulderPitch",
-                    "LElbowYaw", "LElbowRoll",
-                    "LWristYaw", "LHand",
-                    "RShoulderRoll", "RShoulderPitch",
-                    "RElbowYaw", "RElbowRoll",
-                    "RWristYaw", "RHand"]
-        self.fractionMaxSpeed = 0.1
-
-        # Condition to stop run
-        if goal:
-            self.use_goal = True
-        else:
-            self.use_goal = False
-        self.goal = goal
-        self.precision = precision
-
-    def _step(self, changes):
-        ''' Step function that returns the joint and rgb values
-        and, if a goal is specified in the initialization, if the run is done.
-        '''
-        changes = [float(x) for x in changes]
-        self.motion_service.changeAngles(self.names, changes, self.fractionMaxSpeed)
-        time.sleep(self.step_time)
-
-        state = self._getState()
-
-        done = False
-        if self.use_goal:
-            diff = np.square(self.goal - state).mean()
-            print('Diff: ', diff)
-            if diff < self.precision:
-                done = True
-            reward = 1./(diff + 0.01)
-        else:
-            reward = None
-
-        rgb = self.RGB_observer.get_rgb()
-        rgb = cv2.resize(rgb, self.rgb_shape)
-        rgb = rgb.transpose((2,0,1))
-        return state, rgb, reward, done
-
-    def _reset(self):
-        self.posture_service.goToPosture("StandInit", 0.5)
-        time.sleep(1)
-        state = self._getState()
-
-        rgb = self.RGB_observer.get_rgb()
-        rgb = cv2.resize(rgb, self.rgb_shape)
-        rgb = rgb.transpose((2,0,1))
-
-        done = False
-        if self.use_goal:
-            diff = np.square(self.goal - state).mean()
-            print('Diff: ', diff)
-            if diff < self.precision:
-                done = True
-            reward = 1./(diff + 0.01)
-        else:
-            reward = None
-        return state, rgb, reward, done
-
-    def set_new_goal(self, goal):
-        self.goal = goal
-        self.use_goal = True
-
-    def _getState(self):
-        R = np.array(self.motion_service.getAngles(
-            "RArm", self.useSensors))
-        L = np.array(self.motion_service.getAngles(
-            "LArm", self.useSensors))
-        if self.head:
-            H = np.array(self.motion_service.getAngles(
-                "Head", self.useSensors))
-            state = np.concatenate((L, R, H))
-        else:
-            state = np.concatenate((L, R))
-        return state
-
-    def _close(self):
-        self.motion_service.setStiffnesses = 0
-
-    def get_limits(self, head):
-        ''' function that return limits of the robot
-        Arguments:
-            motion_service - qi.session object
-        Return:
-            min_angle
-            max_angle
-            max_velocity
-            max_torque
-        '''
-        limL = np.array(self.motion_service.getLimits("LArm"))
-        limR = np.array(self.motion_service.getLimits("RArm"))
-        limHead = np.array(self.motion_service.getLimits("Head"))
-        if head:
-            o_low = np.concatenate((limL[:, 0], limR[:, 0], limHead[:, 0]))
-            o_high = np.concatenate((limL[:, 1], limR[:, 1], limHead[:, 1]))
-            vel_max = np.concatenate((limL[:, 2], limR[:, 2], limHead[:, 2]))
-            torque_max = np.concatenate((limL[:, 3], limR[:, 3], limHead[:, 3]))
-        else:
-            o_low = np.concatenate((limL[:, 0], limR[:, 0]))
-            o_high = np.concatenate((limL[:, 1], limR[:, 1]))
-            vel_max = np.concatenate((limL[:, 2], limR[:, 2]))
-            torque_max = np.concatenate((limL[:, 3], limR[:, 3]))
-        return o_low, o_high, vel_max, torque_max
 
 
 class Pepper_v0(gym.Env):
-    '''
-    Directions:
+    ''' Directions:
               Environment - Choregraphe
               Open Choregraphe and connect to a virtual session.
               Copy the PORT-number the simulation runs on.
@@ -205,6 +58,8 @@ class Pepper_v0(gym.Env):
         self.posture_service.goToPosture("StandInit", 0.5)
 
         o_low, o_high, a, b = self.get_limits(use_head)  # different sizes w/ or w/out head
+        self.lim_low = o_low
+        self.lim_high = o_high
 
         action_max = np.round( (o_high - o_low)*action_coeff, 3)
         self.state_space = spaces.Box(o_low, o_high)
@@ -255,7 +110,7 @@ class Pepper_v0(gym.Env):
         rgb = cv2.resize(rgb, self.rgb_shape)
         rgb = rgb.transpose((2,0,1))
         self.potential = self.calc_potential()
-        return np.concatenate((self.state, vel)).astype('float32'), rgb
+        return np.concatenate((self.state, vel)).astype('float32'), self.target, rgb
 
     def _step(self, changes):
         ''' Step function that returns the joint and rgb values '''
@@ -288,13 +143,12 @@ class Pepper_v0(gym.Env):
     def set_target(self, target):
         self.target = target
 
-    # def calc_reward(self):
-    #     ''' Calculates reward
-    #     Compares current state with goal state.
-    #     '''
-    #     self.potential = self.calc_potential()
-    #     r = -self.potential  # Highest rewards closest to goal (could use positive inverse but this is a start)
-    #     return np.array([r])
+    def set_random_target(self):
+        tmp_high = np.abs(self.lim_high) + np.abs(self.lim_low)
+        target = np.random.rand(self.lim_high.size)
+        target = target * tmp_high - np.abs(self.lim_low)
+        self.target = target
+        return target
 
     def calc_reward(self):
         ''' Difference potential as reward '''

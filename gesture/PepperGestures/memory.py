@@ -288,69 +288,69 @@ class StackedState(object):
 
 
 class Current(object):
-    """Current holds all relevant current information"""
-    def __init__(self,
-                 num_processes,
-                 num_stack,
-                 state_dims,
-                 starget_dims,
-                 obs_dims,
-                 otarget_dims,
-                 ac_shape):
-        self.state = StackedState(num_processes, num_stack, state_dims)
-        self.obs = StackedObs(num_processes, num_stack, obs_dims)
-        self.target_state = StackedState(num_processes, num_stack, starget_dims)
-        self.target_obs = StackedObs(num_processes, num_stack, otarget_dims)
+        """Current holds all relevant current information"""
+        def __init__(self,
+                    num_processes,
+                    num_stack,
+                    state_dims,
+                    starget_dims,
+                    obs_dims,
+                    otarget_dims,
+                    ac_shape):
+            self.state = StackedState(num_processes, num_stack, state_dims)
+            self.obs = StackedObs(num_processes, num_stack, obs_dims)
+            self.target_state = StackedState(num_processes, num_stack, starget_dims)
+            self.target_obs = StackedObs(num_processes, num_stack, otarget_dims)
 
-        self.o_shape = self.obs.obs_shape
-        self.ot_shape = self.target_obs.obs_shape
-        self.s_shape = self.state.state_shape
-        self.st_shape = self.target_state.state_shape
-        self.ac_shape = ac_shape
+            self.o_shape = self.obs.obs_shape
+            self.ot_shape = self.target_obs.obs_shape
+            self.s_shape = self.state.state_shape
+            self.st_shape = self.target_state.state_shape
+            self.ac_shape = ac_shape
 
-        self.targets = []
-        self.use_cuda = False
+            self.targets = []
+            self.use_cuda = False
 
-    def update(self, state=None, s_target=None, obs=None, o_target=None):
-        if state is not None:
-            self.state.update(state)
-        if s_target is not None:
-            self.target_state.update(s_target)
-        if obs is not None:
-            self.obs.update(obs)
-        if o_target is not None:
-            self.target_obs.update(o_target)
+        def update(self, state=None, s_target=None, obs=None, o_target=None):
+            if state is not None:
+                self.state.update(state)
+            if s_target is not None:
+                self.target_state.update(s_target)
+            if obs is not None:
+                self.obs.update(obs)
+            if o_target is not None:
+                self.target_obs.update(o_target)
 
-    def check_and_reset(self, mask):
-        self.state.check_and_reset(mask)
-        self.obs.check_and_reset(mask)
-        self.target_state.check_and_reset(mask)
-        self.target_obs.check_and_reset(mask)
+        def check_and_reset(self, mask):
+            self.state.check_and_reset(mask)
+            self.obs.check_and_reset(mask)
+            self.target_state.check_and_reset(mask)
+            self.target_obs.check_and_reset(mask)
 
-    def __call__(self):
-        return self.state(), self.target_state(), self.obs(), self.target_obs()
+        def __call__(self):
+            return self.state(), self.target_state(), self.obs(), self.target_obs()
 
-    def add_target_dataset(self, dset):
-        self.targets.append(dset)
+        def add_target_dataset(self, dset):
+            self.targets.append(dset)
 
-    def size(self):
-        ''' Returns torch.Size '''
-        return self.state.size(), self.target_state.size(), \
-            self.obs.size(), self.target_obs.size()
+        def size(self):
+            ''' Returns torch.Size '''
+            return self.state.size(), self.target_state.size(), \
+                self.obs.size(), self.target_obs.size()
 
-    def cuda(self):
-        self.state.cuda()
-        self.target_state.cuda()
-        self.obs.cuda()
-        self.target_obs.cuda()
-        self.use_cuda = True
+        def cuda(self):
+            self.state.cuda()
+            self.target_state.cuda()
+            self.obs.cuda()
+            self.target_obs.cuda()
+            self.use_cuda = True
 
-    def cpu(self):
-        self.state.cpu()
-        self.target_state.cpu()
-        self.obs.cpu()
-        self.target_obs.cpu()
-        self.use_cuda = False
+        def cpu(self):
+            self.state.cpu()
+            self.target_state.cpu()
+            self.obs.cpu()
+            self.target_obs.cpu()
+            self.use_cuda = False
 
 
 class RolloutStorage(object):
@@ -511,227 +511,3 @@ class RolloutStorage(object):
                 target_obs_batch, actions_batch, return_batch, \
                 masks_batch, old_action_log_probs_batch, adv_targ
 
-
-class Targets(object):
-    """ Targets
-    1. Holds the state and obs targets
-    2. returns a self.n-sized list (num proc) with random targets
-    """
-    def __init__(self, n, datadict):
-        self.n = n
-        self.states = datadict['states']
-        self.obs = datadict['obs']
-
-    def remove_speed(self, njoints):
-        for i, s in enumerate(self.states):
-            self.states[i] = s[:-njoints]
-        print('Removed speed')
-
-    def random_target(self):
-        idx = np.random.randint(0,len(self.states))
-        return [self.states[idx], self.obs[idx]]
-
-    def __len__(self):
-        return len(self.states)
-
-    def __call__(self):
-        if self.n > 1:
-            idx = np.random.randint(0,len(self.states), self.n)
-            ret = []
-            for ix in idx:
-                ret.append([self.states[ix], self.obs[ix]])
-            return ret
-        else:
-            idx = np.random.randint(0,len(self.states))
-            return [self.states[idx], self.obs[idx]]
-
-    def __getitem__(self, idx):
-        return [self.states[idx], self.obs[idx]]
-
-# Test functions
-def obs_process(obs):
-    ''' takes in (w, h, c) -> (c, w, h)'''
-    obs = obs.transpose(2,0,1)
-    return torch.from_numpy(obs).float()
-
-def obs_process_multi(obs):
-    ''' takes in (n, w, h, c) -> (n, c, w, h)'''
-    obs = obs.transpose(0, 3, 1, 2)
-    return torch.from_numpy(obs).float()
-
-def test_StackedObs(Env, args):
-    s_env = Env(args)
-    m_env = make_parallel_environments(Env, args)
-
-    m_st = m_env.observation_space.shape
-    m_ob = m_env.rgb_space.shape
-    m_ac = m_env.action_space.shape
-
-    s_st = s_env.observation_space.shape
-    s_ob = s_env.rgb_space.shape
-    s_ac = s_env.action_space.shape
-
-
-    # === StackedState ===
-    multstate = StackedState(args.num_proc, args.num_stack, m_st)
-    singlestate = StackedState(1, args.num_stack, s_st)
-
-    multstate_obs = StackedObs(args.num_proc, args.num_stack, m_ob)
-    singlestate_obs = StackedObs(1, args.num_stack, s_ob)
-
-    if False:
-        print('Mult:\nst: {}\nob: {}\nac: {}\n'.format(m_st, m_ob, m_ac))
-        print('Single:\nst: {}\nob: {}\nac: {}\n'.format(s_st, s_ob, s_ac))
-        print('Single:')
-        print('Num_stack:', args.num_stack)
-        print('MultState:\nsize:{}\n'.format(multstate.size()))
-        print('SingleState:\nsize:{}\n'.format(singlestate.size()))
-        print('Mult:')
-        print('Num_stack:', args.num_stack)
-        print('MultStateObs:\nsize:{}\n'.format(multstate_obs.size()))
-        print('SingleStateObs:\nsize:{}\n'.format(singlestate_obs.size()))
-        input('Press Enter to continue')
-
-    if True:
-        ''' Num_stack = 1... Works'''
-        ss, sobs = s_env.reset()  # sobs (100,100,3)
-        sobs_tensor = obs_process(sobs)  # 3, 100, 100
-        singlestate_obs.update(sobs_tensor)
-
-        if False:
-            print('Sing. Sobs'); rgb_render(sobs)
-            time.sleep(0.1)
-            print('Sing. Tensor'); rgb_tensor_render(sobs_tensor)
-            time.sleep(0.1)
-            print('Sing. StackedObs'); rgb_tensor_render(singlestate_obs()[0])
-            time.sleep(0.1)
-            input('Press Enter to continue')
-
-        ms, mobs = m_env.reset()
-        mobs_tensor = obs_process_multi(mobs)
-        multstate_obs.update(mobs_tensor)
-        print('Call Shape:', multstate_obs().shape)
-        for i in range(2):
-            ms, mobs, r, done, _ = m_env.step(
-                [m_env.action_space.sample()]*args.num_proc)
-            mobs_tensor = obs_process_multi(mobs)
-            masks = torch.FloatTensor([[0.0] if done_ else [1.0] for done_ in done])
-
-            if sum(done)>1:
-                print(masks)
-                input('Press Enter to continue')
-
-            masks[0] = 0
-            print(multstate_obs())
-            multstate_obs.check_and_reset(masks)
-            print(multstate_obs())
-            input('Press Enter to continue')
-            multstate_obs.update(mobs_tensor)
-
-        if False:
-            for i in range(args.num_proc):
-                print('Mult. Sobs'); rgb_render(mobs[i], 'Regular')
-                time.sleep(0.3)
-                print('Mult. Tensor'); rgb_tensor_render(mobs_tensor[i], 'Tensor')
-                time.sleep(0.3)
-                print('Mult. StackedObs'); rgb_tensor_render(multstate_obs()[i], 'SCALL')
-
-def test_RolloutStorageCombi(Env, args):
-    Variable = torch.autograd.Variable
-
-    env = make_parallel_environments(Env, args)
-    st = env.observation_space.shape
-    ob = env.rgb_space.shape
-    ac = env.action_space.shape
-    print('st: ',st)
-    print('ob: ',ob)
-    print('ac: ',ac)
-
-    # === StackedState ===
-    CurrentState = StackedState(args.num_proc, args.num_stack, st[0])
-    CurrentObs = StackedObs(args.num_proc, args.num_stack, ob)
-
-
-    # === RolloutStorageObs ===
-    args.num_steps = 10
-    rollouts = RolloutStorageObs(args.num_steps,
-                                 args.num_proc,
-                                 CurrentState.size()[1],
-                                 CurrentObs.size()[1:],
-                                 ac[0])
-
-    s, obs = env.reset()
-    obs_tensor = obs_process_multi(obs)
-    CurrentObs.update(obs_tensor)
-    print('Call Shape:', CurrentObs().shape)
-    for step in range(args.num_steps):
-        action = [env.action_space.sample()]*args.num_proc
-
-        state, obs, reward, done, _ = env.step(action)
-        reward = torch.from_numpy(reward).view(args.num_proc, -1).float()
-        masks = torch.FloatTensor([[0.0] if done_ else [1.0] for done_ in done])
-
-        action = Variable(torch.Tensor(action))
-        action_log_prob = Variable(torch.ones(reward.size()))
-        value = Variable(torch.ones(reward.size()))
-
-        obs1 =  obs
-        obs = obs_process_multi(obs)
-
-        if sum(done)>1:
-            print(masks)
-            input('Press Enter to continue')
-
-        CurrentObs.update(obs)
-        CurrentState.update(state)
-        rollouts.insert(step,
-                        CurrentState(),
-                        CurrentObs(),
-                        action.data,
-                        action_log_prob.data,
-                        value.data,
-                        reward,
-                        masks)
-
-    print('CurrentObs: ', CurrentObs().mean())
-
-    # Test returns
-    rollouts.compute_returns(value.data, args.no_gae, args.gamma, args.tau)
-    advantages = rollouts.returns[:-1] - rollouts.value_preds[:-1]
-    advantages = (advantages - advantages.mean()) / (advantages.std() + 1e-5)
-
-    if True:
-        for e in range(3):
-            data_generator = rollouts.Batch(advantages, 10)
-            for sample in data_generator:
-                states_batch, obs_batch, actions_batch, return_batch, \
-                    masks_batch, old_action_log_probs_batch, adv_targ = sample
-            if True:
-                print('OBS BATCH MEAN: ', obs_batch.mean())
-                print('STATE BATCH MEAN: ', states_batch.mean())
-                print('action_batch : ', actions_batch.mean())
-                print('return_batch : ', return_batch.mean())
-                print(states_batch.size())
-                print(obs_batch.size())
-                print(actions_batch.size())
-                print(return_batch.size())
-                print(masks_batch.size())
-                print(old_action_log_probs_batch.size())
-                print(adv_targ.size())
-                print(states_batch)
-                print(obs_batch)
-
-                print('IMAGES')
-                print(obs_batch[1])
-                rgb_tensor_render(obs_batch[1])
-                input('Press Enter to continue')
-                rgb_tensor_render(obs_batch[-1])
-                input('Press Enter to continue')
-
-
-if __name__ == '__main__':
-    from arguments import get_args
-    args = get_args()
-
-    dset = torch.load(args.target_path)
-    targets = Targets(n=4, dset=dset)

@@ -18,7 +18,6 @@ import torch
 import torch.optim as optim
 import torch.nn as nn
 
-
 print('\n=== Create Environment ===\n')
 args = get_args()
 args.num_proc=1
@@ -99,7 +98,7 @@ print('Total network parameters to train: ', pi.total_parameters())
 print('\nTraining for %d Updates' % args.num_updates)
 
 # Initialize targets and reset env
-s, obs = env.reset()
+s, st, obs  = env.reset()
 print(obs.shape)
 current.update(state=s, s_target=st)
 s, st, _ , _ = current()
@@ -111,6 +110,7 @@ if args.cuda:
     understand.cuda()
 
 pi.train()
+understand.train()
 MAX_REWARD = -99999
 for j in range(args.num_updates):
     exploration(pi, current, _, rollouts, args, result, env)
