@@ -531,12 +531,19 @@ def test_social(Env, args):
     datadict = load_dict(args.test_target_path)
     targets = Targets(args.num_proc, datadict)
     targets.remove_speed(args.njoints)
+    st, ot = targets()
 
     env = Env(args)
     env.seed(args.seed)
 
+    print(env)
+    print('action space:', env.action_space)
+    print('state space:', env.state_space)
+    print('target state space:', st.shape)
+    print('obs space:', env.observation_space)
     # random_run(env, render=args.render, verbose=args.verbose)
     random_run_with_changing_targets(env, targets, args)
+
 
 def test_social_parallel(Env, args):
     from gesture.environments.utils import random_run_with_changing_targets_parallel
@@ -549,14 +556,17 @@ def test_social_parallel(Env, args):
     datadict = load_dict(args.test_target_path)
     targets = Targets(args.num_proc, datadict)
     targets.remove_speed(args.njoints)
+    st, ot = targets()[0]
 
     env = Social_multiple(Env, args)
     print(env)
     print('action space:', env.action_space)
     print('state space:', env.state_space)
+    print('target state space:', st.shape)
     print('obs space:', env.observation_space)
     # random_run_parallel(env, args)
     random_run_with_changing_targets_parallel(env, targets, args)
+
 
 if __name__ == '__main__':
     from gesture.utils.arguments import get_args
