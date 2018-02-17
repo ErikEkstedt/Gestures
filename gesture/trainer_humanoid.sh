@@ -1,36 +1,24 @@
-python main.py --num-frames=10000000 \
-	--test-thresh=2000000 \
-	--feature-maps 64 128 256 \
-	--hidden=512 --pi-lr=1e-3 \
-	--test-target-path="/home/erik/DATA/Humanoid/SocialHumanoid_S(18,)_O80-80-3_n100000_0.ht" \
-	--train-target-path="/home/erik/DATA/Humanoid/SocialHumanoid_S(18,)_O80-80-3_n200000_0.ht" \
-	--log-dir="/home/erik/"\
-	--num-proc=12 --test-interval=400000 --record
+python train_semicombine.py --num-frames=5000000 \
+	--num-proc=4 \
+	--env-id='Humanoid' \
+	--model='SemiCombine' \
+	--feature-maps 128 128 128 \
+	--hidden=512 \
+	--pi-lr=1e-4 \
+	--test-thresh=500000 \
+	--test-interval=200000 \
+	--train-target-path="/home/erik/DATA/Humanoid/SocialHumanoid_S(18,)_O64-64-3_n200000_0.h5"\
+	--test-target-path="/home/erik/DATA/Humanoid/SocialHumanoid_S(18,)_O64-64-3_n100000_0.h5" \
+	--log-dir="/home/erik/DATA/Humanoid/experiments"
 
-python main.py --num-frames=10000000 \
-	--test-thresh=2000000 \
-	--feature-maps 64 128 256 \
-	--hidden=512 --pi-lr=5e-4 \
-	--test-target-path="/home/erik/DATA/Humanoid/SocialHumanoid_S(18,)_O80-80-3_n100000_0.ht" \
-	--train-target-path="/home/erik/DATA/Humanoid/SocialHumanoid_S(18,)_O80-80-3_n200000_0.ht" \
-	--log-dir="/home/erik/"\
-	--num-proc=12 --test-interval=400000 --record
-
-
-python main.py --num-frames=10000000 \
-	--test-thresh=2000000 \
-	--feature-maps 64 128 256 \
-	--hidden=512 --pi-lr=1e-4 \
-	--test-target-path="/home/erik/DATA/Humanoid/SocialHumanoid_S(18,)_O80-80-3_n100000_0.ht" \
-	--train-target-path="/home/erik/DATA/Humanoid/SocialHumanoid_S(18,)_O80-80-3_n200000_0.ht" \
-	--log-dir="/home/erik/"\
-	--num-proc=12 --test-interval=400000 --record
-
-python main.py --num-frames=10000000 \
-	--test-thresh=2000000 \
-	--feature-maps 64 128 256 \
-	--hidden=512 --pi-lr=5e-5 \
-	--test-target-path="/home/erik/DATA/Humanoid/SocialHumanoid_S(18,)_O80-80-3_n100000_0.ht" \
-	--train-target-path="/home/erik/DATA/Humanoid/SocialHumanoid_S(18,)_O80-80-3_n200000_0.ht" \
-	--log-dir="/home/erik/"\
-	--num-proc=12 --test-interval=400000 --record
+python main.py --num-frames=5000000 \
+	--model='SemiCombine' \
+	--feature-maps 128 128 128 \
+	--hidden=512 \
+	--pi-lr=1e-4 \
+	--test-thresh=500000 \
+	--test-interval=200000 \
+	--train-target-path="/home/erik/DATA/Reacher/SocialReacher_S(6,)_O40-40-3_n100000_0.h5" \
+	--log-dir="/home/erik/DATA/Reacher/experiments"\
+	--env-id="reacher" \
+	--num-proc=4 

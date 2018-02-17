@@ -8,7 +8,7 @@ import torch.optim as optim
 from utils.arguments import get_args
 from utils.utils import make_log_dirs, adjust_learning_rate
 from utils.utils import get_targets
-from environments.social import SocialReacher
+from environments.social import SocialReacher, SocialHumanoid
 from environments.social import Social_multiple
 from agent.test import Test_and_Save_Video_MLP
 from agent.train import exploration, train
@@ -16,7 +16,7 @@ from agent.memory import RolloutStorage, Results, Current, Targets
 from models.combine import SemiCombinePolicy as Model
 
 args = get_args()
-Env = SocialReacher
+Env = SocialHumanoid
 
 # frames -> updates
 args.num_updates = int(args.num_frames) // args.num_steps // args.num_proc

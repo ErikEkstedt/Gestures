@@ -22,7 +22,7 @@ from gesture.utils.arguments import get_args
 from gesture.utils.utils import record, load_dict, get_targets
 from gesture.agent.memory import Current, Targets
 from gesture.models.modular import MLPPolicy, VanillaCNN
-from gesture.environments.social import SocialReacher
+from gesture.environments.social import SocialReacher, SocialHumanoid
 
 
 class PoseDefiner(object):
@@ -70,7 +70,8 @@ def evaluate(env, targets, pi, understand, args, plot=False, USE_UNDERSTAND=True
     if args.cuda:
         current.cuda()
         pi.cuda()
-        understand.cuda()
+        if USE_UNDERSTAND:
+            understand.cuda()
 
     if args.record:
         import skvideo.io
@@ -152,9 +153,12 @@ if __name__ == '__main__':
     print('Evaluation of Modular approach!')
     args = get_args()
     args.num_proc = 1
+    args.video_w = 64
+    args.video_h = 64
 
     # === Environment and targets ===
-    env = SocialReacher(args)
+    # env = SocialReacher(args)
+    env = SocialHumanoid(args)
     env.seed(200)
 
     print('\nLoading targets from:')
@@ -171,6 +175,10 @@ if __name__ == '__main__':
     o_shape = env.observation_space.shape  # RGB (W,H,C)
     ac_shape = env.action_space.shape[0]   # Actions
     current = Current(1, args.num_stack, s_shape, st_shape, o_shape, o_shape, ac_shape)
+    print(st_shape)
+    print(s_shape)
+    input('Press Enter to continue')
+
 
     in_size = current.st_shape + current.s_shape
     pi = MLPPolicy(input_size=in_size, a_shape=current.ac_shape, args=args)
@@ -180,19 +188,20 @@ if __name__ == '__main__':
     coordination_state_dict = torch.load(args.state_dict_path)
     pi.load_state_dict(coordination_state_dict)
 
-    args.hidden=128
-    understand = VanillaCNN(input_shape=current.ot_shape,
-                            s_shape=current.st_shape,
-                            feature_maps=args.feature_maps,
-                            kernel_sizes=args.kernel_sizes,
-                            strides=args.strides,
-                            args=args)
-
-    print('Loading understanding state dict from:')
-    print('path:\t', args.state_dict_path2)
-    understand_state_dict = torch.load(args.state_dict_path2)
-    understand.load_state_dict(understand_state_dict)
+    understand = None
+    if args.use_understand:
+        args.hidden=128
+        understand = VanillaCNN(input_shape=current.ot_shape,
+                                s_shape=current.st_shape,
+                                feature_maps=args.feature_maps,
+                                kernel_sizes=args.kernel_sizes,
+                                strides=args.strides,
+                                args=args)
+        print('Loading understanding state dict from:')
+        print('path:\t', args.state_dict_path2)
+        understand_state_dict = torch.load(args.state_dict_path2)
+        understand.load_state_dict(understand_state_dict)
+        understand.eval()
 
     pi.eval()
-    understand.eval()
     evaluate(env, targets, pi, understand, args, plot=False, USE_UNDERSTAND=args.use_understand)

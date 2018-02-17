@@ -52,24 +52,25 @@ python Coordination_main.py --num-frames=5000000 \
 
 python main.py --num-frames=5000000 \
 	--model='SemiCombine' \
-	--hidden=256 --pi-lr=1e-4 \
+	--hidden=256 \
+	--pi-lr=1e-4 \
 	--test-thresh=500000 \
 	--test-interval=200000 \
-	--model="SemiCombine"
 	--train-target-path="/home/erik/DATA/Reacher/SocialReacher_S(6,)_O40-40-3_n100000_0.h5" \
 	--log-dir="/home/erik/DATA/Reacher/experiments"\
 	--env-id="reacher" \
-	--num-proc=4 --save-interval=5
+	--num-proc=4 
 
 # Combine
 
 python main.py --num-frames=5000000 \
 	--model='Combine' \
-	--hidden=256 --pi-lr=1e-4 \
+	--hidden=256 \
+	--pi-lr=1e-4 \
 	--test-thresh=500000 \
 	--test-interval=200000 \
 	--model="Combine"
 	--train-target-path="/home/erik/DATA/Reacher/SocialReacher_S(6,)_O40-40-3_n100000_0.h5" \
 	--log-dir="/home/erik/DATA/Reacher/experiments/Combine"\
 	--env-id="Reacher" \
-	--num-proc=4 --save-interval=5
+	--num-proc=4 
