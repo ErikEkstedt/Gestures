@@ -104,6 +104,11 @@ def get_args():
     parser.add_argument('--episodes', type=int, help='complete episode trajectory to gather for mimic', default=10)
     parser.add_argument('--update-target', type=int, default=10, help='Number of frames between target update (default: 10)')
 
+    # === Evaluate ===
+    parser.add_argument('--record-name', default="video", help='Name of recording')
+    parser.add_argument('--use-understand', action='store_true', default=False)
+
+
     # === LOG ===
     parser.add_argument('--vis-interval', type=int, default=1, help='vis interval, one log per n updates (default: 1)')
     parser.add_argument('--log-interval', type=int, default=1, help='log interval in console, one log per n updates (default: 1)')

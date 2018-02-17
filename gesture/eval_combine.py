@@ -10,6 +10,7 @@ example:
         --state-dict-path=/PATH/to/state_dict
 '''
 import numpy as np
+import os
 import time
 import matplotlib.pyplot as plt
 from itertools import count
@@ -72,7 +73,8 @@ def evaluate(env, targets, pi, args, plot=False):
 
     if args.record:
         import skvideo.io
-        name = "mimic_{}_update{}.mp4".format(args.env_id, args.update_target)
+        name = "mimic_{}_frames{}_{}.mp4".format(args.record_name, args.MAX_TIME, args.use_understand)
+        name = os.path.join(args.log_dir,name)
         writer = skvideo.io.FFmpegWriter(name)
 
     if args.continuous_targets:
