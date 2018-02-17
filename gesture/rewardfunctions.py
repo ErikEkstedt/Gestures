@@ -20,7 +20,6 @@ from environments.reward import SocialReacherTargets, ReacherAbs, ReacherDiff
 def env_from_reward_envs(args):
     pass
 
-
 args = get_args()
 Env = env_from_reward_envs(args)
 Env = ReacherDiff

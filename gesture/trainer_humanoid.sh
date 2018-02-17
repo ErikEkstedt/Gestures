@@ -1,4 +1,4 @@
-python train_semicombine.py --num-frames=5000000 \
+python main.py --num-frames=5000000 \
 	--num-proc=4 \
 	--env-id='Humanoid' \
 	--model='SemiCombine' \
