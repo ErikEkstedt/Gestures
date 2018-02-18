@@ -35,17 +35,18 @@ python eval_combine.py \
 	--env-id="Evaluate_semicombine" \
 	--record
 
-# HUMANOID
+
+# HUMANOID --------------------------------------
 
 python eval_modular.py \
 	--feature-maps 64 64 32 --render \
     --model="Modular" \
 	--hidden=256 --update-target=300 --MAX_TIME=10000 \
 	--test-target-path="/home/erik/DATA/Humanoid/SocialHumanoid_S(18,)_O64-64-3_n50000_0.h5" \
-	--state-dict-path="/home/erik/DATA/Humanoid/experiments/Feb16/Humanoid/Coordination/checkpoints/BestDictCombi3350528_98.57.pt" \
+	--state-dict-path="/home/erik/DATA/Humanoid/experiments/coordination/checkpoints/BestDictCombi2564096_104.606.pt" \
 	--state-dict-path2="/home/erik/DATA/Humanoid/experiments/Feb16/Humanoid/understand/run-0/checkpoints/BestUnderDict98_0.00010173993566340846.pt" \
 	--log-dir="/home/erik/DATA/Humanoid/tests" \
-	--env-id="Evaluate_Modular" \
+	--env-id="Modular" \
 	--record
 
 # SemiCombine

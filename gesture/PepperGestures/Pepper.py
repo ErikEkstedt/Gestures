@@ -31,7 +31,7 @@ def printLimits(motion_service, name="Body"):
 
 
 class Pepper_v0(gym.Env):
-    ''' Directions:
+ g   ''' Directions:
               Environment - Choregraphe
               Open Choregraphe and connect to a virtual session.
               Copy the PORT-number the simulation runs on.
@@ -139,6 +139,16 @@ class Pepper_v0(gym.Env):
             done = True
 
         return s, self.target, rgb, reward, done
+
+    def set_angles(self, angles):
+        angles = angles.tolist()
+        self.motion_service.setAngles(self.names, angles, self.fractionMaxSpeed)
+        time.sleep(1)
+        self._getState()  # sets self.state
+        print('state:',self.state)
+        print('target:',self.target)
+        raw_input()
+
 
     def set_target(self, target):
         self.target = target

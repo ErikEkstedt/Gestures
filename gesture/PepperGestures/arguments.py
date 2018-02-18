@@ -11,6 +11,7 @@ def get_args():
                         help='The port number to the Choregraphe session')
     parser.add_argument('--IP', type=str, default='localhost',
                         help='The ip number to the Choregraphe session')
+
     # === Environment ===
     parser.add_argument('--env-id', default='SocialReacher')
     parser.add_argument('--dof', type=int, default=2)
@@ -23,6 +24,7 @@ def get_args():
 
     parser.add_argument('--render', action='store_true', default=False)
     parser.add_argument('--record', action='store_true', default=False)
+    parser.add_argument('--random', action='store_true', default=False)
 
     # === Reward =====
     parser.add_argument('--potential-constant',   type=float, default=100)

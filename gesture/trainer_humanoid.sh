@@ -1,7 +1,7 @@
 python main.py --num-frames=5000000 \
 	--num-proc=4 \
 	--env-id='Humanoid' \
-	--model='SemiCombine' \
+	--model='modular' \
 	--feature-maps 128 128 128 \
 	--hidden=512 \
 	--pi-lr=1e-4 \
@@ -9,7 +9,7 @@ python main.py --num-frames=5000000 \
 	--test-interval=200000 \
 	--train-target-path="/home/erik/DATA/Humanoid/SocialHumanoid_S(18,)_O64-64-3_n200000_0.h5"\
 	--test-target-path="/home/erik/DATA/Humanoid/SocialHumanoid_S(18,)_O64-64-3_n100000_0.h5" \
-	--log-dir="/home/erik/DATA/Humanoid/experiments"
+	--log-dir="/home/erik/DATA/Humanoid/experiments/coord"
 
 python main.py --num-frames=5000000 \
 	--model='SemiCombine' \
@@ -22,3 +22,6 @@ python main.py --num-frames=5000000 \
 	--log-dir="/home/erik/DATA/Reacher/experiments"\
 	--env-id="reacher" \
 	--num-proc=4 
+
+
+

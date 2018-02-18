@@ -66,7 +66,7 @@ class PoseDefiner(object):
         print('\nPoses reached/possible: {}/{}'.format(self.poses_achieved, self.total_poses))
 
 
-def evaluate(env, targets, pi, understand, args, plot=False, USE_UNDERSTAND=True):
+def evaluate(env, targets, pi, understand, args, plot=False, USE_UNDERSTAND=False):
     if args.cuda:
         current.cuda()
         pi.cuda()
@@ -92,12 +92,12 @@ def evaluate(env, targets, pi, understand, args, plot=False, USE_UNDERSTAND=True
     env.set_target(target)
     state, real_state_target, obs, o_target = env.reset()
 
-    posedefiner = PoseDefiner(target=real_state_target)
+    posedefiner = PoseDefiner(target=real_state_target, max_time=args.update_target)
     d = posedefiner.distance(state)
     X = [0]; Y = [d]
 
     tt = time.time()
-    total_reward = 0
+    ep_rew, total_reward = 0, 0
     for j in tqdm(range(args.MAX_TIME)):
 
         if USE_UNDERSTAND:
@@ -124,6 +124,7 @@ def evaluate(env, targets, pi, understand, args, plot=False, USE_UNDERSTAND=True
         cpu_actions = action.data.cpu().numpy()[0]
         state, real_state_target, obs, o_target, reward, done, info = env.step(cpu_actions)
         total_reward += reward
+        ep_rew += reward
 
         d, pose_done = posedefiner.update(state)
         Y.append(d)
@@ -133,6 +134,8 @@ def evaluate(env, targets, pi, understand, args, plot=False, USE_UNDERSTAND=True
             plt.pause(1e-4)
 
         if pose_done:
+            print('episode reward:', ep_rew)
+            ep_rew = 0
             if args.continuous_targets:
                 target = targets[t]
                 t += 1
@@ -159,9 +162,19 @@ def evaluate(env, targets, pi, understand, args, plot=False, USE_UNDERSTAND=True
     plt.savefig(name, bbox_inches='tight')
 
 if __name__ == '__main__':
-    print('Evaluation of Modular approach!')
     args = get_args()
+    print('Evaluation of ', args.model)
     args.num_proc = 1
+
+    # Create dirs
+    path='/home/erik/DATA/Humanoid/eval'
+    run = 0
+    while os.path.exists("{}/eval-{}".format(path, run)):
+        run += 1
+    path = "{}/eval-{}".format(path, run)
+    os.mkdir(path)
+    args.log_dir = path
+    args.checkpoint_dir = path
 
     # === Environment and targets ===
     Env = env_from_args(args)
@@ -184,9 +197,6 @@ if __name__ == '__main__':
     current = Current(1, args.num_stack, s_shape, st_shape, o_shape, o_shape, ac_shape)
     print('state:',s_shape)
     print('target state:',st_shape)
-    input('Press Enter to continue')
-
-
 
     if 'Semimodular' in args.model:
         from gesture.models.combine import SemiCombinePolicy
@@ -238,4 +248,4 @@ if __name__ == '__main__':
     pi.load_state_dict(pi_state_dict)
     pi.eval()
 
-    evaluate(env, targets, pi, understand, args, plot=False, USE_UNDERSTAND=args.use_understand)
+    evaluate(env, targets, pi, understand, args, plot=False)
