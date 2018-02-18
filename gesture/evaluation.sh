@@ -102,7 +102,7 @@ python eval_all.py \
 	--env-id='Humanoid' \
 	--video-h=64 --video-w=64 \
 	--feature-maps 64 64 64 \
-	--hidden=512 \
+	--hidden=256 \
 	--update-target=300 \
 	--MAX_TIME=1200 \
 	--test-target-path="/home/erik/DATA/Humanoid/SocialHumanoid_S(18,)_O64-64-3_n100000_0.h5" \
