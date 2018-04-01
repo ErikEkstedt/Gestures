@@ -75,7 +75,6 @@ def train(pi, args, rollouts, optimizer_pi):
             obs_target_batch, actions_batch, return_batch, \
                 masks_batch, old_action_log_probs_batch, adv_targ = sample
 
-            # Reshape to do in a single forward pass for all steps
             v, a_logprobs, entro = pi.evaluate_actions(states_batch,
                                                        state_target_batch,
                                                        obs_batch,
